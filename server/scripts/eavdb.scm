@@ -31,7 +31,7 @@
 (define (setup db)
   (exec/ignore db "create table entity ( entity_id integer primary key autoincrement, entity_type varchar(256))")
   (exec/ignore db "create table attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))")
-  (exec/ignore db "create table value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(1024))")
+  (exec/ignore db "create table value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096))")
   (exec/ignore db "create table value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer)")
   (exec/ignore db "create table value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real)"))
 
@@ -103,21 +103,24 @@
 
 ;; insert an entire entity
 (define (insert-entity db entity-type ktvlist)
+  (msg "1")
   (let ((id (insert
              db (string-append
                  "insert into entity values (null, '" (sqls entity-type) "')"))))
-
+    (msg "2")
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
        (find/add-attribute-type db entity-type (ktv-key ktv) (ktv-type ktv)))
-    ktvlist)
-
+     ktvlist)
+    (msg "3")
     ;; add all the keys
     (for-each
      (lambda (ktv)
+       (msg (ktv-key ktv))
        (insert-value db id ktv))
-     ktvlist)))
+     ktvlist)
+    (msg "4")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
@@ -185,4 +188,36 @@
 ;;  (ktv "pack-id" "int" 1)
 ;;  (ktv "weight" "real" 10.4)))
 
-(get-entity db 3)
+(define (choose l) (list-ref l (random (length l))))
+
+(define (random-string len)
+  (if (zero? len)
+      "" (string-append (choose (list "g" "t" "a" "c"))
+                        (random-string (- len 1)))))
+
+(define (random-ktv)
+  (ktv (random-string 2) "varchar" (random-string 4096)))
+
+(define (random-entity size)
+  (if (zero? size)
+      '() (cons (random-ktv) (random-entity (- size 1)))))
+
+(define (insert-random-entity db)
+  (msg "building")
+  (let ((e (random-entity 40)))
+    (msg "inserting")
+    (insert-entity
+     db (random-string 2) e)))
+
+(define (build db n)
+  (when (not (zero? n))
+        (msg "adding entity" n)
+        (insert-random-entity db)
+        (build db (- n 1))))
+
+(define (test)
+  (let ((db (open-db "unit.db")))
+    (build db 99999999)
+    ))
+
+(test)
