@@ -178,7 +178,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define db (open-db "test.db"))
+;(define db (open-db "test.db"))
 
 ;;(add-entity
 ;; db "mongoose"
@@ -220,4 +220,4 @@
     (build db 99999999)
     ))
 
-(test)
+;(test)
