@@ -34,6 +34,7 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
+
   (activity
    "main"
    (vert
@@ -56,7 +57,4 @@
      (list
       (update-widget 'linear-layout (get-id "main-field-list") 'contents
                      (build-field-buttons)))))
-
-
-
   )

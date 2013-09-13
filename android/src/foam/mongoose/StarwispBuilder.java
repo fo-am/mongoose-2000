@@ -33,7 +33,11 @@ import java.io.InputStreamReader;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Button;
+import android.widget.ToggleButton;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
+import android.widget.ScrollView;
+import android.widget.HorizontalScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
@@ -165,6 +169,31 @@ public class StarwispBuilder
                 return;
             }
 
+            if (type.equals("frame-layout")) {
+                FrameLayout v = new FrameLayout(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
+            if (type.equals("scroll-view")) {
+                HorizontalScrollView v = new HorizontalScrollView(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
+
             if (type.equals("space")) {
                 // Space v = new Space(ctx); (class not found runtime error??)
                 TextView v = new TextView(ctx);
@@ -265,6 +294,25 @@ public class StarwispBuilder
                 });
                 parent.addView(v);
             }
+
+            if (type.equals("toggle-button")) {
+                ToggleButton v = new ToggleButton(ctx);
+                v.setId(arr.getInt(1));
+                v.setText(arr.getString(2));
+                v.setTextSize(arr.getInt(3));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+                v.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                final String fn = arr.getString(5);
+                v.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        String arg="#f";
+                        if (((ToggleButton) v).isChecked()) arg="#t";
+                        CallbackArgs(ctx,v.getId(),arg);
+                    }
+                });
+                parent.addView(v);
+            }
+
 
             if (type.equals("seek-bar")) {
                 SeekBar v = new SeekBar(ctx);

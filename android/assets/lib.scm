@@ -289,6 +289,18 @@
 (define (linear-layout-layout t) (list-ref t 3))
 (define (linear-layout-children t) (list-ref t 4))
 
+(define (frame-layout id layout children)
+  (list "frame-layout" id layout children))
+(define (frame-layout-id t) (list-ref t 1))
+(define (frame-layout-layout t) (list-ref t 2))
+(define (frame-layout-children t) (list-ref t 3))
+
+(define (scroll-view id layout children)
+  (list "scroll-view" id layout children))
+(define (scroll-view-id t) (list-ref t 1))
+(define (scroll-view-layout t) (list-ref t 2))
+(define (scroll-view-children t) (list-ref t 3))
+
 (define (space layout) (list "space" "999" layout))
 (define (space-view-layout t) (list-ref t 2))
 
@@ -330,6 +342,14 @@
 (define (button-text-size t) (list-ref t 3))
 (define (button-layout t) (list-ref t 4))
 (define (button-listener t) (list-ref t 5))
+
+(define (toggle-button id text text-size layout listener) (list "toggle-button" id text text-size layout listener))
+(define (toggle-button-id t) (list-ref t 1))
+(define (toggle-button-text t) (list-ref t 2))
+(define (toggle-button-modify-text t v) (list-replace t 2 v))
+(define (toggle-button-text-size t) (list-ref t 3))
+(define (toggle-button-layout t) (list-ref t 4))
+(define (toggle-button-listener t) (list-ref t 5))
 
 (define (seek-bar id max layout listener) (list "seek-bar" id max layout listener))
 (define (seek-bar-id t) (list-ref t 1))
@@ -449,6 +469,12 @@
    ((equal? (widget-type (car widget-list)) "linear-layout")
     (let ((ret (widget-find (linear-layout-children (car widget-list)) id)))
       (if ret ret (widget-find (cdr widget-list) id))))
+   ((equal? (widget-type (car widget-list)) "frame-layout")
+    (let ((ret (widget-find (frame-layout-children (car widget-list)) id)))
+      (if ret ret (widget-find (cdr widget-list) id))))
+   ((equal? (widget-type (car widget-list)) "scroll-view")
+    (let ((ret (widget-find (scroll-view-children (car widget-list)) id)))
+      (if ret ret (widget-find (cdr widget-list) id))))
    (else (widget-find (cdr widget-list) id))))
 
 (define root 0)
@@ -543,6 +569,8 @@
                        ((edit-text-listener widget) (car args)))
                       ((equal? (widget-type widget) "button")
                        ((button-listener widget)))
+                      ((equal? (widget-type widget) "toggle-button")
+                       ((button-listener widget (car args))))
                       ((equal? (widget-type widget) "seek-bar")
                        ((seek-bar-listener widget) (car args)))
                       ((equal? (widget-type widget) "spinner")

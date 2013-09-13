@@ -60,7 +60,51 @@ public class starwisp extends StarwispActivity
         ActivityManager.Register("main",MainActivity.class);
     };
 
+    NetworkManager nm;
 
+/*    void RequestThread() {
+        Runnable runnable = new Runnable() {
+	        public void run() {
+                Request();
+	        }
+        };
+        Thread mythread = new Thread(runnable);
+        mythread.start();
+    }
+
+    void Request() {
+        try {
+            URL url = new URL("http://192.168.2.1:8888/mongoose?function_name=ping");
+            HttpURLConnection con = (HttpURLConnection) url
+                .openConnection();
+            readStream(con.getInputStream());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    private void readStream(InputStream in) {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(in));
+            String line = "";
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+*/
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -71,6 +115,8 @@ public class starwisp extends StarwispActivity
         m_AppDir = "/sdcard/"+dirname;
         File appdir = new File(m_AppDir);
         appdir.mkdirs();
+
+        nm = new NetworkManager("mongoose-web",this);
 
         // build static things
         m_Scheme = new Scheme(this);

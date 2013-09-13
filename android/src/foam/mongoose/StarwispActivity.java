@@ -54,7 +54,8 @@ public class StarwispActivity extends Activity
         String json = m_Scheme.eval("(activity-callback 'on-create \""+m_Name+"\" (list \""+arg+"\"))");
         View root = findViewById(R.id.main);
 
-        m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
+        //m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
+        m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/grstylus.ttf");
 
         try {
             m_Builder.Build(this, new JSONArray(json), (ViewGroup) root);
