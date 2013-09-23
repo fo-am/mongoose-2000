@@ -43,7 +43,7 @@
     (spacer 10)
     (button (make-id "main-sync") "Experiments" 20 fillwrap (lambda () (list (start-activity "experiments" 2 ""))))
     (button (make-id "main-sync") "Manage Packs" 20 fillwrap (lambda () (list (start-activity "manage-packs" 2 ""))))
-    (button (make-id "main-sync") "Tag Location" 20 fillwrap (lambda () (list)))
+    (button (make-id "main-sync") "Tag Location" 20 fillwrap (lambda () (list (start-activity "tag-location" 2 ""))))
     (button (make-id "main-sync") "Send Database" 20 fillwrap (lambda () (list)))
     (button (make-id "main-sync") "Sync Data" 20 fillwrap (lambda () (list)))
     )
