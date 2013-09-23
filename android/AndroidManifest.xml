@@ -17,6 +17,14 @@
             </intent-filter>
         </activity>
         <activity android:name="MainActivity"></activity>
+        <activity android:name="ExperimentsActivity"></activity>
+        <activity android:name="PackSelectActivity"></activity>
+        <activity android:name="IndividualSelectActivity"></activity>
+        <activity android:name="PupFocalActivity"></activity>
+        <activity android:name="PupFocalEventActivity"></activity>
+        <activity android:name="EventSelfActivity"></activity>
+        <activity android:name="EventFedActivity"></activity>
+        <activity android:name="EventAggressionActivity"></activity>
     </application>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
