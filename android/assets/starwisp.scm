@@ -15,16 +15,20 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (mbutton id title fn)
+  (button (make-id id) title 20 fillwrap fn))
+
+(define (mtext id text)
+  (text-view (make-id id) text 20 fillwrap))
 
 (define-activity-list
   (activity
    "splash"
    (vert
     (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
-    (text-view (make-id "splash-about") "Advanced mongoose technology" 20 fillwrap)
+    (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
-    (button (make-id "f2") "Get started!" 20 fillwrap
-            (lambda () (list (start-activity-goto "main" 2 "")))))
+    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 "")))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) '())
@@ -41,12 +45,13 @@
     (text-view (make-id "main-title") "Mongoose 2000" 40 fillwrap)
     (text-view (make-id "main-about") "Advanced mongoose technology" 20 fillwrap)
     (spacer 10)
-    (button (make-id "main-sync") "Experiments" 20 fillwrap (lambda () (list (start-activity "experiments" 2 ""))))
-    (button (make-id "main-sync") "Manage Packs" 20 fillwrap (lambda () (list (start-activity "manage-packs" 2 ""))))
-    (button (make-id "main-sync") "Tag Location" 20 fillwrap (lambda () (list (start-activity "tag-location" 2 ""))))
-    (button (make-id "main-sync") "Send Database" 20 fillwrap (lambda () (list)))
-    (button (make-id "main-sync") "Sync Data" 20 fillwrap (lambda () (list)))
-    )
+    (mbutton "main-experiments" "Experiments" (lambda () (list (start-activity "experiments" 2 ""))))
+    (mbutton "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
+    (mbutton "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 ""))))
+    (mtext "foo" "Database")
+    (horiz
+     (mbutton "main-send" "Email" (lambda () (list)))
+     (mbutton "main-sync" "Sync" (lambda () (list)))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) (list))
@@ -122,37 +127,40 @@
    (lambda (activity requestcode resultcode) '()))
 
 
-  (activity
-   "pup-focal"
-   (vert
-    (horiz
-     (text-view (make-id "pup-focal-title") "Pup Focal" 40 fillwrap)
-     (vert
-      (text-view (make-id "pup-focal-timer-text") "Time left" 20 fillwrap)
-      (text-view (make-id "pup-focal-timer") "30" 40 fillwrap)))
-    (spacer 10)
-    (text-view (make-id "pup-focal") "Current Activity" 20 fillwrap)
-    (horiz
-     (toggle-button (make-id "pup-focal-moving") "Moving" 30 fillwrap (lambda (v) '()))
-     (toggle-button (make-id "pup-focal-foraging") "Foraging" 30 fillwrap (lambda (v) '()))
-     (toggle-button (make-id "pup-focal-resting") "Resting" 30 fillwrap (lambda (v) '())))
-    (spacer 10)
-    (text-view (make-id "pup-focal-escort-text") "Current Escort" 20 fillwrap)
-    (spinner (make-id "pup-focal-escort") (list "Mongoose 1" "Mongoose 2" "Mongoose 3" "Mongoose 4") fillwrap (lambda (v) '()))
-    (spacer 10)
-    (horiz
-     (button (make-id "pup-focal-event") "New event" 20 fillwrap (lambda () (list (start-activity "pup-focal-event" 2 ""))))
-     (toggle-button (make-id "pup-focal-pause") "Pause" 20 fillwrap (lambda (v) '()))
-     ))
+  (let ((clear-focal-toggles
+         (lambda ()
+           (list
+            (update-widget 'toggle-button (make-id "pup-focal-moving") 'checked 0)
+            (update-widget 'toggle-button (make-id "pup-focal-foraging") 'checked 0)
+            (update-widget 'toggle-button (make-id "pup-focal-resting") 'checked 0)))))
 
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg) (list))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
+    (activity
+     "pup-focal"
+     (vert
+      (horiz
+       (text-view (make-id "pup-focal-title") "Pup Focal" 40 fillwrap)
+       (vert
+        (text-view (make-id "pup-focal-timer-text") "Time left" 20 fillwrap)
+        (text-view (make-id "pup-focal-timer") "30" 40 fillwrap)))
+      (text-view (make-id "pup-focal") "Current Activity" 20 fillwrap)
+      (horiz
+       (toggle-button (make-id "pup-focal-moving") "Moving" 20 fillwrap (lambda (v) (clear-focal-toggles)))
+       (toggle-button (make-id "pup-focal-foraging") "Foraging" 20 fillwrap (lambda (v) (clear-focal-toggles)))
+       (toggle-button (make-id "pup-focal-resting") "Resting" 20 fillwrap (lambda (v) (clear-focal-toggles))))
+      (text-view (make-id "pup-focal-escort-text") "Current Escort" 20 fillwrap)
+      (spinner (make-id "pup-focal-escort") (list "Mongoose 1" "Mongoose 2" "Mongoose 3" "Mongoose 4") fillwrap (lambda (v) '()))
+      (horiz
+       (button (make-id "pup-focal-event") "New event" 20 fillwrap (lambda () (list (start-activity "pup-focal-event" 2 ""))))
+       (toggle-button (make-id "pup-focal-pause") "Pause" 20 fillwrap (lambda (v) '()))
+       ))
+     (lambda (activity arg)
+       (activity-layout activity))
+     (lambda (activity arg) (list))
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity requestcode resultcode) '())))
 
   (activity
    "pup-focal-event"
@@ -181,7 +189,7 @@
   (activity
    "event-self"
    (vert
-    (text-view (make-id "main-title") "Pup focal self feeding" 40 fillwrap)
+    (text-view (make-id "main-title") "Self feeding event" 40 fillwrap)
     (spacer 10)
     (toggle-button (make-id "event-self-found") "Found item?" 20 fillwrap
                    (lambda (v) '()))
@@ -210,7 +218,7 @@
   (activity
    "event-fed"
    (vert
-    (text-view (make-id "main-title") "Pup focal being fed" 40 fillwrap)
+    (text-view (make-id "main-title") "Being fed event" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "event-fed-who-text") "Who by" 20 fillwrap)
     (spinner (make-id "event-fed-who") (list "Mongoose 1" "Mongoose 2" "Mongoose 3") fillwrap (lambda (v) '()))
@@ -242,7 +250,7 @@
   (activity
    "event-aggression"
    (vert
-    (text-view (make-id "main-title") "Pup focal agression" 40 fillwrap)
+    (text-view (make-id "main-title") "Aggression event" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "event-agg-who-text") "Other individual" 20 fillwrap)
     (spinner (make-id "event-agg-who") (list "Mongoose 1" "Mongoose 2" "Mongoose 3") fillwrap (lambda (v) '()))
@@ -272,14 +280,14 @@
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
     (spacer 10)
     (horiz
-     (button (make-id "manage-packs-pack-0") "Pack 1" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 ""))))
-     (button (make-id "manage-packs-pack-1") "Pack 2" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 "")))))
+     (button (make-id "manage-packs-pack-0") "Pack 1" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
+     (button (make-id "manage-packs-pack-1") "Pack 2" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
     (horiz
-     (button (make-id "manage-packs-pack-2") "Pack 3" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 ""))))
-     (button (make-id "manage-packs-pack-3") "Pack 4" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 "")))))
+     (button (make-id "manage-packs-pack-2") "Pack 3" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
+     (button (make-id "manage-packs-pack-3") "Pack 4" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
     (horiz
-     (button (make-id "manage-packs-pack-4") "Pack 5" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 ""))))
-     (button (make-id "manage-packs-pack-5") "Pack 6" 20 fillwrap (lambda () (list (start-activity "manage-individuals" 2 "")))))
+     (button (make-id "manage-packs-pack-4") "Pack 5" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
+     (button (make-id "manage-packs-pack-5") "Pack 6" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
 
     (button (make-id "manage-packs-new") "New pack" 30 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
     )
@@ -298,7 +306,7 @@
    (vert
     (text-view (make-id "title") "New pack" 40 fillwrap)
     (spacer 10)
-    (text-view (make-id "new-pack-name-text") "Pack name")
+    (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 fillwrap (lambda (v) '()))
     (spacer 10)
     (button (make-id "new-pack-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2))))
@@ -314,20 +322,20 @@
 
 
   (activity
-   "manage-individuals"
+   "manage-individual"
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (spacer 10)
 
     (horiz
-     (button (make-id "manage-individuals-0") "Mongoose 1" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "manage-individuals-1") "Mongoose 2" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
+     (button (make-id "manage-individuals-0") "Mongoose 1" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
+     (button (make-id "manage-individuals-1") "Mongoose 2" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
     (horiz
-     (button (make-id "manage-individuals-2") "Mongoose 3" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "manage-individuals-3") "Mongoose 4" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
+     (button (make-id "manage-individuals-2") "Mongoose 3" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
+     (button (make-id "manage-individuals-3") "Mongoose 4" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
     (horiz
-     (button (make-id "manage-individuals-4") "Mongoose 5" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "manage-individuals-5") "Mongoose 6" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
+     (button (make-id "manage-individuals-4") "Mongoose 5" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
+     (button (make-id "manage-individuals-5") "Mongoose 6" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
 
     (button (make-id "manage-individuals-new") "New individual" 30 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
@@ -346,17 +354,17 @@
    (vert
     (text-view (make-id "title") "New Mongoose" 40 fillwrap)
     (spacer 10)
-    (text-view (make-id "new-individual-name-text") "Name")
+    (text-view (make-id "new-individual-name-text") "Name" 20 fillwrap)
     (edit-text (make-id "new-individual-name") "" 30 fillwrap (lambda (v) '()))
-    (text-view (make-id "new-individual-name-text") "Gender")
+    (text-view (make-id "new-individual-name-text") "Gender" 20 fillwrap)
     (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap (lambda (v) '()))
-    (text-view (make-id "new-individual-dob-text") "Date of Birth")
+    (text-view (make-id "new-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
-    (text-view (make-id "new-individual-litter-text") "Litter code")
+    (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 fillwrap (lambda (v) '()))
-    (text-view (make-id "new-individual-chip-text") "Chip code")
+    (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
     (spacer 10)
     (button (make-id "new-individual-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2))))
@@ -375,17 +383,17 @@
    (vert
     (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
     (spacer 10)
-    (text-view (make-id "update-individual-name-text") "Name")
+    (text-view (make-id "update-individual-name-text") "Name" 20 fillwrap)
     (edit-text (make-id "update-individual-name") "" 30 fillwrap (lambda (v) '()))
-    (text-view (make-id "update-individual-name-text") "Gender")
+    (text-view (make-id "update-individual-name-text") "Gender" 20 fillwrap)
     (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap (lambda (v) '()))
-    (text-view (make-id "update-individual-dob-text") "Date of Birth")
+    (text-view (make-id "update-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
-    (text-view (make-id "update-individual-litter-text") "Litter code")
+    (text-view (make-id "update-individual-litter-text") "Litter code" 20 fillwrap)
     (edit-text (make-id "update-individual-litter-code") "" 30 fillwrap (lambda (v) '()))
-    (text-view (make-id "update-individual-chip-text") "Chip code")
+    (text-view (make-id "update-individual-chip-text") "Chip code" 20 fillwrap)
     (edit-text (make-id "update-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
     (spacer 10)
     (horiz

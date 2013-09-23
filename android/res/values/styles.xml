@@ -18,9 +18,8 @@
 
   <style name="StarwispTextAppearanceSpinnerItem" parent="android:TextAppearance.Widget.TextView.SpinnerItem">
     <item name="android:textColor">@color/text</item>
-    <item name="android:textSize">30sp</item>
+    <item name="android:textSize">50sp</item>
   </style>
-
 
   <style name="StarwispSpinner" parent="android:style/Widget.Spinner">
     <item name="android:textColor">@color/text</item>
@@ -38,6 +37,7 @@
     <item name="android:windowBackground">@drawable/bg_style</item>
     <item name="android:colorBackground">@color/bg</item>
     <item name="android:buttonStyle">@style/StarwispButton</item>
+    <item name="android:buttonStyleToggle">@style/StarwispButton</item>
     <item name="android:seekBarStyle">@style/StarwispSeekBar</item>
     <item name="android:spinnerItemStyle">@style/StarwispSpinnerItem</item>
     <item name="android:spinnerStyle">@style/StarwispSpinner</item>

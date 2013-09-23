@@ -27,7 +27,7 @@
         <activity android:name="EventAggressionActivity"></activity>
         <activity android:name="ManagePacksActivity"></activity>
         <activity android:name="NewPackActivity"></activity>
-        <activity android:name="ManageIndividualsActivity"></activity>
+        <activity android:name="ManageIndividualActivity"></activity>
         <activity android:name="NewIndividualActivity"></activity>
         <activity android:name="UpdateIndividualActivity"></activity>
         <activity android:name="TagLocationActivity"></activity>

@@ -121,6 +121,7 @@ public class StarwispBuilder
                                               BuildLayoutParam(arr.getString(2)),
                                               (float)arr.getDouble(3));
             lp.gravity=BuildLayoutGravity(arr.getString(4));
+            lp.setMargins(5,5,5,5);
             return lp;
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
@@ -161,6 +162,7 @@ public class StarwispBuilder
                 v.setId(arr.getInt(1));
                 v.setOrientation(BuildOrientation(arr.getString(2)));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
+                v.setPadding(5,5,5,5);
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(4);
                 for (int i=0; i<children.length(); i++) {
@@ -652,6 +654,31 @@ public class StarwispBuilder
                 }
                 return;
             }
+
+            if (type.equals("toggle-button")) {
+                ToggleButton v = (ToggleButton)vv;
+                if (token.equals("text")) {
+                    v.setText(arr.getString(3));
+                    return;
+                }
+
+                if (token.equals("checked")) {
+                    if (arr.getInt(3)==0) v.setChecked(false);
+                    else v.setChecked(true);
+                    return;
+                }
+
+                if (token.equals("listener")) {
+                    final String fn = arr.getString(3);
+                    v.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            m_Scheme.eval("("+fn+")");
+                        }
+                    });
+                }
+                return;
+            }
+
 
             if (type.equals("canvas")) {
                 StarwispCanvas v = (StarwispCanvas)vv;
