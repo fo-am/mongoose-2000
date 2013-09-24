@@ -15,6 +15,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define db "test.db")
+
+(display (db-open db))(newline)
+
+(display (db-exec db "select * from COMPANY"))(newline)
+
+
 (define (mbutton id title fn)
   (button (make-id id) title 20 fillwrap fn))
 
@@ -130,9 +137,9 @@
   (let ((clear-focal-toggles
          (lambda ()
            (list
-            (update-widget 'toggle-button (make-id "pup-focal-moving") 'checked 0)
-            (update-widget 'toggle-button (make-id "pup-focal-foraging") 'checked 0)
-            (update-widget 'toggle-button (make-id "pup-focal-resting") 'checked 0)))))
+            (update-widget 'toggle-button (get-id "pup-focal-moving") 'checked 0)
+            (update-widget 'toggle-button (get-id "pup-focal-foraging") 'checked 0)
+            (update-widget 'toggle-button (get-id "pup-focal-resting") 'checked 0)))))
 
     (activity
      "pup-focal"
@@ -417,16 +424,15 @@
    "tag-location"
    (vert
     (text-view (make-id "title") "Tag Location" 40 fillwrap)
-    (spacer 10)
-    (text-view (make-id "tag-location-gps-text") "GPS")
+    (text-view (make-id "tag-location-gps-text") "GPS" 20 fillwrap)
     (horiz
-     (text-view (make-id "tag-location-gps-lat") "LAT")
-     (text-view (make-id "tag-location-gps-lng") "LNG"))
+     (text-view (make-id "tag-location-gps-lat") "LAT" 20 fillwrap)
+     (text-view (make-id "tag-location-gps-lng") "LNG" 20 fillwrap))
 
-    (text-view (make-id "tag-location-name-text") "Name")
+    (text-view (make-id "tag-location-name-text") "Name" 20 fillwrap)
     (edit-text (make-id "tag-location-name") "" 30 fillwrap (lambda (v) '()))
 
-    (text-view (make-id "tag-location-pack-text") "Associated pack")
+    (text-view (make-id "tag-location-pack-text") "Associated pack" 20 fillwrap)
     (spinner (make-id "tag-location-pack") (list "Pack 1" "Pack 2") fillwrap (lambda (v) '()))
 
     (text-view (make-id "tag-location-radius-text") "Approx radius of area" 20 fillwrap)

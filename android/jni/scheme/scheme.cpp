@@ -31,6 +31,9 @@
 #include <float.h>
 #include <ctype.h>
 
+#include "core/db_container.h"
+db_container the_db_container;
+
 #ifdef _EE
 #define USE_STRLWR 0
 #define USE_STRCASECMP 0
@@ -4186,6 +4189,28 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
      return sc->T;
 }
 
+static pointer db_data_to_scm(scheme *sc, list *data)
+{
+     pointer ret=sc->NIL;
+     db::row_node *row=(db::row_node*)data->m_head;
+     while (row!=NULL)
+     {
+          pointer ret_row=sc->NIL;
+          db::value_node *value=(db::value_node*)row->m_row->m_head;
+          while (value!=NULL)
+          {
+               ret_row=cons(sc,mk_string(sc,value->m_value),ret_row);
+               value=(db::value_node*)value->m_next;
+          }
+
+          ret_row=reverse(sc,ret_row);
+          ret=cons(sc,ret_row,ret);
+          row=(db::row_node*)row->m_next;
+     }
+     ret=reverse(sc,ret);
+     return ret;
+}
+
 static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
      pointer x, y;
      long v;
@@ -4239,6 +4264,28 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                starwisp_data=string_value(car(sc->args));
           }
           s_return(sc,sc->F);
+     case OP_OPEN_DB: {
+          if (is_string(car(sc->args))) {
+               the_db_container.add(string_value(car(sc->args)),
+                                    new db(string_value(car(sc->args))));
+               s_return(sc,sc->T);
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_EXEC_DB: {
+          if (is_string(car(sc->args)) &&
+              is_string(cadr(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    list *data=d->exec(string_value(cadr(sc->args)));
+                    pointer ret=db_data_to_scm(sc,data);
+                    delete data;
+                    s_return(sc,ret);
+               }
+          }
+          s_return(sc,sc->F);
+     }
 ////////////////////
      default:
           snprintf(sc->strbuff,STRBUFFSIZE,"%d: illegal operator", sc->op);

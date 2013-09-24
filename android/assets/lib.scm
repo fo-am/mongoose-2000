@@ -69,7 +69,6 @@
    (number->string (list-ref d 2))))
 
 
-(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
 
 
 (define (insert elt fn sorted-lst)
@@ -270,7 +269,6 @@
                                   "\n" token ": " value))))))
   (string-append "{" (_ l "") "\n" "}"))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (layout width height weight gravity) (list "layout" width height weight gravity))
@@ -278,6 +276,8 @@
 (define (layout-height l) (list-ref l 2))
 (define (layout-weight l) (list-ref l 3))
 (define (layout-gravity l) (list-ref l 4))
+
+(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
 
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
