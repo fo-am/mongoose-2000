@@ -4286,6 +4286,16 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           }
           s_return(sc,sc->F);
      }
+     case OP_STATUS_DB: {
+          if (is_string(car(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    s_return(sc,mk_string(sc,d->status()));
+               }
+          }
+          s_return(sc,sc->F);
+     }
 ////////////////////
      default:
           snprintf(sc->strbuff,STRBUFFSIZE,"%d: illegal operator", sc->op);

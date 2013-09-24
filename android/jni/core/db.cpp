@@ -79,7 +79,7 @@ list *db::exec(const char *sql)
     if( rc != SQLITE_OK )
     {
         snprintf(m_status,4096,"SQL error: %s",err);
-        m_running=0;
+        //m_running=0;
         sqlite3_free(err);
     }
     else
