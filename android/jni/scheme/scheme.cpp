@@ -4189,26 +4189,32 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
      return sc->T;
 }
 
+// fudge to behave like planet jaymccarthy/sqlite:5:1/sqlite
 static pointer db_data_to_scm(scheme *sc, list *data)
 {
-     pointer ret=sc->NIL;
-     db::row_node *row=(db::row_node*)data->m_head;
-     while (row!=NULL)
+     if (data!=NULL)
      {
-          pointer ret_row=sc->NIL;
-          db::value_node *value=(db::value_node*)row->m_row->m_head;
-          while (value!=NULL)
+          pointer ret=sc->NIL;
+          db::row_node *row=(db::row_node*)data->m_head;
+          while (row!=NULL)
           {
-               ret_row=cons(sc,mk_string(sc,value->m_value),ret_row);
-               value=(db::value_node*)value->m_next;
-          }
+               pointer ret_row=mk_vector(sc,row->m_row->size());
+               int p=0;
+               db::value_node *value=(db::value_node*)row->m_row->m_head;
+               while (value!=NULL)
+               {
+                    set_vector_elem(ret_row,p,mk_string(sc,value->m_value));
+                    p++;
+                    value=(db::value_node*)value->m_next;
+               }
 
-          ret_row=reverse(sc,ret_row);
-          ret=cons(sc,ret_row,ret);
-          row=(db::row_node*)row->m_next;
+               ret=cons(sc,ret_row,ret);
+               row=(db::row_node*)row->m_next;
+          }
+          ret=reverse(sc,ret);
+          return ret;
      }
-     ret=reverse(sc,ret);
-     return ret;
+     return sc->NIL;
 }
 
 static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
@@ -4282,6 +4288,17 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                     pointer ret=db_data_to_scm(sc,data);
                     delete data;
                     s_return(sc,ret);
+               }
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_INSERT_DB: {
+          if (is_string(car(sc->args)) &&
+              is_string(cadr(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    s_return(sc,mk_integer(sc,d->insert(string_value(cadr(sc->args)))));
                }
           }
           s_return(sc,sc->F);

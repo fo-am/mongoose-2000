@@ -14,37 +14,44 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; persistent database
 
-(define db "/sdcard/mongoose/test.db")
-
-(display (db-open db))(newline)
-
+(define db "/sdcard/test.db")
+(db-open db)
+(setup db)
+(display (db-exec db "select * from entity"))(newline)
 (display (db-status db))(newline)
 
-(db-exec db "CREATE TABLE COMPANY(
-             ID INT PRIMARY KEY     NOT NULL,
-             NAME           TEXT    NOT NULL,
-             AGE            INT     NOT NULL,
-             ADDRESS        CHAR(50),
-             SALARY         REAL );")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; stuff in memory
 
-(display (db-status db))(newline)
+(define (store-set store key value)
+  (cond
+    ((null? store) (list (list key value)))
+    ((eq? key (car (car store)))
+     (cons (list key value) (cdr store)))
+    (else
+     (cons (car store) (store-set (cdr store) key value)))))
 
-(db-exec db "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
-             VALUES (1, 'Paul', 32, 'California', 20000.00 );
-             INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
-             VALUES (2, 'Allen', 25, 'Texas', 15000.00 );
-             INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
-             VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );
-             INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)
-             VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );")
+(define (store-get store key)
+  (cond
+    ((null? store) #f)
+    ((eq? key (car (car store)))
+     (cadr (car store)))
+    (else
+     (store-get (cdr store) key))))
 
-(display (db-status db))(newline)
 
-(display (db-exec db "select * from COMPANY"))(newline)
+(define store '())
 
-(display (db-status db))(newline)
+(define (set-current! key value)
+  (set! store (store-set store key value)))
 
+(define (get-current key)
+  (store-get store key))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (mbutton id title fn)
   (button (make-id id) title 20 fillwrap fn))
@@ -304,33 +311,37 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-
+  (let ((build-pack-buttons
+         (lambda ()
+           (map
+            (lambda (pack)
+              (let ((name (ktv-get pack "name")))
+                (button (make-id (string-append "manage-packs-pack-" name))
+                        name 20 fillwrap
+                        (lambda ()
+                          (list (start-activity "manage-individual" 2 (db-get pack "id")))))))
+            (db-all db "pack")))))
   (activity
    "manage-packs"
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
-    (spacer 10)
-    (horiz
-     (button (make-id "manage-packs-pack-0") "Pack 1" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
-     (button (make-id "manage-packs-pack-1") "Pack 2" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
-    (horiz
-     (button (make-id "manage-packs-pack-2") "Pack 3" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
-     (button (make-id "manage-packs-pack-3") "Pack 4" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
-    (horiz
-     (button (make-id "manage-packs-pack-4") "Pack 5" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 ""))))
-     (button (make-id "manage-packs-pack-5") "Pack 6" 20 fillwrap (lambda () (list (start-activity "manage-individual" 2 "")))))
-
-    (button (make-id "manage-packs-new") "New pack" 30 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
+    (linear-layout
+     (make-id "manage-packs-pack-list")
+     'vertical fill (list))
+    (button (make-id "manage-packs-new") "New pack" 20 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
     )
-
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'linear-layout (get-id "manage-packs-pack-list") 'contents
+                     (build-pack-buttons))
+      ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
+   (lambda (activity requestcode resultcode) '())))
 
   (activity
    "new-pack"
@@ -338,9 +349,17 @@
     (text-view (make-id "title") "New pack" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
-    (edit-text (make-id "new-pack-name") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "new-pack-name") "" 30 fillwrap
+               (lambda (v) (set-current! 'pack-name v) '()))
     (spacer 10)
-    (button (make-id "new-pack-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2))))
+    (horiz
+     (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "new-pack-done") "Done" 20 fillwrap
+             (lambda ()
+               (insert-entity
+                db "pack" (list
+                           (ktv "name" "varchar" (get-current 'pack-name))))
+               (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -368,7 +387,7 @@
      (button (make-id "manage-individuals-4") "Mongoose 5" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
      (button (make-id "manage-individuals-5") "Mongoose 6" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
 
-    (button (make-id "manage-individuals-new") "New individual" 30 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
+    (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
 
    (lambda (activity arg)
@@ -398,7 +417,7 @@
     (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
     (spacer 10)
-    (button (make-id "new-individual-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2))))
+    (button (make-id "new-individual-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -428,11 +447,11 @@
     (edit-text (make-id "update-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
     (spacer 10)
     (horiz
-     (button (make-id "update-individual-delete") "Delete" 30 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "update-individual-died") "Died" 30 fillwrap (lambda () (list (finish-activity 2)))))
+     (button (make-id "update-individual-delete") "Delete" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "update-individual-died") "Died" 20 fillwrap (lambda () (list (finish-activity 2)))))
     (horiz
-     (button (make-id "update-individual-cancel") "Cancel" 30 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "update-individual-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2)))))
+     (button (make-id "update-individual-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "update-individual-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -464,8 +483,8 @@
     (text-view (make-id "tag-location-radius-value") "10m" 20 fillwrap)
 
     (horiz
-     (button (make-id "tag-location-cancel") "Cancel" 30 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "tag-location-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2)))))
+     (button (make-id "tag-location-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "tag-location-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2)))))
 
     )
    (lambda (activity arg)

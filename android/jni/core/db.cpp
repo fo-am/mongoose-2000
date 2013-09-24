@@ -40,6 +40,18 @@ db::~db()
 static int callback(void *d, int argc, char **argv, char **azColName){
    int i;
    list *data=(list*)d;
+
+   // add the column names first time round
+   if (data->size()==0)
+   {
+       list *row = new list;
+       for(i=0; i<argc; i++)
+       {
+           row->add_to_end(new db::value_node(azColName[i]));
+       }
+       data->add_to_end(new db::row_node(row));
+   }
+
    list *row = new list;
    for(i=0; i<argc; i++)
    {
@@ -88,4 +100,27 @@ list *db::exec(const char *sql)
     }
 
     return data;
+}
+
+unsigned int db::insert(const char *sql)
+{
+    if (!m_running) return 0;
+
+    char *err = 0;
+    list *data = new list;
+    int rc = sqlite3_exec(m_db, sql, callback, data, &err);
+
+    if( rc != SQLITE_OK )
+    {
+        snprintf(m_status,4096,"SQL error: %s",err);
+        //m_running=0;
+        sqlite3_free(err);
+        return 0;
+    }
+    else
+    {
+        snprintf(m_status,4096,"SQL GOOD.");
+    }
+
+    return sqlite3_last_insert_rowid(m_db);
 }

@@ -14,6 +14,14 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+(define (msg . args)
+  (for-each
+   (lambda (i) (display i)(display " "))
+   args)
+  (newline))
+
+(define (dbg i) (msg i) i)
+
 (define (filter fn l)
   (foldl
    (lambda (i r)

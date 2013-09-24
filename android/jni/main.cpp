@@ -77,34 +77,10 @@ int main(int argc, char *argv[])
     appEval("(display \"loaded init\")(newline)");
     appEval((char*)LoadFile("../assets/lib.scm").c_str());
     appEval("(display \"loaded lib\")(newline)");
+    appEval((char*)LoadFile("../assets/eavdb.scm").c_str());
+    appEval("(display \"loaded eavdb\")(newline)");
     appEval((char*)LoadFile("../assets/starwisp.scm").c_str());
     appEval("(display \"loaded starwisp\")(newline)");
-
-/*
-    db my_db("test.db");
-
-    my_db.exec("CREATE TABLE COMPANY("  \
-               "ID INT PRIMARY KEY     NOT NULL,"   \
-               "NAME           TEXT    NOT NULL,"   \
-               "AGE            INT     NOT NULL,"   \
-               "ADDRESS        CHAR(50),"           \
-               "SALARY         REAL );");
-
-    my_db.exec("INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "    \
-               "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
-               "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) " \
-               "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
-               "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)"  \
-               "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );"      \
-               "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)"   \
-               "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );");
-
-    list *data = my_db.exec("SELECT * FROM COMPANY");
-//    my_db.print_data(data);
-
-    delete data;
-*/
-
 
 	return 0;
 }

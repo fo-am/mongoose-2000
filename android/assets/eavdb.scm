@@ -1,5 +1,3 @@
-#lang racket
-
 ;; MongooseWeb Copyright (C) 2013 Dave Griffiths
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -15,30 +13,11 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(require (planet jaymccarthy/sqlite:5:1/sqlite))
-
 ;; sql (in)sanity
 
 ;; android/racket stuff
 (define exec/ignore db-exec)
-
-;; helper to return first instance from a select
-(define (select-first db str)
-  (let ((s (select db str)))
-    (if (null? s)
-        s
-        (vector-ref (cadr s) 0))))
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (msg . args)
-  (for-each
-   (lambda (i) (display i)(display " "))
-   args)
-  (newline))
-
-(define (dbg i) (msg i) i)
+(define db-select db-exec)
 
 ;; create eav tables (add types as required)
 (define (setup db)
@@ -64,19 +43,24 @@
     ((equal? (ktv-type ktv) "varchar") (string-append "'" (ktv-value ktv) "'"))
     (else (number->string (ktv-value ktv)))))
 
+;; helper to return first instance from a select
+(define (select-first db str)
+  (let ((s (db-select db str)))
+    (if (or (null? s) (eq? s #t))
+        '()
+        (vector-ref (cadr s) 0))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; putting data in
 
 ;; get the type from the attribute table with an entity/key
 (define (get-attribute-type db entity-type key)
-  (select-first
-   db
-   (string-append
-    "select attribute_type from attribute where entity_type = '"
-    (sqls entity-type)
-    "' and attribute_id = '"
-    (sqls key) "'")))
+  (let ((sql (string-append
+              "select attribute_type from attribute where entity_type = '"
+              (sqls entity-type)
+              "' and attribute_id = '"
+              (sqls key) "'")))
+    (select-first db sql)))
 
 ;; search for a type and add it if it doesn't exist
 (define (find/add-attribute-type db entity-type key type)
@@ -85,7 +69,7 @@
     (cond
       ((null? t)
        (msg "adding new attribute for" entity-type " called " key " of type " type)
-       (insert
+       (db-insert
         db (string-append
             "insert into attribute values (null, '"
             (sqls key) "', '" (sqls entity-type) "', '" (sqls type) "')"))
@@ -103,31 +87,26 @@
 ;; low level insert of a ktv
 (define (insert-value db entity-id ktv)
   ;; use type to dispatch insert to correct value table
-  (insert
-   db (string-append "insert into value_" (sqls (ktv-type ktv))
-                     " values (null, " (number->string entity-id) ", '" (sqls (ktv-key ktv)) "', "
-                     (stringify-value ktv) ")")))
+  (db-insert db (string-append "insert into value_" (sqls (ktv-type ktv))
+                               " values (null, " (number->string entity-id) ", '" (sqls (ktv-key ktv)) "', "
+                               (stringify-value ktv) ")")))
 
 ;; insert an entire entity
 (define (insert-entity db entity-type ktvlist)
-  (msg "1")
-  (let ((id (insert
+  (let ((id (db-insert
              db (string-append
                  "insert into entity values (null, '" (sqls entity-type) "')"))))
-    (msg "2")
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
        (find/add-attribute-type db entity-type (ktv-key ktv) (ktv-type ktv)))
      ktvlist)
-    (msg "3")
     ;; add all the keys
     (for-each
      (lambda (ktv)
        (msg (ktv-key ktv))
        (insert-value db id ktv))
-     ktvlist)
-    (msg "4")))
+     ktvlist)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
@@ -139,7 +118,7 @@
 
 ;; get all the (current) attributes for an entity type
 (define (get-attribute-ids/types db entity-type)
-  (let ((s (select
+  (let ((s (db-select
             db (string-append
                 "select * from attribute where entity_type = '" (sqls entity-type) "'"))))
     (if (null? s) '()
@@ -162,69 +141,40 @@
     (cond
       ((null? entity-type) (msg "entity" entity-id "not found!") '())
       (else
-       (map
-        (lambda (kt)
-          (list (ktv-key kt) (get-value db entity-id kt)))
-        (get-attribute-ids/types db entity-type))))))
+       (cons
+        (list "entity_id" "int" entity-id)
+        (map
+         (lambda (kt)
+           (list (ktv-key kt) (ktv-type kt) (get-value db entity-id kt)))
+         (get-attribute-ids/types db entity-type)))))))
+
+
+(define (all-entities db type)
+  (map
+   (lambda (i)
+     (string->number (vector-ref i 0)))
+   (cdr
+    (db-select
+     db
+     (string-append "select entity_id from entity where entity_type = '" type "';")))))
 
 
 (define (validate db)
   ;; check attribute for duplicate entity-id/attribute-ids
   0)
 
-(define (open-db db-name)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; helpers
+
+(define (ktv-get ktv-list key)
   (cond
-    ((file-exists? (string->path db-name))
-     (display "open existing db")(newline)
-     (open (string->path db-name)))
-    (else
-     (display "making new db")(newline)
-     (let ((db (open (string->path db-name))))
-       (setup db)
-       db))))
+   ((null? ktv-list) #f)
+   ((equal? (ktv-key (car ktv-list)) key)
+    (ktv-value (car ktv-list)))
+   (else (ktv-get (cdr ktv-list) key))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;(define db (open-db "test.db"))
-
-;;(add-entity
-;; db "mongoose"
-;; (list
-;;  (ktv "code" "varchar" "brendon")
-;;  (ktv "gender" "varchar" "male")
-;;  (ktv "pack-id" "int" 1)
-;;  (ktv "weight" "real" 10.4)))
-
-(define (choose l) (list-ref l (random (length l))))
-
-(define (random-string len)
-  (if (zero? len)
-      "" (string-append (choose (list "g" "t" "a" "c"))
-                        (random-string (- len 1)))))
-
-(define (random-ktv)
-  (ktv (random-string 2) "varchar" (random-string 4096)))
-
-(define (random-entity size)
-  (if (zero? size)
-      '() (cons (random-ktv) (random-entity (- size 1)))))
-
-(define (insert-random-entity db)
-  (msg "building")
-  (let ((e (random-entity 40)))
-    (msg "inserting")
-    (insert-entity
-     db (random-string 2) e)))
-
-(define (build db n)
-  (when (not (zero? n))
-        (msg "adding entity" n)
-        (insert-random-entity db)
-        (build db (- n 1))))
-
-(define (test)
-  (let ((db (open-db "unit.db")))
-    (build db 99999999)
-    ))
-
-;(test)
+(define (db-all db type)
+  (map
+   (lambda (i)
+     (get-entity db i))
+   (all-entities db type)))

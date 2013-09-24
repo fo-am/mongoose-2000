@@ -27,6 +27,7 @@ public:
     ~db();
 
     list *exec(const char *sql);
+    unsigned int insert(const char *sql);
     const char *status() { return m_status; }
 
     class value_node: public list::node
