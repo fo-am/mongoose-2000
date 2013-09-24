@@ -158,7 +158,6 @@
      db
      (string-append "select entity_id from entity where entity_type = '" type "';")))))
 
-
 (define (validate db)
   ;; check attribute for duplicate entity-id/attribute-ids
   0)
@@ -177,4 +176,13 @@
   (map
    (lambda (i)
      (get-entity db i))
+   (all-entities db type)))
+
+(define (db-all-where db type clause)
+  (foldl
+   (lambda (i r)
+     (let ((e (get-entity db i)))
+       (if (equal? (ktv-get e (car clause)) (cadr clause))
+           (cons e r) r)))
+   '()
    (all-entities db type)))

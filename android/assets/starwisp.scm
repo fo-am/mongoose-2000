@@ -319,7 +319,8 @@
                 (button (make-id (string-append "manage-packs-pack-" name))
                         name 20 fillwrap
                         (lambda ()
-                          (list (start-activity "manage-individual" 2 (db-get pack "id")))))))
+                          (set-current! 'pack pack)
+                          (list (start-activity "manage-individual" 2 ""))))))
             (db-all db "pack")))))
   (activity
    "manage-packs"
@@ -370,58 +371,85 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-
+  (let ((build-individual-buttons
+         (lambda ()
+           (map
+            (lambda (individual)
+              (let ((name (ktv-get individual "name")))
+                (button (make-id (string-append "manage-individuals-ind-" name))
+                        name 20 fillwrap
+                        (lambda ()
+                          (list (start-activity "manage-individual" 2 ""))))))
+            (db-all-where
+             db "mongoose"
+             (list "pack-id" (number->string (ktv-get (get-current 'pack) "entity_id"))))
+            ))))
   (activity
    "manage-individual"
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
-    (spacer 10)
-
-    (horiz
-     (button (make-id "manage-individuals-0") "Mongoose 1" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
-     (button (make-id "manage-individuals-1") "Mongoose 2" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
-    (horiz
-     (button (make-id "manage-individuals-2") "Mongoose 3" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
-     (button (make-id "manage-individuals-3") "Mongoose 4" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
-    (horiz
-     (button (make-id "manage-individuals-4") "Mongoose 5" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 ""))))
-     (button (make-id "manage-individuals-5") "Mongoose 6" 20 fillwrap (lambda () (list (start-activity "update-individual" 2 "")))))
-
+    (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
+    (linear-layout
+     (make-id "manage-individuals-list")
+     'vertical fill (list))
     (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
-
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'linear-layout (get-id "manage-individuals-list") 'contents
+                     (build-individual-buttons))
+      (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
+                     (string-append "Pack: " (ktv-get (get-current 'pack) "name")))
+      ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
+   (lambda (activity requestcode resultcode) '())))
 
   (activity
    "new-individual"
    (vert
     (text-view (make-id "title") "New Mongoose" 40 fillwrap)
-    (spacer 10)
+    (text-view (make-id "new-individual-pack-name") "Pack:" 20 fillwrap)
     (text-view (make-id "new-individual-name-text") "Name" 20 fillwrap)
-    (edit-text (make-id "new-individual-name") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "new-individual-name") "" 30 fillwrap
+               (lambda (v) (set-current! 'individual-name v) '()))
     (text-view (make-id "new-individual-name-text") "Gender" 20 fillwrap)
-    (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap (lambda (v) '()))
+    (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap
+             (lambda (v) (set-current! 'individual-gender v) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
     (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
-    (edit-text (make-id "new-individual-litter-code") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "new-individual-litter-code") "" 30 fillwrap
+               (lambda (v) (set-current! 'individual-litter-code v) '()))
     (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
-    (edit-text (make-id "new-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
-    (spacer 10)
-    (button (make-id "new-individual-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2))))
+    (edit-text (make-id "new-individual-chip-code") "" 30 fillwrap
+               (lambda (v) (set-current! 'individual-chip-code v) '()))
+    (horiz
+     (button (make-id "new-individual-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "new-individual-done") "Done" 20 fillwrap
+             (lambda ()
+               (insert-entity
+                db "mongoose" (list
+                               (ktv "name" "varchar" (get-current 'individual-name))
+                               (ktv "gender" "varchar" (get-current 'individual-gender))
+                               (ktv "litter-code" "varchar" (get-current 'individual-litter-code))
+                               (ktv "chip-code" "varchar" (get-current 'individual-chip-code))
+                               (ktv "pack-id" "int" (ktv-get (get-current 'pack) "entity_id"))
+                               ))
+               (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'text-view (get-id "new-individual-pack-name") 'text
+                     (string-append "Pack: " (ktv-get (get-current 'pack) "name")))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
