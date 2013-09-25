@@ -196,6 +196,7 @@
     _OP_DEF(opexe_6, "db-exec",                        2,  2,       TST_NONE,                        OP_EXEC_DB          )
     _OP_DEF(opexe_6, "db-insert",                      2,  2,       TST_NONE,                        OP_INSERT_DB        )
     _OP_DEF(opexe_6, "db-status",                      1,  1,       TST_NONE,                        OP_STATUS_DB        )
+    _OP_DEF(opexe_6, "time",                           0,  0,       TST_NONE,                        OP_TIME             )
 
 
 #undef _OP_DEF

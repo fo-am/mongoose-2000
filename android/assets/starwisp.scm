@@ -18,8 +18,18 @@
 
 (define db "/sdcard/test.db")
 (db-open db)
-(setup db)
-(display (db-exec db "select * from entity"))(newline)
+
+(setup db "local")
+(setup db "sync")
+(setup db "stream")
+
+(insert-entity-if-not-exists
+ db "local" "app-settings" "null" 1
+ (list
+  (ktv "user-id" "varchar" "No name yet...")))
+
+(display (db-all db "local" "app-settings"))(newline)
+
 (display (db-status db))(newline)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -49,7 +59,6 @@
 
 (define (get-current key)
   (store-get store key))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -86,13 +95,23 @@
     (mbutton "main-experiments" "Experiments" (lambda () (list (start-activity "experiments" 2 ""))))
     (mbutton "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
     (mbutton "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 ""))))
+    (mtext "foo" "Your ID")
+    (edit-text (make-id "main-id-text") "" 30 fillwrap
+               (lambda (v)
+                 (set-current! 'user-id v)
+                 (update-entity
+                  db "local" 1 (list (ktv "user-id" "varchar" v)))))
     (mtext "foo" "Database")
     (horiz
      (mbutton "main-send" "Email" (lambda () (list)))
      (mbutton "main-sync" "Sync" (lambda () (list)))))
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (let ((user-id (ktv-get (get-entity db "local" 1) "user-id")))
+       (set-current! 'user-id user-id)
+       (list
+        (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -319,9 +338,11 @@
                 (button (make-id (string-append "manage-packs-pack-" name))
                         name 20 fillwrap
                         (lambda ()
+                          (msg "going to manage individuals")
+                          (msg pack)
                           (set-current! 'pack pack)
                           (list (start-activity "manage-individual" 2 ""))))))
-            (db-all db "pack")))))
+            (db-all db "sync" "pack")))))
   (activity
    "manage-packs"
    (vert
@@ -351,15 +372,16 @@
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 fillwrap
-               (lambda (v) (set-current! 'pack-name v) '()))
+               (lambda (v) (msg "edit callback" v) (set-current! 'pack-name v) '()))
     (spacer 10)
     (horiz
      (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
      (button (make-id "new-pack-done") "Done" 20 fillwrap
              (lambda ()
                (insert-entity
-                db "pack" (list
-                           (ktv "name" "varchar" (get-current 'pack-name))))
+                db "sync" "pack" (get-current 'user-id)
+                (list
+                 (ktv "name" "varchar" (get-current 'pack-name))))
                (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -373,6 +395,7 @@
 
   (let ((build-individual-buttons
          (lambda ()
+           (msg "building individual buttons")
            (map
             (lambda (individual)
               (let ((name (ktv-get individual "name")))
@@ -381,7 +404,7 @@
                         (lambda ()
                           (list (start-activity "manage-individual" 2 ""))))))
             (db-all-where
-             db "mongoose"
+             db "sync" "mongoose"
              (list "pack-id" (number->string (ktv-get (get-current 'pack) "entity_id"))))
             ))))
   (activity
@@ -435,13 +458,14 @@
      (button (make-id "new-individual-done") "Done" 20 fillwrap
              (lambda ()
                (insert-entity
-                db "mongoose" (list
-                               (ktv "name" "varchar" (get-current 'individual-name))
-                               (ktv "gender" "varchar" (get-current 'individual-gender))
-                               (ktv "litter-code" "varchar" (get-current 'individual-litter-code))
-                               (ktv "chip-code" "varchar" (get-current 'individual-chip-code))
-                               (ktv "pack-id" "int" (ktv-get (get-current 'pack) "entity_id"))
-                               ))
+                db "sync" "mongoose" (get-current 'user-id)
+                (list
+                 (ktv "name" "varchar" (get-current 'individual-name))
+                 (ktv "gender" "varchar" (get-current 'individual-gender))
+                 (ktv "litter-code" "varchar" (get-current 'individual-litter-code))
+                 (ktv "chip-code" "varchar" (get-current 'individual-chip-code))
+                 (ktv "pack-id" "int" (ktv-get (get-current 'pack) "entity_id"))
+                 ))
                (list (finish-activity 2)))))
     )
    (lambda (activity arg)

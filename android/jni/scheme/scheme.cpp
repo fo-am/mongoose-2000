@@ -30,6 +30,7 @@
 #include <limits.h>
 #include <float.h>
 #include <ctype.h>
+#include <sys/time.h>
 
 #include "core/db_container.h"
 db_container the_db_container;
@@ -4312,6 +4313,15 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                }
           }
           s_return(sc,sc->F);
+     }
+     case OP_TIME: {
+          	timeval t;
+            // stop valgrind complaining
+            t.tv_sec=0;
+            t.tv_usec=0;
+            gettimeofday(&t,NULL);
+            s_return(sc,cons(sc,mk_integer(sc,t.tv_sec),
+                             cons(sc,mk_integer(sc,t.tv_usec),sc->NIL)));
      }
 ////////////////////
      default:

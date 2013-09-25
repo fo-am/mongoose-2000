@@ -81,6 +81,8 @@ int main(int argc, char *argv[])
     appEval("(display \"loaded eavdb\")(newline)");
     appEval((char*)LoadFile("../assets/starwisp.scm").c_str());
     appEval("(display \"loaded starwisp\")(newline)");
+    appEval((char*)LoadFile("../assets/unit-tests.scm").c_str());
+    appEval("(display \"loaded unit tests\")(newline)");
 
 	return 0;
 }

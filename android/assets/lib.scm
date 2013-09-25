@@ -13,6 +13,8 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; debugging and unit tests
 
 (define (msg . args)
   (for-each
@@ -21,6 +23,19 @@
   (newline))
 
 (define (dbg i) (msg i) i)
+
+(define (assert msg v)
+  (display (string-append "testing " msg))(newline)
+  (when (not v)
+        (error "unit " msg)))
+
+(define (asserteq msg a b)
+  (display (string-append "testing " msg))(newline)
+  (when (not (equal? a b))
+        (error "unit " msg a b)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; list stuff
 
 (define (filter fn l)
   (foldl
@@ -35,17 +50,50 @@
       (insert (car lst) fn
               (sort (cdr lst) fn))))
 
-
 (define (find n l)
   (cond
     ((null? l) #f)
     ((equal? n (car (car l))) (car l))
     (else (find n (cdr l)))))
 
+(define (build-list fn n)
+  (define (_ fn n l)
+    (cond ((zero? n) l)
+          (else
+           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
+  (_ fn n '()))
 
-(define (error . args)
-  (display (apply string-append args))(newline))
+(define (foldl op initial seq)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op (car rest) result) (cdr rest))))
+  (iter initial seq))
 
+(define (insert-to i p l)
+  (cond
+   ((null? l) (list i))
+   ((zero? p) (cons i l))
+   (else
+    (cons (car l) (insert-to i (- p 1) (cdr l))))))
+
+;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
+(define (list-replace l i v)
+  (cond
+    ((null? l) l)
+    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
+    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
+
+(define (insert elt fn sorted-lst)
+  (if (null? sorted-lst)
+      (list elt)
+      (if (fn elt (car sorted-lst))
+          (cons elt sorted-lst)
+          (cons (car sorted-lst)
+                (insert elt fn (cdr sorted-lst))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; time
 
 ;; just for graph so don't have to be accurate!!!
 (define (date->day d)
@@ -76,66 +124,7 @@
    "/"
    (number->string (list-ref d 2))))
 
-
-
-
-(define (insert elt fn sorted-lst)
-  (if (null? sorted-lst)
-      (list elt)
-      (if (fn elt (car sorted-lst))
-          (cons elt sorted-lst)
-          (cons (car sorted-lst)
-                (insert elt fn (cdr sorted-lst))))))
-
-;; utils funcs for using lists as sets
-
-(define (set-remove a l)
-  (if (null? l)
-      '()
-      (if (eq? (car l) a)
-          (set-remove a (cdr l))
-          (cons (car l) (set-remove a (cdr l))))))
-
-(define (set-add a l)
-  (if (not (memq a l))
-      (cons a l)
-      l))
-
-(define (set-contains a l)
-  (if (not (memq a l))
-      #f
-      #t))
-
-;; missing list stuff
-
-(define (build-list fn n)
-  (define (_ fn n l)
-    (cond ((zero? n) l)
-          (else
-           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
-  (_ fn n '()))
-
-(define (foldl op initial seq)
-  (define (iter result rest)
-    (if (null? rest)
-        result
-        (iter (op (car rest) result) (cdr rest))))
-  (iter initial seq))
-
-(define (insert-to i p l)
-  (cond
-   ((null? l) (list i))
-   ((zero? p) (cons i l))
-   (else
-    (cons (car l) (insert-to i (- p 1) (cdr l))))))
-
-;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
-(define (list-replace l i v)
-  (cond
-    ((null? l) l)
-    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
-    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; random
 
 (define random-maker
@@ -233,7 +222,8 @@
     (if (> (vdot n v) 0)
         v
         (loop (hsrndvec)))))
-                                        ;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; convert scheme values into equivilent json strings
 
 (define (scheme->json v)
@@ -278,6 +268,7 @@
   (string-append "{" (_ l "") "\n" "}"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; android ui
 
 (define (layout width height weight gravity) (list "layout" width height weight gravity))
 (define (layout-width l) (list-ref l 1))

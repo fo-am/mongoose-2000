@@ -73,9 +73,9 @@ extern "C" {
 # define USE_STRING_PORTS 1
 #endif
 
-#ifndef USE_TRACING
+//#ifndef USE_TRACING
 # define USE_TRACING 1
-#endif
+//#endif
 
 #ifndef USE_PLIST
 # define USE_PLIST 0
@@ -110,9 +110,9 @@ extern "C" {
 # define USE_INTERFACE 0
 #endif
 
-#ifndef SHOW_ERROR_LINE   /* Show error line in file */
+//#ifndef SHOW_ERROR_LINE   /* Show error line in file */
 # define SHOW_ERROR_LINE 1
-#endif
+//#endif
 
 typedef struct scheme scheme;
 typedef struct cell *pointer;
