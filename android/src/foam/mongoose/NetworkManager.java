@@ -13,6 +13,8 @@ import android.widget.Toast;
 import android.net.wifi.WifiManager;
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+import android.os.Handler;
+import android.os.Message;
 
 import android.net.wifi.WifiConfiguration;
 
@@ -29,15 +31,26 @@ import android.os.SystemClock;
 public class NetworkManager {
 
     public enum State {
-        SCANNING, CONNECTED // what else?
+        IDLE, SCANNING, CONNECTED // what else?
     }
 
     WifiManager wifi;
 	BroadcastReceiver receiver;
-    State state;
+    public State state;
     String SSID;
 
-    NetworkManager(String ssid, Context c) {
+    String m_CallbackName;
+    StarwispActivity m_Context;
+    StarwispBuilder m_Builder;
+
+    NetworkManager() {
+        state = State.IDLE;
+    }
+
+    void Start(String ssid, StarwispActivity c, String name, StarwispBuilder b) {
+        m_CallbackName=name;
+        m_Context=c;
+        m_Builder=b;
 		wifi = (WifiManager) c.getSystemService(Context.WIFI_SERVICE);
         state = State.SCANNING;
         SSID = ssid;
@@ -45,6 +58,8 @@ public class NetworkManager {
 		receiver = new WiFiScanReceiver(SSID, this);
 		c.registerReceiver(receiver, new IntentFilter(
                                WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+
+        m_Builder.DialogCallback(m_Context,m_CallbackName,"\"Scanning\"");
     }
 
     void Connect() {
@@ -63,6 +78,7 @@ public class NetworkManager {
                 wifi.enableNetwork(i.networkId, true);
                 wifi.reconnect();
                 Log.i("starwisp", "Connected");
+                m_Builder.DialogCallback(m_Context,m_CallbackName,"\"Connected\"");
                 break;
             }
         }
@@ -80,29 +96,31 @@ public class NetworkManager {
             conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
             wifi.addNetwork(conf);
         }
-        else
-        {
-            StartRequestThread();
-        }
 
     }
 
-    public void StartRequestThread() {
+    public void StartRequestThread(final String url, final String callbackname) {
         Runnable runnable = new Runnable() {
 	        public void run() {
-                Request();
+                Request(url, callbackname);
 	        }
         };
         Thread mythread = new Thread(runnable);
         mythread.start();
     }
 
-    private void Request() {
-        try {
-            SystemClock.sleep(7000);
+    private class ReqMsg {
+        ReqMsg(InputStream is, String c) {
+            m_Stream=is;
+            m_CallbackName=c;
+        }
+        public InputStream m_Stream;
+        public String m_CallbackName;
+    }
 
+    private void Request(String u, String CallbackName) {
+        try {
             Log.i("starwisp", "Pinging URL");
-            String u="http://192.168.2.1:8888/mongoose?function_name=ping";
             Log.i("starwisp",u);
             URL url = new URL(u);
             HttpURLConnection con = (HttpURLConnection) url
@@ -116,22 +134,38 @@ public class NetworkManager {
             con.connect();
 
             Log.i("starwisp", "Connection open");
-            readStream(con.getInputStream());
+            //readStream(con.getInputStream());
             Log.i("starwisp", "read stream, ending");
+            m_RequestHandler.sendMessage(
+                Message.obtain(m_RequestHandler, 0,
+                               new ReqMsg(con.getInputStream(),CallbackName)));
+
         } catch (Exception e) {
             Log.i("starwisp",e.toString());
             e.printStackTrace();
         }
     }
 
-    private void readStream(InputStream in) {
+    private Handler m_RequestHandler = new Handler(){
+        @Override
+        public void handleMessage(Message msg){
+            ReadStream((ReqMsg)msg.obj);
+        }
+    };
+
+
+    private void ReadStream(ReqMsg m) {
+        InputStream in = m.m_Stream;
         BufferedReader reader = null;
         try {
             reader = new BufferedReader(new InputStreamReader(in));
             String line = "";
+            String all = "";
             while ((line = reader.readLine()) != null) {
+                all+=line+"\n";
                 Log.i("starwisp",line);
             }
+            m_Builder.DialogCallback(m_Context,m.m_CallbackName,all);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -168,6 +202,7 @@ public class NetworkManager {
 
                 for (ScanResult result : results) {
                     if (result.SSID.equals(SSID)) {
+                        m_Builder.DialogCallback(m_Context,m_CallbackName,"\"In range\"");
                         nm.Connect();
                         return;
                     }

@@ -563,8 +563,22 @@
       (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
       (mtext "sync-dirty" "...")
       (horiz
-       (mtext "sync-range" "Out of range")
-       (mbutton "sync-sync" "Sync" (lambda () (list))))
+       (mbutton "sync-connect" "Connect"
+                (lambda ()
+                  (list
+                   (network-connect
+                    "network"
+                    "mongoose-web"
+                    (lambda (state)
+                      (msg state)
+                      (list
+                       (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
+       (mbutton "sync-sync" "Sync"
+                (lambda ()
+                  (list
+                   (http-request "myreq" "http://192.168.2.1:8888/mongoose?function_name=ping"
+                                 (lambda (v)
+                                   (msg "got" v)))))))
       (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
       (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
 

@@ -374,6 +374,9 @@
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
+(define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
+(define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
+
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
 
 (define (time-picker-dialog name fn)
@@ -521,7 +524,9 @@
                   ;; todo - something a bit more fancy
                   (equal? (list-ref event 0) "date-picker-dialog")
                   (equal? (list-ref event 0) "alert-dialog")
-                  (equal? (list-ref event 0) "list-files"))
+                  (equal? (list-ref event 0) "list-files")
+                  (equal? (list-ref event 0) "http-request")
+                  (equal? (list-ref event 0) "network-connect"))
                  (add-new-dialog! event)))
          events)))
 

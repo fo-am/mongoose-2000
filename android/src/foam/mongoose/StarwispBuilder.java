@@ -83,9 +83,11 @@ import org.json.JSONArray;
 public class StarwispBuilder
 {
     Scheme m_Scheme;
+    NetworkManager m_NetworkManager;
 
     public StarwispBuilder(Scheme scm) {
         m_Scheme = scm;
+        m_NetworkManager = new NetworkManager();
     }
 
     public int BuildOrientation(String p) {
@@ -128,6 +130,17 @@ public class StarwispBuilder
             return null;
         }
     }
+
+    public void DialogCallback(StarwispActivity ctx, String name, String args)
+    {
+        try {
+            String ret=m_Scheme.eval("(dialog-callback \""+name+"\" '("+args+"))");
+            UpdateList(ctx, new JSONArray(ret));
+        } catch (JSONException e) {
+            Log.e("starwisp", "Error parsing data " + e.toString());
+        }
+    }
+
 
     private void Callback(StarwispActivity ctx, int wid)
     {
@@ -461,16 +474,31 @@ public class StarwispBuilder
                         }
                         code+=")";
 
-                        try {
-                            String ret=m_Scheme.eval("(dialog-callback \""+ name+"\" '("+code+"))");
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback((StarwispActivity)ctx, name, code);
                     }
                 }
                 return;
             }
+
+            if (token.equals("network-connect")) {
+                if (m_NetworkManager.state==NetworkManager.State.IDLE) {
+                    final String name = arr.getString(3);
+                    final String ssid = arr.getString(5);
+                    m_NetworkManager.Start(ssid,(StarwispActivity)ctx,name,this);
+                }
+                return;
+            }
+
+            if (token.equals("http-request")) {
+                if (m_NetworkManager.state==NetworkManager.State.CONNECTED) {
+                    Log.i("starwisp","attempting http request");
+                    final String name = arr.getString(3);
+                    final String url = arr.getString(5);
+                    m_NetworkManager.StartRequestThread(url,name);
+                }
+                return;
+            }
+
 
             if (token.equals("send-mail")) {
                 final String to[] = new String[1];
@@ -518,13 +546,7 @@ public class StarwispBuilder
                     ctx,
                     new DatePickerDialog.OnDateSetListener() {
                         public void onDateSet(DatePicker view, int year, int month, int day) {
-                            try {
-                                String ret=m_Scheme.eval("(dialog-callback \""+
-                                                         name+"\" '("+day+" "+month+" "+year+"))");
-                                UpdateList(ctx, new JSONArray(ret));
-                            } catch (JSONException e) {
-                                Log.e("starwisp", "Error parsing data " + e.toString());
-                            }
+                            DialogCallback((StarwispActivity)ctx, name, day+" "+month+" "+year);
                         }
                     }, year, month, day);
                 d.show();
@@ -541,13 +563,7 @@ public class StarwispBuilder
                     public void onClick(DialogInterface dialog, int which) {
                         int result = 0;
                         if (which==DialogInterface.BUTTON_POSITIVE) result=1;
-                        String ret=m_Scheme.eval("(dialog-callback \""+
-                                                 name+"\" '("+result+"))");
-                        try {
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback((StarwispActivity)ctx, name, ""+result);
                     }
                 };
 

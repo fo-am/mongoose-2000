@@ -77,8 +77,6 @@ public class starwisp extends StarwispActivity
         ActivityManager.Register("sync",SyncActivity.class);
     };
 
-    NetworkManager nm;
-
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
@@ -89,8 +87,6 @@ public class starwisp extends StarwispActivity
         m_AppDir = "/sdcard/"+dirname;
         File appdir = new File(m_AppDir);
         appdir.mkdirs();
-
-        nm = new NetworkManager("mongoose-web",this);
 
         // build static things
         m_Scheme = new Scheme(this);
