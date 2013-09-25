@@ -40,8 +40,12 @@
 ;; stringify based on type
 (define (stringify-value ktv)
   (cond
-    ((equal? (ktv-type ktv) "varchar") (string-append "'" (ktv-value ktv) "'"))
-    (else (number->string (ktv-value ktv)))))
+   ((null? (ktv-value ktv)) "NULL")
+   ((equal? (ktv-type ktv) "varchar") (string-append "'" (ktv-value ktv) "'"))
+   (else
+    (if (not (string? (ktv-value ktv)))
+        (number->string (ktv-value ktv))
+        (ktv-value ktv)))))
 
 ;; helper to return first instance from a select
 (define (select-first db str)
@@ -174,6 +178,13 @@
          (get-attribute-ids/types db table entity-type)))))))
 
 
+(define (get-dirty-stats db table)
+  (list
+   (select-first
+    db (string-append "select count(entity_id) from " table "_entity where dirty=1;"))
+   (select-first
+    db (string-append "select count(entity_id) from " table "_entity;"))))
+
 (define (all-entities db table type)
   (let ((s (db-select
             db (string-append "select entity_id from " table "_entity where entity_type = '"
@@ -246,7 +257,39 @@
         (insert-entity db table entity-type user ktvlist)
         #f)))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; syncing
+
+(define (stringify-list l)
+  (foldl
+   (lambda (i r)
+     (string-append r " " i))
+   "" l))
+
+(define (stringify-ktvlist ktvlist)
+  (foldl
+   (lambda (i r)
+     (string-append r " " (ktv-key i) ":" (stringify-value i)))
+   ""
+   ktvlist))
+
+(define (build-sync-debug db table)
+  (foldl
+   (lambda (i r)
+     (string-append
+      r "\n" (vector-ref i 0) " " (vector-ref i 1) " "
+      (stringify-ktvlist (get-entity db table (string->number (vector-ref i 0))))))
+   ""
+   (cdr (db-select
+         db (string-append "select * from " table "_entity where dirty=1;")))))
 
 
-;; todo
-;; update (with partial values)
+(define (build-sync-json db table)
+  (dbg (scheme->json
+   (map
+    (lambda (i)
+      (dbg (list
+       (vector->list i)
+       (get-entity db table (string->number (vector-ref i 0))))))
+    (dbg (cdr (db-select
+          db (string-append "select * from " table "_entity where dirty=1;"))))))))

@@ -16,6 +16,16 @@ import android.content.IntentFilter;
 
 import android.net.wifi.WifiConfiguration;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.InputStream;
+
+import java.net.URL;
+import java.net.HttpURLConnection;
+import android.os.SystemClock;
+
 public class NetworkManager {
 
     public enum State {
@@ -52,6 +62,7 @@ public class NetworkManager {
                 wifi.disconnect();
                 wifi.enableNetwork(i.networkId, true);
                 wifi.reconnect();
+                Log.i("starwisp", "Connected");
                 break;
             }
         }
@@ -68,6 +79,69 @@ public class NetworkManager {
 
             conf.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE);
             wifi.addNetwork(conf);
+        }
+        else
+        {
+            StartRequestThread();
+        }
+
+    }
+
+    public void StartRequestThread() {
+        Runnable runnable = new Runnable() {
+	        public void run() {
+                Request();
+	        }
+        };
+        Thread mythread = new Thread(runnable);
+        mythread.start();
+    }
+
+    private void Request() {
+        try {
+            SystemClock.sleep(7000);
+
+            Log.i("starwisp", "Pinging URL");
+            String u="http://192.168.2.1:8888/mongoose?function_name=ping";
+            Log.i("starwisp",u);
+            URL url = new URL(u);
+            HttpURLConnection con = (HttpURLConnection) url
+                .openConnection();
+
+            con.setReadTimeout(10000 /* milliseconds */);
+            con.setConnectTimeout(15000 /* milliseconds */);
+            con.setRequestMethod("GET");
+            con.setDoInput(true);
+            // Starts the query
+            con.connect();
+
+            Log.i("starwisp", "Connection open");
+            readStream(con.getInputStream());
+            Log.i("starwisp", "read stream, ending");
+        } catch (Exception e) {
+            Log.i("starwisp",e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    private void readStream(InputStream in) {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(in));
+            String line = "";
+            while ((line = reader.readLine()) != null) {
+                Log.i("starwisp",line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -99,11 +173,10 @@ public class NetworkManager {
                     }
                 }
 
-                /*   if (nm.state==State.SCANNING) {
+                if (nm.state==State.SCANNING) {
                     Log.i("starwisp", "REScanning "+nm.state);
-
                     nm.wifi.startScan();
-                    }*/
+                }
             }
         }
     }

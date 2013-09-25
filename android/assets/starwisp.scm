@@ -104,7 +104,7 @@
     (mtext "foo" "Database")
     (horiz
      (mbutton "main-send" "Email" (lambda () (list)))
-     (mbutton "main-sync" "Sync" (lambda () (list)))))
+     (mbutton "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 ""))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -547,6 +547,38 @@
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
+
+  (let ((build-dirty
+         (lambda ()
+           (let ((sync (get-dirty-stats db "sync"))
+                 (stream (get-dirty-stats db "stream")))
+             (msg sync stream)
+             (dbg (string-append
+                   "Pack data: " (car sync) "/" (cadr sync) " "
+                   "Focal data: " (car stream) "/" (cadr stream)))))))
+    (activity
+     "sync"
+     (vert
+      (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
+      (mtext "sync-dirty" "...")
+      (horiz
+       (mtext "sync-range" "Out of range")
+       (mbutton "sync-sync" "Sync" (lambda () (list))))
+      (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
+      (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
+
+     (lambda (activity arg)
+       (activity-layout activity))
+     (lambda (activity arg)
+       (list
+        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+        (update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))))
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity) '())
+     (lambda (activity requestcode resultcode) '())))
 
 
 
