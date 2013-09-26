@@ -1,0 +1,21 @@
+Raspberry Pi/Android syncing
+
+Server interface:
+
+/sync:
+
+Called once per entity, taking a full entity description and either:
+
+- Inserts a new entry if the entity doesn't exist and dirty is true
+- Updates the database entry if it's out of date and dirty is true
+- Returns a more recent copy if it's older than the stored one and it's not dirty
+- Returns an error message
+
+/mongoose?fn=sync&table=sync&entity-type=mongoose&unique-id=0&dirty=0&version=0&next:varchar=%22foodle%22&blah:int=20
+
+/entity-versions
+
+Returns a list of all unique ids and version numbers. Used to check for new
+entities and ??? (provide list of newer updated ones to request?)
+
+/mongoose?fn=all-entities&table=sync

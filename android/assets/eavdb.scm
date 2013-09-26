@@ -13,19 +13,24 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-;; sql (in)sanity
-
 ;; android/racket stuff
-(define exec/ignore db-exec)
 (define db-select db-exec)
+
+;; racket
+;(define db-exec exec/ignore)
+;(define db-select select)
+;(define db-insert insert)
+;(define (db-status) "")
+;(define (time) (list 0 0))
+
 
 ;; create eav tables (add types as required)
 (define (setup db table)
-  (exec/ignore db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer)"))
-  (exec/ignore db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))"))
-  (exec/ignore db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer)"))
-  (exec/ignore db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer)"))
-  (exec/ignore db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer)")))
+  (db-exec db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))"))
+  (db-exec db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer)"))
+  (db-exec db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer)"))
+  (db-exec db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer)")))
 
 (define (sqls str)
   ;; todo sanitise str
@@ -103,10 +108,13 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
+  (insert-entity-with-unique db table entity-type (get-unique user) ktvlist))
+
+(define (insert-entity-with-unique db table entity-type unique ktvlist)
   (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (null, '" (sqls entity-type) "', '" (get-unique user) "', 1, 0)"))))
+                 "insert into " table "_entity values (null, '" (sqls entity-type) "', '" unique-id "', 1, 0)"))))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
@@ -118,6 +126,7 @@
        (msg (ktv-key ktv))
        (insert-value db table id ktv))
      ktvlist)))
+
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
 (define (update-value db table entity-id ktv)
