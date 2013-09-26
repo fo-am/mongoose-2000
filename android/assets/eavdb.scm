@@ -129,7 +129,7 @@
                  "insert into " table "_entity values (null, '"
                  (sqls entity-type) "', '"
                  unique-id "', "
-                 dirty ", "
+                 (number->string dirty) ", "
                  (number->string version) ")"))))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
