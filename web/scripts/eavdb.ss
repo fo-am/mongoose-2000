@@ -262,20 +262,20 @@
 ;; update an entire entity (version incl), via a (possibly partial) list of key/value pairs
 (define (update-to-version db table entity-id version ktvlist)
   (msg table entity-id ktvlist)
-  (update-entity db table entity-id ktvlist)
+  (_update-entity db table entity-id ktvlist)
   (update-entity-version db table entity-id version))
 
+;; auto update version
+(define (update-entity db table entity-id ktvlist)
+  (update-entity-changed db table entity-id)
+  (_update-entity db table entity-id ktvlist))
 
 ;; update an entity, via a (possibly partial) list of key/value pairs
-(define (update-entity db table entity-id ktvlist)
-  (msg table entity-id ktvlist)
+(define (_update-entity db table entity-id ktvlist)
   (let* ((entity-type (get-entity-type db table entity-id)))
-    (msg "1")
     (cond
       ((null? entity-type) (msg "entity" entity-id "not found!") '())
       (else
-;       (update-entity-changed db table entity-id)
-       (msg "2")
        (for-each
         (lambda (ktv)
           (msg ktv)

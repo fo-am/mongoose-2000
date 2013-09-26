@@ -110,7 +110,7 @@
 (define (insert-entity db table entity-type user ktvlist)
   (insert-entity-with-unique db table entity-type (get-unique user) ktvlist))
 
-(define (insert-entity-with-unique db table entity-type unique ktvlist)
+(define (insert-entity-with-unique db table entity-type unique-id ktvlist)
   (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
@@ -138,15 +138,22 @@
                      " and attribute_id = '" (sqls (ktv-key ktv)) "'"))
   (msg (db-status db)))
 
-(define (update-entity-modified db table entity-id)
+(define (update-entity-changed db table entity-id)
   (let ((version (car (db-exec db (string-append
                                    "select version from "
                                    table "_entity where entity_id = " (number->string entity-id) ";")))))
     (db-exec
      db (string-append "update " table "_entity "
-                       "set dirty='" (number->string v) "' "
-                       "set version='" (number->string (+ 1 (string->number version))) "'"
+                       "set dirty='1', "
+                       "version='" (number->string (+ 1 (string->number version))) "'"
                        " where entity_id = " (number->string entity-id) ";"))))
+
+(define (update-entity-version db table entity-id version)
+  (db-exec
+   db (string-append "update " table "_entity "
+                     "set dirty='1', "
+                     "version='" (number->string version) "'"
+                     " where entity_id = " (number->string entity-id) ";")))
 
 (define (update-entity-clean db table entity-id)
   (db-exec
@@ -247,15 +254,26 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data
 
-;; update an entire entity, via a (possibly partial) list of key/value pairs
+;; update an entire entity (version incl), via a (possibly partial) list of key/value pairs
+(define (update-to-version db table entity-id version ktvlist)
+  (msg table entity-id ktvlist)
+  (_update-entity db table entity-id ktvlist)
+  (update-entity-version db table entity-id version))
+
+;; auto update version
 (define (update-entity db table entity-id ktvlist)
+  (update-entity-changed db table entity-id)
+  (_update-entity db table entity-id ktvlist))
+
+;; update an entity, via a (possibly partial) list of key/value pairs
+(define (_update-entity db table entity-id ktvlist)
   (let* ((entity-type (get-entity-type db table entity-id)))
     (cond
       ((null? entity-type) (msg "entity" entity-id "not found!") '())
       (else
-       (update-entity-changed db table entity-id)
        (for-each
         (lambda (ktv)
+          (msg ktv)
           (update-value db table entity-id ktv))
         ktvlist)))))
 
@@ -303,12 +321,11 @@
          db (string-append "select * from " table "_entity where dirty=1;")))))
 
 
-(define (build-sync-json db table)
-  (dbg (scheme->json
-   (map
-    (lambda (i)
-      (dbg (list
-       (vector->list i)
-       (get-entity db table (string->number (vector-ref i 0))))))
-    (dbg (cdr (db-select
-          db (string-append "select * from " table "_entity where dirty=1;"))))))))
+(define (build-sync db table)
+  (map
+   (lambda (i)
+     (list
+      (vector->list i)
+      (get-entity db table (string->number (vector-ref i 0)))))
+   (cdr (db-select
+         db (string-append "select * from " table "_entity where dirty=1;")))))
