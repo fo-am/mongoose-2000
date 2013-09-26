@@ -103,7 +103,7 @@
     (list
      (select-first
       db (string-append "select entity_type, unique_id, version from "
-                        table "_entities where entity_id = " entity-id))
+                        table "_entities where entity_id = " (number->string entity-id)))
      (get-entity-plain db table entity-id))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
