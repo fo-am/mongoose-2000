@@ -24,9 +24,10 @@
          "scripts/request.ss"
          "scripts/logger.ss"
          "scripts/json.ss"
-         "scripts/eavdb.ss")
-
-(require (planet jaymccarthy/sqlite:5:1/sqlite))
+         "scripts/sync.ss"
+         "scripts/utils.ss"
+         "scripts/eavdb.ss"
+         "scripts/txt.ss")
 
 ; a utility to change the process owner,
 ; assuming mzscheme is called by root.
@@ -34,45 +35,52 @@
 ;;(define setuid (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 
 (define db-name "mongoose.db")
-(define db #f)
-
-
+(define db (open-db db-name))
 (open-log "log.txt")
-
-
-
-(define (pluto-response txt)
-  (response/full
-   200                ; code
-   #"Okay"            ; message
-   (current-seconds)  ; seconds
-   #"text/javascript" ; mime type
-   '()                ; headers
-   (list (string->bytes/utf-8 txt)))) ; body
 
 (define registered-requests
   (list
+
    (register
     (req 'ping '())
     (lambda ()
-      (pluto-response (scheme->json '("hello")))))))
+      (pluto-response (scheme->txt '("hello")))))
 
+   ;; http://localhost:8888/mongoose?fn=sync&table=sync&entity-type=mongoose&unique-id=dave1234&dirty=1&version=0&next:varchar=%22foo%22&blah:int=20
+
+   (register
+    (req 'sync '(table entity-type unique-id dirty version))
+    (lambda (table entity-type unique-id dirty version . data)
+      (pluto-response
+       (scheme->txt
+        (check-for-sync
+         db
+         table
+         entity-type
+         unique-id
+         (string->number dirty)
+         (string->number version) data)))))
+
+   (register
+    (req 'entity-versions '(table))
+    (lambda (table)
+      (pluto-response
+       (scheme->txt
+        (entity-versions db table)))))))
 
 (define (start request)
   (let ((values (url-query (request-uri request))))
-    (display "a request has arrived!")(newline)
-    (log (format "~a" values))
-    (if (not (null? values)) ; do we have some parameters?
-        (let ((name (assq 'function_name values)))
-          (when name ; is this a well formed request?
+    (if (not (null? values))   ; do we have some parameters?
+        (let ((name (assq 'fn values)))
+          (when name           ; is this a well formed request?
                 (request-dispatch
                  registered-requests
                  (req (string->symbol (cdr name))
                       (filter
                        (lambda (v)
-                         (not (eq? (car v) 'function_name)))
+                         (not (eq? (car v) 'fn)))
                        values)))))
-        "hello")))
+        (pluto-response "malformed thingy"))))
 
 (printf "server is running...~n")
 

@@ -42,6 +42,7 @@ public class Scheme
         Log.i("starwisp","started, now running init.scm...");
         eval(readRawTextFile(ctx, "init.scm"));
         eval(readRawTextFile(ctx, "lib.scm"));
+        eval(readRawTextFile(ctx, "eavdb.scm"));
     }
 
     public String eval(String code) {

@@ -4,9 +4,12 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := starwisp-core
 
-LOCAL_CFLAGS := -DANDROID_NDK -O3 --fast-math -Wno-write-strings
+LOCAL_CFLAGS := -DANDROID_NDK -O3 -Wno-write-strings
 
 LOCAL_SRC_FILES := \
+	core/list.cpp \
+	core/db.cpp \
+	sqlite/sqlite3.c \
 	scheme/scheme.cpp \
     app-android.c
 

@@ -33,7 +33,11 @@ import java.io.InputStreamReader;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Button;
+import android.widget.ToggleButton;
 import android.widget.LinearLayout;
+import android.widget.FrameLayout;
+import android.widget.ScrollView;
+import android.widget.HorizontalScrollView;
 import android.widget.SeekBar;
 import android.widget.Spinner;
 import android.widget.ArrayAdapter;
@@ -79,9 +83,11 @@ import org.json.JSONArray;
 public class StarwispBuilder
 {
     Scheme m_Scheme;
+    NetworkManager m_NetworkManager;
 
     public StarwispBuilder(Scheme scm) {
         m_Scheme = scm;
+        m_NetworkManager = new NetworkManager();
     }
 
     public int BuildOrientation(String p) {
@@ -117,12 +123,24 @@ public class StarwispBuilder
                                               BuildLayoutParam(arr.getString(2)),
                                               (float)arr.getDouble(3));
             lp.gravity=BuildLayoutGravity(arr.getString(4));
+            lp.setMargins(5,5,5,5);
             return lp;
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
             return null;
         }
     }
+
+    public void DialogCallback(StarwispActivity ctx, String name, String args)
+    {
+        try {
+            String ret=m_Scheme.eval("(dialog-callback \""+name+"\" '("+args+"))");
+            UpdateList(ctx, new JSONArray(ret));
+        } catch (JSONException e) {
+            Log.e("starwisp", "Error parsing data " + e.toString());
+        }
+    }
+
 
     private void Callback(StarwispActivity ctx, int wid)
     {
@@ -157,6 +175,7 @@ public class StarwispBuilder
                 v.setId(arr.getInt(1));
                 v.setOrientation(BuildOrientation(arr.getString(2)));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
+                v.setPadding(5,5,5,5);
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(4);
                 for (int i=0; i<children.length(); i++) {
@@ -164,6 +183,31 @@ public class StarwispBuilder
                 }
                 return;
             }
+
+            if (type.equals("frame-layout")) {
+                FrameLayout v = new FrameLayout(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
+            if (type.equals("scroll-view")) {
+                HorizontalScrollView v = new HorizontalScrollView(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
 
             if (type.equals("space")) {
                 // Space v = new Space(ctx); (class not found runtime error??)
@@ -265,6 +309,25 @@ public class StarwispBuilder
                 });
                 parent.addView(v);
             }
+
+            if (type.equals("toggle-button")) {
+                ToggleButton v = new ToggleButton(ctx);
+                v.setId(arr.getInt(1));
+                v.setText(arr.getString(2));
+                v.setTextSize(arr.getInt(3));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+                v.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                final String fn = arr.getString(5);
+                v.setOnClickListener(new View.OnClickListener() {
+                    public void onClick(View v) {
+                        String arg="#f";
+                        if (((ToggleButton) v).isChecked()) arg="#t";
+                        CallbackArgs(ctx,v.getId(),arg);
+                    }
+                });
+                parent.addView(v);
+            }
+
 
             if (type.equals("seek-bar")) {
                 SeekBar v = new SeekBar(ctx);
@@ -411,16 +474,31 @@ public class StarwispBuilder
                         }
                         code+=")";
 
-                        try {
-                            String ret=m_Scheme.eval("(dialog-callback \""+ name+"\" '("+code+"))");
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback((StarwispActivity)ctx, name, code);
                     }
                 }
                 return;
             }
+
+            if (token.equals("network-connect")) {
+                if (m_NetworkManager.state==NetworkManager.State.IDLE) {
+                    final String name = arr.getString(3);
+                    final String ssid = arr.getString(5);
+                    m_NetworkManager.Start(ssid,(StarwispActivity)ctx,name,this);
+                }
+                return;
+            }
+
+            if (token.equals("http-request")) {
+                if (m_NetworkManager.state==NetworkManager.State.CONNECTED) {
+                    Log.i("starwisp","attempting http request");
+                    final String name = arr.getString(3);
+                    final String url = arr.getString(5);
+                    m_NetworkManager.StartRequestThread(url,name);
+                }
+                return;
+            }
+
 
             if (token.equals("send-mail")) {
                 final String to[] = new String[1];
@@ -468,13 +546,7 @@ public class StarwispBuilder
                     ctx,
                     new DatePickerDialog.OnDateSetListener() {
                         public void onDateSet(DatePicker view, int year, int month, int day) {
-                            try {
-                                String ret=m_Scheme.eval("(dialog-callback \""+
-                                                         name+"\" '("+day+" "+month+" "+year+"))");
-                                UpdateList(ctx, new JSONArray(ret));
-                            } catch (JSONException e) {
-                                Log.e("starwisp", "Error parsing data " + e.toString());
-                            }
+                            DialogCallback((StarwispActivity)ctx, name, day+" "+month+" "+year);
                         }
                     }, year, month, day);
                 d.show();
@@ -491,13 +563,7 @@ public class StarwispBuilder
                     public void onClick(DialogInterface dialog, int which) {
                         int result = 0;
                         if (which==DialogInterface.BUTTON_POSITIVE) result=1;
-                        String ret=m_Scheme.eval("(dialog-callback \""+
-                                                 name+"\" '("+result+"))");
-                        try {
-                            UpdateList(ctx, new JSONArray(ret));
-                        } catch (JSONException e) {
-                            Log.e("starwisp", "Error parsing data " + e.toString());
-                        }
+                        DialogCallback((StarwispActivity)ctx, name, ""+result);
                     }
                 };
 
@@ -604,6 +670,31 @@ public class StarwispBuilder
                 }
                 return;
             }
+
+            if (type.equals("toggle-button")) {
+                ToggleButton v = (ToggleButton)vv;
+                if (token.equals("text")) {
+                    v.setText(arr.getString(3));
+                    return;
+                }
+
+                if (token.equals("checked")) {
+                    if (arr.getInt(3)==0) v.setChecked(false);
+                    else v.setChecked(true);
+                    return;
+                }
+
+                if (token.equals("listener")) {
+                    final String fn = arr.getString(3);
+                    v.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            m_Scheme.eval("("+fn+")");
+                        }
+                    });
+                }
+                return;
+            }
+
 
             if (type.equals("canvas")) {
                 StarwispCanvas v = (StarwispCanvas)vv;

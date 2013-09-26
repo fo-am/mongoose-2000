@@ -30,6 +30,10 @@
 #include <limits.h>
 #include <float.h>
 #include <ctype.h>
+#include <sys/time.h>
+
+#include "core/db_container.h"
+db_container the_db_container;
 
 #ifdef _EE
 #define USE_STRLWR 0
@@ -4186,6 +4190,34 @@ static pointer opexe_5(scheme *sc, enum scheme_opcodes op) {
      return sc->T;
 }
 
+// fudge to behave like planet jaymccarthy/sqlite:5:1/sqlite
+static pointer db_data_to_scm(scheme *sc, list *data)
+{
+     if (data!=NULL)
+     {
+          pointer ret=sc->NIL;
+          db::row_node *row=(db::row_node*)data->m_head;
+          while (row!=NULL)
+          {
+               pointer ret_row=mk_vector(sc,row->m_row->size());
+               int p=0;
+               db::value_node *value=(db::value_node*)row->m_row->m_head;
+               while (value!=NULL)
+               {
+                    set_vector_elem(ret_row,p,mk_string(sc,value->m_value));
+                    p++;
+                    value=(db::value_node*)value->m_next;
+               }
+
+               ret=cons(sc,ret_row,ret);
+               row=(db::row_node*)row->m_next;
+          }
+          ret=reverse(sc,ret);
+          return ret;
+     }
+     return sc->NIL;
+}
+
 static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
      pointer x, y;
      long v;
@@ -4239,6 +4271,58 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                starwisp_data=string_value(car(sc->args));
           }
           s_return(sc,sc->F);
+     case OP_OPEN_DB: {
+          if (is_string(car(sc->args))) {
+               the_db_container.add(string_value(car(sc->args)),
+                                    new db(string_value(car(sc->args))));
+               s_return(sc,sc->T);
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_EXEC_DB: {
+          if (is_string(car(sc->args)) &&
+              is_string(cadr(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    list *data=d->exec(string_value(cadr(sc->args)));
+                    pointer ret=db_data_to_scm(sc,data);
+                    delete data;
+                    s_return(sc,ret);
+               }
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_INSERT_DB: {
+          if (is_string(car(sc->args)) &&
+              is_string(cadr(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    s_return(sc,mk_integer(sc,d->insert(string_value(cadr(sc->args)))));
+               }
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_STATUS_DB: {
+          if (is_string(car(sc->args))) {
+               db *d=the_db_container.get(string_value(car(sc->args)));
+               if (d!=NULL)
+               {
+                    s_return(sc,mk_string(sc,d->status()));
+               }
+          }
+          s_return(sc,sc->F);
+     }
+     case OP_TIME: {
+          	timeval t;
+            // stop valgrind complaining
+            t.tv_sec=0;
+            t.tv_usec=0;
+            gettimeofday(&t,NULL);
+            s_return(sc,cons(sc,mk_integer(sc,t.tv_sec),
+                             cons(sc,mk_integer(sc,t.tv_usec),sc->NIL)));
+     }
 ////////////////////
      default:
           snprintf(sc->strbuff,STRBUFFSIZE,"%d: illegal operator", sc->op);

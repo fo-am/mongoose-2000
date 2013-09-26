@@ -58,8 +58,24 @@ public class starwisp extends StarwispActivity
         // register all activities here
         ActivityManager.Register("splash",starwisp.class);
         ActivityManager.Register("main",MainActivity.class);
-    };
+        ActivityManager.Register("experiments",ExperimentsActivity.class);
+        ActivityManager.Register("pack-select",PackSelectActivity.class);
+        ActivityManager.Register("individual-select",IndividualSelectActivity.class);
+        ActivityManager.Register("pup-focal",PupFocalActivity.class);
+        ActivityManager.Register("pup-focal-event",PupFocalEventActivity.class);
+        ActivityManager.Register("event-self",EventSelfActivity.class);
+        ActivityManager.Register("event-fed",EventFedActivity.class);
+        ActivityManager.Register("event-aggression",EventAggressionActivity.class);
 
+        ActivityManager.Register("manage-packs",ManagePacksActivity.class);
+        ActivityManager.Register("new-pack",NewPackActivity.class);
+        ActivityManager.Register("manage-individual",ManageIndividualActivity.class);
+        ActivityManager.Register("new-individual",NewIndividualActivity.class);
+        ActivityManager.Register("update-individual",UpdateIndividualActivity.class);
+
+        ActivityManager.Register("tag-location",TagLocationActivity.class);
+        ActivityManager.Register("sync",SyncActivity.class);
+    };
 
     /** Called when the activity is first created. */
     @Override

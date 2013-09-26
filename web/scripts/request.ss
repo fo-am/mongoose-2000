@@ -21,7 +21,16 @@
 #lang scheme
 
 (provide (all-defined-out))
-(require "filter-string.ss" "list.ss")
+(require web-server/http/response-structs "filter-string.ss" "list.ss" "utils.ss")
+
+(define (pluto-response txt)
+  (response/full
+   200                ; code
+   #"Okay"            ; message
+   (current-seconds)  ; seconds
+   #"text/javascript" ; mime type
+   '()                ; headers
+   (list (string->bytes/utf-8 txt)))) ; body
 
 ;; a request is a name and a list of arguments
 (define (req name args) (list name args))
@@ -38,7 +47,7 @@
 
 ;; check for the existance of an argument
 (define (req-has-arg? r n)
-  (assq n (req-args r)))
+  (list-contains-equal? (req-args r) n))
 
 ;; a register is a request and the procedure to call
 (define (register req proc) (list req proc))
@@ -50,21 +59,21 @@
   (apply (register-proc reg)
          (map
           (lambda (arg)
-            (if (req-has-arg? req arg)
-                ; use the passed in value, and filter it
-                ; for dangerous characters before we go
-                ; any further
-                (filter-string (req-arg req arg))
-                '())) ; nothing found... ?
-          (req-args (register-req reg)))))
+            ;; if it's registered as an argument
+            (if (req-has-arg? (register-req reg) (car arg))
+                ;; send it through plain
+                (filter-string (cdr arg))
+                ;; send it with the argument name
+                (cons (string->symbol (filter-string (symbol->string (car arg))))
+                      (filter-string (cdr arg)))))
+          (req-args req))))
 
 ;; look up this request in the registry and run it
 (define (request-dispatch reg req)
   (cond
    ((null? reg) (printf "unknown command ~a~n" (req-name req))
-    (string-append "unknown command "
-                   (symbol->string (req-name req))))
-   ((eq? (req-name (register-req (car reg))) (req-name req))
+    (pluto-response (string-append "unknown command " (symbol->string (req-name req)))))
+   ((equal? (req-name (register-req (car reg))) (req-name req))
     (request-run (car reg) req))
    (else
     (request-dispatch (cdr reg) req))))

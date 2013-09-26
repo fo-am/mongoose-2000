@@ -55,6 +55,7 @@ public class StarwispActivity extends Activity
         View root = findViewById(R.id.main);
 
         m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
+        //m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/grstylus.ttf");
 
         try {
             m_Builder.Build(this, new JSONArray(json), (ViewGroup) root);

@@ -13,6 +13,29 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; debugging and unit tests
+
+(define (msg . args)
+  (for-each
+   (lambda (i) (display i)(display " "))
+   args)
+  (newline))
+
+(define (dbg i) (msg i) i)
+
+(define (assert msg v)
+  (display (string-append "testing " msg))(newline)
+  (when (not v)
+        (error "unit " msg)))
+
+(define (asserteq msg a b)
+  (display (string-append "testing " msg))(newline)
+  (when (not (equal? a b))
+        (error "unit " msg a b)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; list stuff
 
 (define (filter fn l)
   (foldl
@@ -27,17 +50,50 @@
       (insert (car lst) fn
               (sort (cdr lst) fn))))
 
-
 (define (find n l)
   (cond
     ((null? l) #f)
     ((equal? n (car (car l))) (car l))
     (else (find n (cdr l)))))
 
+(define (build-list fn n)
+  (define (_ fn n l)
+    (cond ((zero? n) l)
+          (else
+           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
+  (_ fn n '()))
 
-(define (error . args)
-  (display (apply string-append args))(newline))
+(define (foldl op initial seq)
+  (define (iter result rest)
+    (if (null? rest)
+        result
+        (iter (op (car rest) result) (cdr rest))))
+  (iter initial seq))
 
+(define (insert-to i p l)
+  (cond
+   ((null? l) (list i))
+   ((zero? p) (cons i l))
+   (else
+    (cons (car l) (insert-to i (- p 1) (cdr l))))))
+
+;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
+(define (list-replace l i v)
+  (cond
+    ((null? l) l)
+    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
+    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
+
+(define (insert elt fn sorted-lst)
+  (if (null? sorted-lst)
+      (list elt)
+      (if (fn elt (car sorted-lst))
+          (cons elt sorted-lst)
+          (cons (car sorted-lst)
+                (insert elt fn (cdr sorted-lst))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; time
 
 ;; just for graph so don't have to be accurate!!!
 (define (date->day d)
@@ -68,67 +124,7 @@
    "/"
    (number->string (list-ref d 2))))
 
-
-(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
-
-
-(define (insert elt fn sorted-lst)
-  (if (null? sorted-lst)
-      (list elt)
-      (if (fn elt (car sorted-lst))
-          (cons elt sorted-lst)
-          (cons (car sorted-lst)
-                (insert elt fn (cdr sorted-lst))))))
-
-;; utils funcs for using lists as sets
-
-(define (set-remove a l)
-  (if (null? l)
-      '()
-      (if (eq? (car l) a)
-          (set-remove a (cdr l))
-          (cons (car l) (set-remove a (cdr l))))))
-
-(define (set-add a l)
-  (if (not (memq a l))
-      (cons a l)
-      l))
-
-(define (set-contains a l)
-  (if (not (memq a l))
-      #f
-      #t))
-
-;; missing list stuff
-
-(define (build-list fn n)
-  (define (_ fn n l)
-    (cond ((zero? n) l)
-          (else
-           (_ fn (- n 1) (cons (fn (- n 1)) l)))))
-  (_ fn n '()))
-
-(define (foldl op initial seq)
-  (define (iter result rest)
-    (if (null? rest)
-        result
-        (iter (op (car rest) result) (cdr rest))))
-  (iter initial seq))
-
-(define (insert-to i p l)
-  (cond
-   ((null? l) (list i))
-   ((zero? p) (cons i l))
-   (else
-    (cons (car l) (insert-to i (- p 1) (cdr l))))))
-
-;; (list-replace '(1 2 3 4) 2 100) => '(1 2 100 4)
-(define (list-replace l i v)
-  (cond
-    ((null? l) l)
-    ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
-    (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; random
 
 (define random-maker
@@ -226,7 +222,8 @@
     (if (> (vdot n v) 0)
         v
         (loop (hsrndvec)))))
-                                        ;
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; convert scheme values into equivilent json strings
 
 (define (scheme->json v)
@@ -270,14 +267,16 @@
                                   "\n" token ": " value))))))
   (string-append "{" (_ l "") "\n" "}"))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; android ui
 
 (define (layout width height weight gravity) (list "layout" width height weight gravity))
 (define (layout-width l) (list-ref l 1))
 (define (layout-height l) (list-ref l 2))
 (define (layout-weight l) (list-ref l 3))
 (define (layout-gravity l) (list-ref l 4))
+
+(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
 
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
@@ -288,6 +287,18 @@
 (define (linear-layout-orientation t) (list-ref t 2))
 (define (linear-layout-layout t) (list-ref t 3))
 (define (linear-layout-children t) (list-ref t 4))
+
+(define (frame-layout id layout children)
+  (list "frame-layout" id layout children))
+(define (frame-layout-id t) (list-ref t 1))
+(define (frame-layout-layout t) (list-ref t 2))
+(define (frame-layout-children t) (list-ref t 3))
+
+(define (scroll-view id layout children)
+  (list "scroll-view" id layout children))
+(define (scroll-view-id t) (list-ref t 1))
+(define (scroll-view-layout t) (list-ref t 2))
+(define (scroll-view-children t) (list-ref t 3))
 
 (define (space layout) (list "space" "999" layout))
 (define (space-view-layout t) (list-ref t 2))
@@ -331,6 +342,14 @@
 (define (button-layout t) (list-ref t 4))
 (define (button-listener t) (list-ref t 5))
 
+(define (toggle-button id text text-size layout listener) (list "toggle-button" id text text-size layout listener))
+(define (toggle-button-id t) (list-ref t 1))
+(define (toggle-button-text t) (list-ref t 2))
+(define (toggle-button-modify-text t v) (list-replace t 2 v))
+(define (toggle-button-text-size t) (list-ref t 3))
+(define (toggle-button-layout t) (list-ref t 4))
+(define (toggle-button-listener t) (list-ref t 5))
+
 (define (seek-bar id max layout listener) (list "seek-bar" id max layout listener))
 (define (seek-bar-id t) (list-ref t 1))
 (define (seek-bar-max t) (list-ref t 2))
@@ -355,6 +374,9 @@
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
+(define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
+(define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
+
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
 
 (define (time-picker-dialog name fn)
@@ -449,6 +471,12 @@
    ((equal? (widget-type (car widget-list)) "linear-layout")
     (let ((ret (widget-find (linear-layout-children (car widget-list)) id)))
       (if ret ret (widget-find (cdr widget-list) id))))
+   ((equal? (widget-type (car widget-list)) "frame-layout")
+    (let ((ret (widget-find (frame-layout-children (car widget-list)) id)))
+      (if ret ret (widget-find (cdr widget-list) id))))
+   ((equal? (widget-type (car widget-list)) "scroll-view")
+    (let ((ret (widget-find (scroll-view-children (car widget-list)) id)))
+      (if ret ret (widget-find (cdr widget-list) id))))
    (else (widget-find (cdr widget-list) id))))
 
 (define root 0)
@@ -496,7 +524,9 @@
                   ;; todo - something a bit more fancy
                   (equal? (list-ref event 0) "date-picker-dialog")
                   (equal? (list-ref event 0) "alert-dialog")
-                  (equal? (list-ref event 0) "list-files"))
+                  (equal? (list-ref event 0) "list-files")
+                  (equal? (list-ref event 0) "http-request")
+                  (equal? (list-ref event 0) "network-connect"))
                  (add-new-dialog! event)))
          events)))
 
@@ -543,6 +573,8 @@
                        ((edit-text-listener widget) (car args)))
                       ((equal? (widget-type widget) "button")
                        ((button-listener widget)))
+                      ((equal? (widget-type widget) "toggle-button")
+                       ((button-listener widget (car args))))
                       ((equal? (widget-type widget) "seek-bar")
                        ((seek-bar-listener widget) (car args)))
                       ((equal? (widget-type widget) "spinner")
