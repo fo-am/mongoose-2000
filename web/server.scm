@@ -80,6 +80,7 @@
 
 (define (start request)
   (let ((values (url-query (request-uri request))))
+    (msg "got a request" request)
     (if (not (null? values))   ; do we have some parameters?
         (let ((name (assq 'fn values)))
           (when name           ; is this a well formed request?
