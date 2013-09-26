@@ -123,7 +123,7 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
-  (insert-entity-with-wholesale db table entity-type (get-unique user) "1" "0" ktvlist))
+  (insert-entity-wholesale db table entity-type (get-unique user) "1" "0" ktvlist))
 
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
