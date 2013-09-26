@@ -21,11 +21,11 @@
 
 ;; create eav tables (add types as required)
 (define (setup db table)
-  (exec/ignore db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer)"))
+  (exec/ignore db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer)"))
   (exec/ignore db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))"))
-  (exec/ignore db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096))"))
-  (exec/ignore db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer)"))
-  (exec/ignore db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real)")))
+  (exec/ignore db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer)"))
+  (exec/ignore db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer)"))
+  (exec/ignore db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer)")))
 
 (define (sqls str)
   ;; todo sanitise str
@@ -93,7 +93,7 @@
   ;; use type to dispatch insert to correct value table
   (db-insert db (string-append "insert into " table "_value_" (sqls (ktv-type ktv))
                                " values (null, " (number->string entity-id) ", '" (sqls (ktv-key ktv)) "', "
-                               (stringify-value ktv) ")")))
+                               (stringify-value ktv) ", 0)")))
 
 
 (define (get-unique user)
@@ -106,7 +106,7 @@
   (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (null, '" (sqls entity-type) "', '" (get-unique user) "', 1)"))))
+                 "insert into " table "_entity values (null, '" (sqls entity-type) "', '" (get-unique user) "', 1, 0)"))))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
@@ -129,10 +129,20 @@
                      " and attribute_id = '" (sqls (ktv-key ktv)) "'"))
   (msg (db-status db)))
 
-(define (update-entity-dirty db table entity-id v)
+(define (update-entity-modified db table entity-id)
+  (let ((version (car (db-exec db (string-append
+                                   "select version from "
+                                   table "_entity where entity_id = " (number->string entity-id) ";")))))
+    (db-exec
+     db (string-append "update " table "_entity "
+                       "set dirty='" (number->string v) "' "
+                       "set version='" (number->string (+ 1 (string->number version))) "'"
+                       " where entity_id = " (number->string entity-id) ";"))))
+
+(define (update-entity-clean db table entity-id)
   (db-exec
    db (string-append "update " table "_entity "
-                     "set dirty='" (number->string v) "'"
+                     "set dirty='0' "
                      " where entity_id = " (number->string entity-id) ";")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -234,7 +244,7 @@
     (cond
       ((null? entity-type) (msg "entity" entity-id "not found!") '())
       (else
-       (update-entity-dirty db table entity-id 1)
+       (update-entity-changed db table entity-id)
        (for-each
         (lambda (ktv)
           (update-value db table entity-id ktv))
