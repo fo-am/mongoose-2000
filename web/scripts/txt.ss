@@ -16,7 +16,7 @@
 #lang scheme
 (provide (all-defined-out))
 
-;; what am I missing here?
+;; this is bonkers - what am I missing here?
 
 (define (scheme->txt v)
   (cond
