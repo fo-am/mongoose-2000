@@ -130,10 +130,14 @@
       (msg data)
       (for-each
        (lambda (i)
-         (let ((unique-id (car i))
-               (version (cadr i))
-               (exists (entity-exists? db table unique-id))
-               (old (> version (get-entity-version db table unique-id))))
+         (let* ((unique-id (car i))
+                (version (cadr i))
+                (exists (entity-exists? db table unique-id))
+                (old
+                 (if exists
+                     (> version (string->number
+                                 (dbg (get-entity-version db table unique-id))))
+                     #f)))
            ;; if we don't have this entity or the version on the server is newer
            (when (or (not exists) old)
                  (msg "sending for new version")

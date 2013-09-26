@@ -366,10 +366,10 @@
 
 (define (entity-id-from-unique db table unique-id)
   (select-first
-   db (string-append "select entity_id from " table "_entity where unique_id = "
-                     unique-id)))
+   db (string-append "select entity_id from " table "_entity where unique_id = '"
+                     unique-id "'")))
 
 (define (entity-version-from-unique db table unique-id)
   (select-first
-   db (string-append "select version from " table "_entity where unique_id = "
-                     unique-id)))
+   db (string-append "select version from " table "_entity where unique_id = '"
+                     unique-id "'")))
