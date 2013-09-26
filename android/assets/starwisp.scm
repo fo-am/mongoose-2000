@@ -32,6 +32,7 @@
 
 (display (db-status db))(newline)
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
 
@@ -59,6 +60,106 @@
 
 (define (get-current key)
   (store-get store key))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; syncing code
+
+(define url "http://192.168.2.1:8888/mongoose?")
+
+(define (dirty-entities db table)
+  (map
+   (lambda (i)
+     (list
+      ;; build according to url ([table] entity-type unique-id dirty version)
+      (cdr (vector->list i))
+      ;; data entries (todo - only dirty values!)
+      (get-entity-plain db table (string->number (vector-ref i 0)))))
+   (cdr (db-select
+         db (string-append "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;")))))
+
+(define (get-entity-id db table unique-id)
+  (select-first db (string-append "select entity_id from " table "_entity where unique_id = '" unique-id "';")))
+
+(define (get-entity-version db table unique-id)
+  (select-first db (string-append "select version from " table "_entity where unique_id = '" unique-id "';")))
+
+(define (entity-exists? db table unique-id)
+  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
+
+(define (build-url-from-ktv ktv)
+  (string-append "&" (ktv-key ktv) ":" (ktv-type ktv) "=" (stringify-value-url ktv)))
+
+(define (build-url-from-ktvlist ktvlist)
+  (foldl
+   (lambda (ktv r)
+     (string-append r (build-url-from-ktv ktv)))
+   "" ktvlist))
+
+(define (build-url-from-entity table e)
+  (string-append
+   url
+   "fn=sync"
+   "&table=" table
+   "&entity-type=" (list-ref (car e) 0)
+   "&unique-id=" (list-ref (car e) 1)
+   "&dirty=" (list-ref (car e) 2)
+   "&version=" (list-ref (car e) 3)
+   (build-url-from-ktvlist (cadr e))))
+
+;; spit all dirty entities to server
+(define (spit-dirty db table)
+  (map
+   (lambda (e)
+     (http-request
+      (string-append "req-" (list-ref (car e) 1))
+      (build-url-from-entity table e)
+      (lambda (v)
+        (display v)(newline)
+        (if (equal? (car v) "inserted")
+            (update-entity-clean db table (cadr v))
+            (display "somefink went wrong")(newline)))))
+   (dirty-entities db table)))
+
+;; repeatedly read version and request updates
+(define (get-new-entities db table)
+  (list
+   (http-request
+    "new-entities-req"
+    (dbg (string-append url "fn=entity-versions&table=" table))
+    (lambda (data)
+      (msg data)
+      (for-each
+       (lambda (i)
+         (let ((unique-id (car i))
+               (version (cadr i))
+               (exists (entity-exists? db table unique-id))
+               (old (> version (get-entity-version db table unique-id))))
+           ;; if we don't have this entity or the version on the server is newer
+           (when (or (not exists) old)
+                 (msg "sending for new version")
+                 ;; ask for the current version
+                 (http-request
+                  (string-append unique-id "-update-new")
+                  (string-append url "fn=entity&table=" table "&unique-id=" unique-id)
+                  (lambda (data)
+                    (msg data)
+                    ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
+                    (let ((entity (list-ref data 1))
+                          (ktvlist (list-ref data 2)))
+                      (if (not exists)
+                          (insert-entity-wholesale
+                           db table
+                           (list-ref entity 0) ;; entity-type
+                           (list-ref entity 1) ;; unique-id
+                           "0"
+                           (list-ref entity 2) ;; version
+                           ktvlist)
+                          (update-to-version
+                           db table (get-entity-id db table unique-id)
+                           (list-ref entity 4) ktvlist))))))))
+       data)))))
+
+;;(display (get-new-entities db "local"))(newline)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -573,12 +674,12 @@
                       (msg state)
                       (list
                        (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
-       (mbutton "sync-sync" "Sync"
+       (mbutton "sync-sync" "Push"
                 (lambda ()
-                  (list
-                   (http-request "myreq" "http://192.168.2.1:8888/mongoose?function_name=ping"
-                                 (lambda (v)
-                                   (msg "got" v)))))))
+                  (spit-dirty db "sync")))
+       (mbutton "sync-pull" "Pull"
+                (lambda ()
+                  (dbg (get-new-entities db "sync")))))
       (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
       (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
 
