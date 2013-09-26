@@ -66,7 +66,17 @@
     (lambda (table)
       (pluto-response
        (scheme->txt
-        (entity-versions db table)))))))
+        (entity-versions db table)))))
+
+   (register
+    (req 'entity '(table unique-id))
+    (lambda (table unique-id)
+      (pluto-response
+       (scheme->txt
+        (send-entity db table unique-id)))))
+
+
+   ))
 
 (define (start request)
   (let ((values (url-query (request-uri request))))

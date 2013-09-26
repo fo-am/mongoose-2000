@@ -33,21 +33,6 @@
        (setup db "stream")
        db))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; doing things with unique ids
-
-(define (entity-id-from-unique db table unique-id)
-  (select-first
-   db (string-append "select entity_id from " table "_entity where unique_id = "
-                     unique-id)))
-
-(define (entity-version-from-unique db table unique-id)
-  (select-first
-   db (string-append "select version from " table "_entity where unique_id = "
-                     unique-id)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (define (request-args->ktvlist data)
   (map
    (lambda (i)
@@ -65,7 +50,7 @@
 
 (define (sync-insert db table entity-type unique-id dirty version data)
   (let ((ktvlist (dbg (request-args->ktvlist data))))
-    (insert-entity-with-unique db table entity-type unique-id ktvlist)
+    (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
     (list "inserted" unique-id)))
 
 (define (send-version db table entity-type unique-id current-version)
@@ -112,6 +97,14 @@
      (list (vector-ref i 0) (vector-ref i 1)))
    (cdr (db-select
          db (string-append "select unique_id, version from " table "_entity;")))))
+
+(define (send-entity db table unique-id)
+  (let ((entity-id (entity-id-from-unique db table unique-id)))
+    (list
+     (select-first
+      db (string-append "select entity_type, unique_id, version from "
+                        table "_entities where entity_id = " entity-id))
+     (get-entity-plain db table entity-id))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

@@ -47,11 +47,21 @@
 (define ktv-type cadr)
 (define ktv-value caddr)
 
-;; stringify based on type
+;; stringify based on type (for sql)
 (define (stringify-value ktv)
   (cond
    ((null? (ktv-value ktv)) "NULL")
    ((equal? (ktv-type ktv) "varchar") (string-append "'" (ktv-value ktv) "'"))
+   (else
+    (if (not (string? (ktv-value ktv)))
+        (number->string (ktv-value ktv))
+        (ktv-value ktv)))))
+
+;; stringify based on type (for url)
+(define (stringify-value-url ktv)
+  (cond
+   ((null? (ktv-value ktv)) "NULL")
+   ((equal? (ktv-type ktv) "varchar") (ktv-value ktv))
    (else
     (if (not (string? (ktv-value ktv)))
         (number->string (ktv-value ktv))
@@ -113,13 +123,18 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
-  (insert-entity-with-unique db table entity-type (get-unique user) ktvlist))
+  (insert-entity-with-wholesale db table entity-type (get-unique user) "1" "0" ktvlist))
 
-(define (insert-entity-with-unique db table entity-type unique-id ktvlist)
+;; all the parameters - for syncing purposes
+(define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
   (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (null, '" (sqls entity-type) "', '" unique-id "', 1, 0)"))))
+                 "insert into " table "_entity values (null, '"
+                 (sqls entity-type) "', '"
+                 unique-id "', "
+                 dirty ", "
+                 version ")"))))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
@@ -160,11 +175,11 @@
                      " where entity_id = " (number->string entity-id) ";")))
 
 
-(define (update-entity-clean db table entity-id)
+(define (update-entity-clean db table unique-id)
   (db-exec
    db (string-append "update " table "_entity "
                      "set dirty='0' "
-                     " where entity_id = " (number->string entity-id) ";")))
+                     " where unique_id = '" unique-id "';")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
@@ -196,6 +211,17 @@
                      " and attribute_id = '" (sqls (ktv-key kt)) "'")))
 
 ;; get an entire entity, as a list of key/value pairs
+(define (get-entity-plain db table entity-id)
+  (let* ((entity-type (get-entity-type db table entity-id)))
+    (cond
+      ((null? entity-type) (msg "entity" entity-id "not found!") '())
+      (else
+       (map
+        (lambda (kt)
+          (list (ktv-key kt) (ktv-type kt) (get-value db table entity-id kt)))
+        (get-attribute-ids/types db table entity-type))))))
+
+;; get an entire entity, as a list of key/value pairs (includes entity id)
 (define (get-entity db table entity-id)
   (let* ((entity-type (get-entity-type db table entity-id)))
     (cond
@@ -334,3 +360,16 @@
       (get-entity db table (string->number (vector-ref i 0)))))
    (cdr (db-select
          db (string-append "select * from " table "_entity where dirty=1;")))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; doing things with unique ids
+
+(define (entity-id-from-unique db table unique-id)
+  (select-first
+   db (string-append "select entity_id from " table "_entity where unique_id = "
+                     unique-id)))
+
+(define (entity-version-from-unique db table unique-id)
+  (select-first
+   db (string-append "select version from " table "_entity where unique_id = "
+                     unique-id)))
