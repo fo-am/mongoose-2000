@@ -130,7 +130,7 @@
                  (sqls entity-type) "', '"
                  unique-id "', "
                  dirty ", "
-                 version ")"))))
+                 (number->string version) ")"))))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
