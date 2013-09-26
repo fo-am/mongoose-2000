@@ -60,7 +60,8 @@
 
 (define (start request)
   (let ((values (url-query (request-uri request))))
-    ;;    (log (format "~a" values))
+    (display "a request has arrived!")(newline)
+    (log (format "~a" values))
     (if (not (null? values)) ; do we have some parameters?
         (let ((name (assq 'function_name values)))
           (when name ; is this a well formed request?
@@ -88,6 +89,7 @@
  start
  ;; port number is read from command line as argument
  ;; ie: ./server.scm 8080
+ #:listen-ip "192.168.2.1"
  #:port (string->number (command-line #:args (port) port))
  #:command-line? #t
  #:servlet-path "/mongoose"
