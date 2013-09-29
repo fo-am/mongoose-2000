@@ -158,7 +158,10 @@
 ;; getting data out
 
 (define (entity-exists? db table unique-id)
-  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
+  (not (null? (select-first
+               db (string-append
+                   "select * from " table "_entity where unique_id = ?")
+               unique-id))))
 
 (define (get-entity-type db table entity-id)
   (select-first
@@ -290,12 +293,14 @@
 ;; versioning
 
 (define (get-entity-version db table entity-id)
-  (select-first db (string-append "select version from " table "_entity where entity_id = ?")
-                entity-id))
+  (select-first
+   db (string-append "select version from " table "_entity where entity_id = ?")
+   entity-id))
 
 (define (get-entity-dirty db table entity-id)
-  (select-first db (string-append "select dirty from " table "_entity where entity_id = ?")
-                entity-id))
+  (select-first
+   db (string-append "select dirty from " table "_entity where entity_id = ?")
+   entity-id))
 
 (define (update-entity-changed db table entity-id)
   (db-exec
@@ -307,7 +312,7 @@
   (db-exec
    db (string-append
        "update " table "_entity set dirty=?, version=? where entity_id = ?")
-   1 entity-id version))
+   1 version entity-id))
 
 (define (update-entity-clean db table unique-id)
   (db-exec
@@ -334,7 +339,7 @@
             (cdr (vector->list i))
             ;; data entries (todo - only dirty values!)
             (get-entity-plain db table (vector-ref i 0))))
-         de))))
+         (cdr de)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing
@@ -357,7 +362,7 @@
    (lambda (i r)
      (string-append
       r "\n" (vector-ref i 0) " " (vector-ref i 1) " "
-      (stringify-ktvlist (get-entity db table (string->number (vector-ref i 0))))))
+      (stringify-ktvlist (get-entity db table (vector-ref i 0)))))
    ""
    (cdr (db-select
          db (string-append "select * from " table "_entity where dirty=1;")))))
@@ -368,7 +373,7 @@
    (lambda (i)
      (list
       (vector->list i)
-      (get-entity db table (string->number (vector-ref i 0)))))
+      (get-entity db table (vector-ref i 0))))
    (cdr (db-select
          db (string-append "select * from " table "_entity where dirty=1;")))))
 

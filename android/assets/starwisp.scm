@@ -89,12 +89,13 @@
    "&table=" table
    "&entity-type=" (list-ref (car e) 0)
    "&unique-id=" (list-ref (car e) 1)
-   "&dirty=" (list-ref (car e) 2)
-   "&version=" (list-ref (car e) 3)
+   "&dirty=" (number->string (list-ref (car e) 2))
+   "&version=" (number->string (list-ref (car e) 3))
    (build-url-from-ktvlist (cadr e))))
 
 ;; spit all dirty entities to server
 (define (spit-dirty db table)
+  (msg "hello")
   (map
    (lambda (e)
      (http-request
@@ -105,7 +106,7 @@
         (if (equal? (car v) "inserted")
             (update-entity-clean db table (cadr v))
             (display "somefink went wrong")(newline)))))
-   (dirty-entities db table)))
+   (dbg (dirty-entities db table))))
 
 (define (suck-entity-from-server db table unique-id exists)
   (msg "suck-entity-from-server" unique-id)
@@ -154,8 +155,9 @@
                 (exists (entity-exists? db table unique-id))
                 (old
                  (if exists
-                     (> version (string->number
-                                 (dbg (get-entity-version db table unique-id))))
+                     (> version (dbg (get-entity-version
+                                      db table
+                                      (get-entity-id db table unique-id))))
                      #f)))
            ;; if we don't have this entity or the version on the server is newer
            (if (or (not exists) old)
@@ -667,8 +669,8 @@
                  (stream (get-dirty-stats db "stream")))
              (msg sync stream)
              (dbg (string-append
-                   "Pack data: " (car sync) "/" (cadr sync) " "
-                   "Focal data: " (car stream) "/" (cadr stream)))))))
+                   "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
+                   "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream))))))))
     (activity
      "sync"
      (vert
