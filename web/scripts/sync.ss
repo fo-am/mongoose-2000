@@ -20,18 +20,6 @@
 (require "utils.ss")
 (provide (all-defined-out))
 
-(define (open-db db-name)
-  (cond
-    ((file-exists? (string->path db-name))
-     (display "open existing db")(newline)
-     (open (string->path db-name)))
-    (else
-     (display "making new db")(newline)
-     (let ((db (open (string->path db-name))))
-       ;; todo, dynamically create these tables
-       (setup db "sync")
-       (setup db "stream")
-       db))))
 
 (define (request-args->ktvlist data)
   (map
@@ -102,7 +90,8 @@
   (let* ((entity-id (entity-id-from-unique db table unique-id))
          (entity (db-select
                   db (string-append "select entity_type, unique_id, version from "
-                                    table "_entity where entity_id = " (number->string entity-id)))))
+                                    table "_entity where entity_id = ?")
+                  entity-id))))
     (if (not (null? entity))
         (list
          (vector->list (cadr entity))
