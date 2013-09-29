@@ -35,7 +35,7 @@
 ;;(define setuid (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 
 (define db-name "mongoose.db")
-(define db (open-db db-name))
+(define db (db-open db-name))
 (open-log "log.txt")
 
 (define registered-requests
