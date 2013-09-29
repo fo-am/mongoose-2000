@@ -25,6 +25,16 @@
 
 (define (dbg i) (msg i) i)
 
+(define (assert msg v)
+  (display (string-append "testing " msg))(newline)
+  (when (not v)
+        (error "unit " msg)))
+
+(define (asserteq msg a b)
+  (display (string-append "testing " msg))(newline)
+  (when (not (equal? a b))
+        (error "unit " msg a b)))
+
 
 ;
 ; -- procedure+: string-split STRING

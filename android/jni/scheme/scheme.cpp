@@ -4204,7 +4204,12 @@ static pointer db_data_to_scm(scheme *sc, list *data)
                db::value_node *value=(db::value_node*)row->m_row->m_head;
                while (value!=NULL)
                {
-                    set_vector_elem(ret_row,p,mk_string(sc,value->m_value));
+                    switch (value->m_type)
+                    {
+                    case 's': set_vector_elem(ret_row,p,mk_string(sc,value->m_strvalue)); break;
+                    case 'i': set_vector_elem(ret_row,p,mk_integer(sc,value->m_intvalue)); break;
+                    case 'f': set_vector_elem(ret_row,p,mk_real(sc,value->m_floatvalue)); break;
+                    }
                     p++;
                     value=(db::value_node*)value->m_next;
                }
@@ -4216,6 +4221,42 @@ static pointer db_data_to_scm(scheme *sc, list *data)
           return ret;
      }
      return sc->NIL;
+}
+
+pointer db_exec(scheme* sc, db *d) {
+     sqlite3_stmt *stmt = d->prepare(string_value(cadr(sc->args)));
+
+     if (stmt == NULL) return sc->NIL;
+
+     pointer args = cdr(cdr(sc->args));
+     int c=1; // sqlite index from 1!
+     while (args!=sc->NIL) {
+          pointer arg=car(args);
+          if (is_string(arg))
+          {
+               d->bind_text(string_value(arg),c,stmt);
+          }
+          else
+          {
+               if (is_number(arg)) {
+                    if (num_is_integer(arg))
+                    {
+                         d->bind_int(ivalue(arg),c,stmt);
+                    }
+                    else
+                    {
+                         d->bind_float(rvalue(arg),c,stmt);
+                    }
+               }
+          }
+          args=cdr(args);
+          c++;
+     }
+
+     list *data=d->run(stmt);
+     pointer ret=db_data_to_scm(sc,data);
+     delete data;
+     return ret;
 }
 
 static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
@@ -4285,10 +4326,7 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                db *d=the_db_container.get(string_value(car(sc->args)));
                if (d!=NULL)
                {
-                    list *data=d->exec(string_value(cadr(sc->args)));
-                    pointer ret=db_data_to_scm(sc,data);
-                    delete data;
-                    s_return(sc,ret);
+                    s_return(sc,db_exec(sc,d));
                }
           }
           s_return(sc,sc->F);
@@ -4299,18 +4337,15 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
                db *d=the_db_container.get(string_value(car(sc->args)));
                if (d!=NULL)
                {
-                    s_return(sc,mk_integer(sc,d->insert(string_value(cadr(sc->args)))));
+                    db_exec(sc,d);
+                    s_return(sc,mk_integer(sc,d->last_rowid()));
                }
           }
           s_return(sc,sc->F);
      }
      case OP_STATUS_DB: {
           if (is_string(car(sc->args))) {
-               db *d=the_db_container.get(string_value(car(sc->args)));
-               if (d!=NULL)
-               {
-                    s_return(sc,mk_string(sc,d->status()));
-               }
+               s_return(sc,mk_string(sc,the_db_container.status()));
           }
           s_return(sc,sc->F);
      }

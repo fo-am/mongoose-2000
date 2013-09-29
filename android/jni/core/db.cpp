@@ -20,16 +20,10 @@
 db::db(const char *fn) :
     m_running(1)
 {
-    snprintf(m_status,2048,"Starting up");
     int rc = sqlite3_open(fn, &m_db);
     if(rc)
     {
-        snprintf(m_status,2048,"Can't open database: %s",sqlite3_errmsg(m_db));
         m_running=0;
-    }
-    else
-    {
-        snprintf(m_status,2048,"Opened database successfully");
     }
 }
 
@@ -37,49 +31,76 @@ db::~db()
 {
 }
 
-static int callback(void *d, int argc, char **argv, char **azColName){
-   int i;
-   list *data=(list*)d;
+sqlite3_stmt *db::prepare(const char *sql)
+{
+    sqlite3_stmt *stmt;
+    const char *test;
+    int rc = sqlite3_prepare(m_db, sql, strlen(sql), &stmt, NULL);
 
-   // add the column names first time round
-   if (data->size()==0)
-   {
-       list *row = new list;
-       for(i=0; i<argc; i++)
-       {
-           row->add_to_end(new db::value_node(azColName[i]));
-       }
-       data->add_to_end(new db::row_node(row));
-   }
-
-   list *row = new list;
-   for(i=0; i<argc; i++)
-   {
-       row->add_to_end(new db::value_node(argv[i] ? argv[i] : "NULL"));
-   }
-   data->add_to_end(new db::row_node(row));
-   return 0;
+    if( rc != SQLITE_OK )
+    {
+        return NULL;
+    }
+    return stmt;
 }
+
+void db::bind_text(const char *v, int n, sqlite3_stmt *stmt)
+{
+    sqlite3_bind_text(stmt, n, v, strlen(v), 0);
+}
+
+void db::bind_int(int v, int n, sqlite3_stmt *stmt)
+{
+    sqlite3_bind_int(stmt, n, v);
+}
+
+void db::bind_float(float v, int n, sqlite3_stmt *stmt)
+{
+    sqlite3_bind_double(stmt, n, (double)v);
+}
+
+list *db::run(sqlite3_stmt *stmt)
+{
+    list *data= new list;
+    bool first=true;
+    int result=0;
+    do {
+        result = sqlite3_step(stmt);
+        if (result == SQLITE_ROW) { /* can read data */
+            if (first)
+            {
+                // first add the column names
+                list *row = new list;
+                for (int i=0; i<sqlite3_column_count(stmt); i++) {
+                    row->add_to_end(new db::value_node(sqlite3_column_name(stmt, i)));
+                }
+                data->add_to_end(new db::row_node(row));
+                first=false;
+            }
+
+            list *row = new list;
+            for (int i=0; i<sqlite3_column_count(stmt); i++)
+            {
+                db::value_node *v=NULL;
+                switch (sqlite3_column_type(stmt, i)) {
+                case SQLITE_TEXT: v = new db::value_node((char*)sqlite3_column_text(stmt,i)); break;
+                case SQLITE_INTEGER: v = new db::value_node(sqlite3_column_int(stmt,i)); break;
+                case SQLITE_FLOAT: v = new db::value_node((float)sqlite3_column_double(stmt,i)); break;
+                default: v = new db::value_node("NULL"); break; // probably incorrect
+                };
+
+                row->add_to_end(v);
+            }
+            data->add_to_end(new db::row_node(row));
+        }
+    } while (result == SQLITE_ROW);
+    sqlite3_finalize(stmt);
+    return data;
+}
+
+///////////////////////////////////
 
 /*
-void db::print_data(list *d)
-{
-    row_node *row=(row_node*)d->m_head;
-    while (row!=NULL)
-    {
-        value_node *value=(value_node*)row->m_row->m_head;
-        while (value!=NULL)
-        {
-            cerr<<value->m_value<<" ";
-            value=(value_node*)value->m_next;
-        }
-
-        row=(row_node*)row->m_next;
-        cerr<<endl;
-    }
-}
-*/
-
 list *db::exec(const char *sql)
 {
     if (!m_running) return NULL;
@@ -124,3 +145,4 @@ unsigned int db::insert(const char *sql)
 
     return sqlite3_last_insert_rowid(m_db);
 }
+*/

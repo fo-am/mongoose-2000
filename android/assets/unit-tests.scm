@@ -19,3 +19,119 @@
 (asserteq "scheme->json6" (scheme->json (list #t #f)) "[true, false]")
 (asserteq "assoc->json" (assoc->json '((one . 1) (two . "three")))
           "{\n\"one\": 1,\n\"two\": \"three\"\n}")
+
+
+;; db
+(msg "testing db")
+(define db "unit-test.db")
+(db-open db)
+
+(define (feq a b)
+  (< (abs (- a b)) 0.001))
+
+;;(msg (db-status db))
+
+;; test low level sql
+(db-exec db "create table unittest ( id integer primary key autoincrement, name varchar(256), num int, r real )")
+
+(define id (db-insert db "insert into unittest values (null, ?, ?, ?)" "hello" 23 1.1))
+(asserteq "sql autoinc" (+ id 1) (db-insert db "insert into unittest values (null, ?, ?, ?)" "hello2" 26 2.3))
+
+(let ((q (db-exec db "select * from unittest")))
+  (assert "sql length" (> (length q) 2)))
+
+(let ((q (db-exec db "select * from unittest where id = ?" id)))
+  (asserteq "sql select one" (length q) 2)
+  (assert "sql select two" (vector? (car q)))
+  (asserteq "sql select 3" (vector-ref (cadr q) 2) 23)
+  (assert "sql select 4" (feq (vector-ref (cadr q) 3) 1.1)))
+
+(db-exec db "update unittest set name=? where id = ?" "bob" id)
+
+(let ((q (db-exec db "select * from unittest where id = ?" id)))
+  (asserteq "sql update" (vector-ref (cadr q) 1) "bob"))
+
+(db-exec db "update unittest set name=? where id = ?" "Robert'); DROP TABLE unittest;--" id)
+
+(let ((q (db-exec db "select * from unittest where id = ?" id)))
+  (asserteq "bobby tables sql injection" (vector-ref (cadr q) 1) "Robert'); DROP TABLE unittest;--"))
+
+
+;; test the entity attribute value system
+(define table "eavunittest")
+(setup db table)
+
+(asserteq "ktv one" (stringify-value (ktv "one" "varchar" "two")) "'two'")
+(asserteq "ktv 2" (stringify-value (ktv "one" "int" 3)) "3")
+(asserteq "ktv 3" (stringify-value-url (ktv "one" "varchar" "two")) "two")
+(asserteq "ktv 4" (stringify-value-url (ktv "one" "int" 3)) "3")
+
+(asserteq "select first" (select-first db "select name from unittest where id = ?" (+ id 1))
+          "hello2")
+
+(define e (insert-entity db table "thing" "me" (list (ktv "param1" "varchar" "bob")
+                                                     (ktv "param2" "int" 30)
+                                                     (ktv "param3" "real" 3.141))))
+
+(asserteq "eav ent type" (get-entity-type db table e) "thing")
+
+(let ((e (get-entity db table e)))
+  (asserteq "entity get 1" (ktv-get e "param1") "bob")
+  (asserteq "entity get 2" (ktv-get e "param2") 30)
+  (assert "entity get 3" (feq (ktv-get e "param3") 3.141)))
+
+(update-value db table e (ktv "param1" "varchar" "fred"))
+
+(let ((e (get-entity db table e)))
+  (asserteq "update value 1" (ktv-get e "param1") "fred")
+  (asserteq "update value 2" (ktv-get e "param2") 30))
+
+(assert "all-entities" (> (length (all-entities db table "thing")) 0))
+
+(update-entity db table e (list (ktv "param1" "varchar" "wotzit")
+                                (ktv "param2" "int" 1)))
+
+(let ((e (get-entity db table e)))
+  (asserteq "update-entity 1" (ktv-get e "param1") "wotzit")
+  (asserteq "update-entity 2" (ktv-get e "param2") 1))
+
+(update-entity db table e (list (ktv "param3" "real" 3.3)))
+
+(let ((e (get-entity db table e)))
+  (msg e)
+  (asserteq "update-entity 3" (ktv-get e "param1") "wotzit")
+  (asserteq "update-entity 4" (ktv-get e "param2") 1)
+  (assert "update-entity 5" (feq (ktv-get e "param3") 3.3)))
+
+(define e2 (insert-entity db table "thing" "me"
+                          (list (ktv "param1" "varchar" "bob")
+                                (ktv "param2" "int" 30)
+                                (ktv "param3" "real" 3.141)
+                                (ktv "param4" "int" 0))))
+
+(let ((e (get-entity db table e2)))
+  (msg e)
+  (asserteq "new entity 1" (ktv-get e "param1") "bob")
+  (asserteq "new entity 2" (ktv-get e "param2") 30)
+  (assert "new entity 3" (feq (ktv-get e "param3") 3.141))
+  (asserteq "new entity 3" (ktv-get e "param4") 0))
+
+;; test the versioning
+(asserteq "dirty flag" (get-entity-dirty db table e2) 1)
+(let ((uid (get-unique-id db table e2)))
+  (update-entity-clean db table uid))
+(asserteq "dirty flag post clean" (get-entity-dirty db table e2) 0)
+(asserteq "versioning" (get-entity-version db table e) 2)
+(assert "dirty" (> (length (dirty-entities db table)) 0))
+
+(for-each
+ (lambda (e)
+   (update-entity-clean
+    db table
+    (list-ref (car e) 1)))
+ (dirty-entities db table))
+
+(asserteq "cleaning" (length (dirty-entities db table)) 0)
+
+
+(msg (db-status db))

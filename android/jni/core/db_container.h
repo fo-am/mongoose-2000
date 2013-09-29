@@ -1,11 +1,23 @@
 #include "core/db.h"
 #include "core/list.h"
 #include "string.h"
+#include <stdio.h>
 
 class db_container
 {
 public:
-    db_container() {}
+    db_container()
+    {
+        snprintf(m_status,4096,"Startup");
+        sqlite3_config(SQLITE_CONFIG_LOG, error, NULL);
+    }
+
+    static void error(void *pArg, int iErrCode, const char *zMsg){
+        fprintf(stderr,"%s\n",zMsg);
+        snprintf(m_status,4096,"(%d) : %s", iErrCode, zMsg);
+    }
+
+    static const char *status() { return m_status; }
 
     void add(const char *fn, db *d)
     {
@@ -42,5 +54,6 @@ public:
     };
 
 private:
+    static char m_status[4096];
     list m_dbs;
 };

@@ -51,13 +51,13 @@
     (else
      (cons (car store) (store-set (cdr store) key value)))))
 
-(define (store-get store key)
+(define (store-get store key default)
   (cond
-    ((null? store) #f)
+    ((null? store) default)
     ((eq? key (car (car store)))
      (cadr (car store)))
     (else
-     (store-get (cdr store) key))))
+     (store-get (cdr store) key default))))
 
 
 (define store '())
@@ -65,8 +65,8 @@
 (define (set-current! key value)
   (set! store (store-set store key value)))
 
-(define (get-current key)
-  (store-get store key))
+(define (get-current key default)
+  (store-get store key default))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
@@ -490,9 +490,9 @@
      (button (make-id "new-pack-done") "Done" 20 fillwrap
              (lambda ()
                (insert-entity
-                db "sync" "pack" (get-current 'user-id)
+                db "sync" "pack" (get-current 'user-id "no id")
                 (list
-                 (ktv "name" "varchar" (get-current 'pack-name))))
+                 (ktv "name" "varchar" (get-current 'pack-name "no name"))))
                (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -509,14 +509,15 @@
            (msg "building individual buttons")
            (map
             (lambda (individual)
+              (msg "hello")
               (let ((name (ktv-get individual "name")))
                 (button (make-id (string-append "manage-individuals-ind-" name))
                         name 20 fillwrap
                         (lambda ()
                           (list (start-activity "manage-individual" 2 ""))))))
-            (db-all-where
+            (dbg (db-all-where
              db "sync" "mongoose"
-             (list "pack-id" (ktv-get (get-current 'pack) "unique_id")))
+             (dbg (list "pack-id" (ktv-get (dbg (get-current 'pack '())) "unique_id")))))
             ))))
   (activity
    "manage-individual"
@@ -535,7 +536,7 @@
       (update-widget 'linear-layout (get-id "manage-individuals-list") 'contents
                      (build-individual-buttons))
       (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
-                     (string-append "Pack: " (ktv-get (get-current 'pack) "name")))
+                     (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -569,13 +570,13 @@
      (button (make-id "new-individual-done") "Done" 20 fillwrap
              (lambda ()
                (insert-entity
-                db "sync" "mongoose" (get-current 'user-id)
+                db "sync" "mongoose" (get-current 'user-id "no id")
                 (list
-                 (ktv "name" "varchar" (get-current 'individual-name))
-                 (ktv "gender" "varchar" (get-current 'individual-gender))
-                 (ktv "litter-code" "varchar" (get-current 'individual-litter-code))
-                 (ktv "chip-code" "varchar" (get-current 'individual-chip-code))
-                 (ktv "pack-id" "varchar" (ktv-get (get-current 'pack) "unique_id"))
+                 (ktv "name" "varchar" (get-current 'individual-name "no name"))
+                 (ktv "gender" "varchar" (get-current 'individual-gender "Female"))
+                 (ktv "litter-code" "varchar" (get-current 'individual-litter-code ""))
+                 (ktv "chip-code" "varchar" (get-current 'individual-chip-code ""))
+                 (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
                  ))
                (list (finish-activity 2)))))
     )
@@ -584,7 +585,7 @@
    (lambda (activity arg)
      (list
       (update-widget 'text-view (get-id "new-individual-pack-name") 'text
-                     (string-append "Pack: " (ktv-get (get-current 'pack) "name")))))
+                     (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())

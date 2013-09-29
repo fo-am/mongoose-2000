@@ -27,7 +27,8 @@
 (define db-select select)
 (define db-insert insert)
 (define (db-status a) "")
-(define (time) (list 0 0))
+(define (time) (list (random) (random))) ; ahem
+
 
 ;; create eav tables (add types as required)
 (define (setup db table)
@@ -37,9 +38,7 @@
   (db-exec db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer)"))
   (db-exec db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer)")))
 
-(define (sqls str)
-  ;; todo sanitise str
-  str)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; basic key/type/value structure
 (define (ktv key type value) (list key type value))
@@ -47,7 +46,7 @@
 (define ktv-type cadr)
 (define ktv-value caddr)
 
-;; stringify based on type (for sql)
+;; stringify based on type (for url)
 (define (stringify-value ktv)
   (cond
    ((null? (ktv-value ktv)) "NULL")
@@ -67,9 +66,10 @@
         (number->string (ktv-value ktv))
         (ktv-value ktv)))))
 
+
 ;; helper to return first instance from a select
-(define (select-first db str)
-  (let ((s (db-select db str)))
+(define (select-first db str . args)
+  (let ((s (apply db-select (append (list db str) args))))
     (if (or (null? s) (eq? s #t))
         '()
         (vector-ref (cadr s) 0))))
@@ -79,24 +79,23 @@
 
 ;; get the type from the attribute table with an entity/key
 (define (get-attribute-type db table entity-type key)
+  (msg "get-attribute-type")
   (let ((sql (string-append
-              "select attribute_type from " table "_attribute where entity_type = '"
-              (sqls entity-type)
-              "' and attribute_id = '"
-              (sqls key) "'")))
-    (select-first db sql)))
+              "select attribute_type from " table
+              "_attribute where entity_type = ? and attribute_id = ?")))
+    (select-first db sql entity-type key)))
 
 ;; search for a type and add it if it doesn't exist
 (define (find/add-attribute-type db table entity-type key type)
+  (msg "find/add-attribute")
   (let ((t (get-attribute-type db table entity-type key)))
     ;; add and return passed in type if not exist
     (cond
       ((null? t)
        (msg "adding new attribute for" entity-type " called " key " of type " type)
        (db-insert
-        db (string-append
-            "insert into " table "_attribute values (null, '"
-            (sqls key) "', '" (sqls entity-type) "', '" (sqls type) "')"))
+        db (string-append "insert into " table "_attribute values (null, ?, ?, ?)")
+        key entity-type type)
        type)
       (else
        (cond
@@ -110,11 +109,11 @@
 
 ;; low level insert of a ktv
 (define (insert-value db table entity-id ktv)
+  (msg "insert-value")
   ;; use type to dispatch insert to correct value table
-  (db-insert db (string-append "insert into " table "_value_" (sqls (ktv-type ktv))
-                               " values (null, " (number->string entity-id) ", '" (sqls (ktv-key ktv)) "', "
-                               (stringify-value ktv) ", 0)")))
-
+  (db-insert db (string-append "insert into " table "_value_" (ktv-type ktv)
+                               " values (null, ?, ?, ?, 0)")
+             entity-id (ktv-key ktv) (ktv-value ktv)))
 
 (define (get-unique user)
   (let ((t (time)))
@@ -123,18 +122,17 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
-  (insert-entity-wholesale db table entity-type (get-unique user) "1" "0" ktvlist))
+  (msg "insert-entity")
+  (insert-entity-wholesale db table entity-type (get-unique user) 1 0 ktvlist))
 
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
+  (msg "insert-entity-w")
   (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (null, '"
-                 (sqls entity-type) "', '"
-                 unique-id "', "
-                 (number->string dirty) ", "
-                 (number->string version) ")"))))
+                 "insert into " table "_entity values (null, ?, ?, ?, ?)")
+             entity-type unique-id dirty version)))
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
@@ -145,57 +143,37 @@
      (lambda (ktv)
        (msg (ktv-key ktv))
        (insert-value db table id ktv))
-     ktvlist)))
+     ktvlist)
+    id))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
 (define (update-value db table entity-id ktv)
   (msg "update-value" table entity-id ktv)
   (db-exec
-   db (string-append "update " table "_value_" (sqls (ktv-type ktv))
-                     " set value='" (ktv-value ktv) "'"
-                     " where entity_id = " (number->string entity-id)
-                     " and attribute_id = '" (sqls (ktv-key ktv)) "'"))
+   db (string-append "update " table "_value_" (ktv-type ktv)
+                     " set value=?  where entity_id = ? and attribute_id = ?")
+   (ktv-value ktv) entity-id (ktv-key ktv))
   (msg (db-status db)))
 
-(define (update-entity-changed db table entity-id)
-  (let ((version (car (db-exec db (string-append
-                                   "select version from "
-                                   table "_entity where entity_id = " (number->string entity-id) ";")))))
-    (db-exec
-     db (string-append "update " table "_entity "
-                       "set dirty='1', "
-                       "version='" (number->string (+ 1 (string->number version))) "'"
-                       " where entity_id = " (number->string entity-id) ";"))))
-
-(define (update-entity-version db table entity-id version)
-  (db-exec
-   db (string-append "update " table "_entity "
-                     "set dirty='1', "
-                     "version='" (number->string version) "'"
-                     " where entity_id = " (number->string entity-id) ";")))
-
-
-(define (update-entity-clean db table unique-id)
-  (db-exec
-   db (string-append "update " table "_entity "
-                     "set dirty='0' "
-                     " where unique_id = '" unique-id "';")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
 
+(define (entity-exists? db table unique-id)
+  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
+
 (define (get-entity-type db table entity-id)
   (select-first
    db (string-append
-       "select entity_type from " table "_entity where entity_id = "
-       (number->string entity-id))))
+       "select entity_type from " table "_entity where entity_id = ?")
+       entity-id))
 
 ;; get all the (current) attributes for an entity type
 (define (get-attribute-ids/types db table entity-type)
   (let ((s (db-select
             db (string-append
-                "select * from " table "_attribute where entity_type = '"
-                (sqls entity-type) "'"))))
+                "select * from " table "_attribute where entity_type = ?")
+                entity-type)))
     (if (null? s) '()
         (map
          (lambda (row)
@@ -206,9 +184,9 @@
 ;; get the value given an entity type, a attribute type and it's key (= attriute_id)
 (define (get-value db table entity-id kt)
   (select-first
-   db (string-append "select value from " table "_value_" (sqls (ktv-type kt))
-                     " where entity_id = " (number->string entity-id)
-                     " and attribute_id = '" (sqls (ktv-key kt)) "'")))
+   db (string-append "select value from " table "_value_" (ktv-type kt)
+                     " where entity_id = ? and attribute_id = ?")
+   entity-id (ktv-key kt)))
 
 ;; get an entire entity, as a list of key/value pairs
 (define (get-entity-plain db table entity-id)
@@ -223,34 +201,20 @@
 
 ;; get an entire entity, as a list of key/value pairs (includes entity id)
 (define (get-entity db table entity-id)
-  (let* ((entity-type (get-entity-type db table entity-id)))
-    (cond
-      ((null? entity-type) (msg "entity" entity-id "not found!") '())
-      (else
-       (cons
-        (list "entity_id" "int" entity-id)
-        (map
-         (lambda (kt)
-           (list (ktv-key kt) (ktv-type kt) (get-value db table entity-id kt)))
-         (get-attribute-ids/types db table entity-type)))))))
-
-
-(define (get-dirty-stats db table)
-  (list
-   (select-first
-    db (string-append "select count(entity_id) from " table "_entity where dirty=1;"))
-   (select-first
-    db (string-append "select count(entity_id) from " table "_entity;"))))
+  (let ((unique-id (get-unique-id db table entity-id)))
+    (cons
+     (list "unique_id" "varchar" unique-id)
+     (get-entity-plain db table entity-id))))
 
 (define (all-entities db table type)
   (let ((s (db-select
-            db (string-append "select entity_id from " table "_entity where entity_type = '"
-                              (sqls type) "';"))))
+            db (string-append "select entity_id from " table "_entity where entity_type = ?")
+            type)))
     (if (null? s)
         '()
         (map
          (lambda (i)
-           (string->number (vector-ref i 0)))
+           (vector-ref i 0))
          (cdr s)))))
 
 (define (validate db)
@@ -287,26 +251,25 @@
 
 ;; update an entire entity (version incl), via a (possibly partial) list of key/value pairs
 (define (update-to-version db table entity-id version ktvlist)
-  (msg table entity-id ktvlist)
-  (_update-entity db table entity-id ktvlist)
+  (update-entity-values db table entity-id ktvlist)
   (update-entity-version db table entity-id version))
 
 ;; auto update version
 (define (update-entity db table entity-id ktvlist)
   (update-entity-changed db table entity-id)
-  (_update-entity db table entity-id ktvlist))
+  (update-entity-values db table entity-id ktvlist))
 
 ;; update an entity, via a (possibly partial) list of key/value pairs
-(define (_update-entity db table entity-id ktvlist)
+(define (update-entity-values db table entity-id ktvlist)
   (let* ((entity-type (get-entity-type db table entity-id)))
     (cond
-      ((null? entity-type) (msg "entity" entity-id "not found!") '())
-      (else
-       (for-each
-        (lambda (ktv)
-          (msg ktv)
-          (update-value db table entity-id ktv))
-        ktvlist)))))
+     ((null? entity-type) (msg "entity" entity-id "not found!") '())
+     (else
+      ;; todo - do we want to create new attributes here???
+      (for-each
+       (lambda (ktv)
+         (update-value db table entity-id ktv))
+       ktvlist)))))
 
 ;; update or create an entire entity if it doesn't exist
 ;; will return the new entity id if it's created
@@ -324,6 +287,56 @@
     (if (null? found)
         (insert-entity db table entity-type user ktvlist)
         #f)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; versioning
+
+(define (get-entity-version db table entity-id)
+  (select-first db (string-append "select version from " table "_entity where entity_id = ?")
+                entity-id))
+
+(define (get-entity-dirty db table entity-id)
+  (select-first db (string-append "select dirty from " table "_entity where entity_id = ?")
+                entity-id))
+
+(define (update-entity-changed db table entity-id)
+  (db-exec
+   db (string-append
+       "update " table "_entity set dirty=?, version=? where entity_id = ?")
+   1 (+ 1 (get-entity-version db table entity-id)) entity-id))
+
+(define (update-entity-version db table entity-id version)
+  (db-exec
+   db (string-append
+       "update " table "_entity set dirty=?, version=? where entity_id = ?")
+   1 entity-id version))
+
+(define (update-entity-clean db table unique-id)
+  (db-exec
+   db (string-append "update " table "_entity set dirty=? where unique_id = ?")
+   0 unique-id))
+
+(define (get-dirty-stats db table)
+  (list
+   (select-first
+    db (string-append "select count(entity_id) from " table "_entity where dirty=1"))
+   (select-first
+    db (string-append "select count(entity_id) from " table "_entity;"))))
+
+(define (dirty-entities db table)
+  (let ((de (db-select
+             db (string-append
+                 "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;"))))
+    (if (null? de)
+        '()
+        (map
+         (lambda (i)
+           (list
+            ;; build according to url ([table] entity-type unique-id dirty version)
+            (cdr (vector->list i))
+            ;; data entries (todo - only dirty values!)
+            (get-entity-plain db table (vector-ref i 0))))
+         de))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing
@@ -366,10 +379,159 @@
 
 (define (entity-id-from-unique db table unique-id)
   (select-first
-   db (string-append "select entity_id from " table "_entity where unique_id = '"
-                     unique-id "'")))
+   db (string-append "select entity_id from " table "_entity where unique_id = ?")
+   unique-id))
 
 (define (entity-version-from-unique db table unique-id)
   (select-first
-   db (string-append "select version from " table "_entity where unique_id = '"
-                     unique-id "'")))
+   db (string-append "select version from " table "_entity where unique_id = ?")
+   unique-id))
+
+
+(define (get-unique-id db table entity-id)
+  (select-first
+   db (string-append
+       "select unique_id from " table "_entity where entity_id = ?")
+       entity-id))
+
+(define (get-entity-id db table unique-id)
+  (select-first
+   db (string-append
+       "select entity_id from " table "_entity where unique_id = ?")
+   unique-id))
+
+
+
+(define (db-open db-name)
+  (cond
+    ((file-exists? (string->path db-name))
+     (display "open existing db")(newline)
+     (open (string->path db-name)))
+    (else
+     (display "making new db")(newline)
+     (let ((db (open (string->path db-name))))
+       ;; todo, dynamically create these tables
+       (setup db "sync")
+       (setup db "stream")
+       db))))
+
+
+(define (unit-tests)
+  ;; db
+(msg "testing db")
+(define db "unit-test.db")
+(set! db (db-open db))
+
+(define (feq a b)
+  (< (abs (- a b)) 0.001))
+
+;;(msg (db-status db))
+
+;; test low level sql
+(db-exec db "create table unittest ( id integer primary key autoincrement, name varchar(256), num int, r real )")
+
+(define id (db-insert db "insert into unittest values (null, ?, ?, ?)" "hello" 23 1.1))
+(asserteq "sql autoinc" (+ id 1) (db-insert db "insert into unittest values (null, ?, ?, ?)" "hello2" 26 2.3))
+
+(let ((q (db-select db "select * from unittest")))
+  (assert "sql length" (> (length q) 2)))
+
+(let ((q (db-select db "select * from unittest where id = ?" id)))
+  (asserteq "sql select one" (length q) 2)
+  (assert "sql select two" (vector? (car q)))
+  (asserteq "sql select 3" (vector-ref (cadr q) 2) 23)
+  (assert "sql select 4" (feq (vector-ref (cadr q) 3) 1.1)))
+
+(db-exec db "update unittest set name=? where id = ?" "bob" id)
+
+(let ((q (db-select db "select * from unittest where id = ?" id)))
+  (asserteq "sql update" (vector-ref (cadr q) 1) "bob"))
+
+(db-exec db "update unittest set name=? where id = ?" "Robert'); DROP TABLE unittest;--" id)
+
+(let ((q (db-select db "select * from unittest where id = ?" id)))
+  (asserteq "bobby tables sql injection" (vector-ref (cadr q) 1) "Robert'); DROP TABLE unittest;--"))
+
+;; test the entity attribute value system
+(define table "eavunittest")
+(setup db table)
+
+(asserteq "ktv one" (stringify-value (ktv "one" "varchar" "two")) "'two'")
+(asserteq "ktv 2" (stringify-value (ktv "one" "int" 3)) "3")
+(asserteq "ktv 3" (stringify-value-url (ktv "one" "varchar" "two")) "two")
+(asserteq "ktv 4" (stringify-value-url (ktv "one" "int" 3)) "3")
+
+(asserteq "select first" (select-first db "select name from unittest where id = ?" (+ id 1))
+          "hello2")
+
+(define e (insert-entity db table "thing" "me" (list (ktv "param1" "varchar" "bob")
+                                                     (ktv "param2" "int" 30)
+                                                     (ktv "param3" "real" 3.141))))
+
+(asserteq "eav ent type" (get-entity-type db table e) "thing")
+
+(let ((e (get-entity db table e)))
+  (asserteq "entity get 1" (ktv-get e "param1") "bob")
+  (asserteq "entity get 2" (ktv-get e "param2") 30)
+  (assert "entity get 3" (feq (ktv-get e "param3") 3.141)))
+
+(update-value db table e (ktv "param1" "varchar" "fred"))
+
+(let ((e (get-entity db table e)))
+  (asserteq "update value 1" (ktv-get e "param1") "fred")
+  (asserteq "update value 2" (ktv-get e "param2") 30))
+
+(assert "all-entities" (> (length (all-entities db table "thing")) 0))
+
+(update-entity db table e (list (ktv "param1" "varchar" "wotzit")
+                                (ktv "param2" "int" 1)))
+
+(let ((e (get-entity db table e)))
+  (asserteq "update-entity 1" (ktv-get e "param1") "wotzit")
+  (asserteq "update-entity 2" (ktv-get e "param2") 1))
+
+(update-entity db table e (list (ktv "param3" "real" 3.3)))
+
+(let ((e (get-entity db table e)))
+  (msg e)
+  (asserteq "update-entity 3" (ktv-get e "param1") "wotzit")
+  (asserteq "update-entity 4" (ktv-get e "param2") 1)
+  (assert "update-entity 5" (feq (ktv-get e "param3") 3.3)))
+
+(define e2 (insert-entity db table "thing" "me"
+                          (list (ktv "param1" "varchar" "bob")
+                                (ktv "param2" "int" 30)
+                                (ktv "param3" "real" 3.141)
+                                (ktv "param4" "int" 0))))
+
+(let ((e (get-entity db table e2)))
+  (msg e)
+  (asserteq "new entity 1" (ktv-get e "param1") "bob")
+  (asserteq "new entity 2" (ktv-get e "param2") 30)
+  (assert "new entity 3" (feq (ktv-get e "param3") 3.141))
+  (asserteq "new entity 3" (ktv-get e "param4") 0))
+
+;; test the versioning
+(asserteq "dirty flag" (get-entity-dirty db table e) 1)
+(asserteq "dirty flag2" (get-entity-dirty db table e2) 1)
+(let ((uid (get-unique-id db table e2)))
+  (update-entity-clean db table uid))
+(asserteq "dirty flag post clean" (get-entity-dirty db table e2) 0)
+(asserteq "versioning" (get-entity-version db table e) 2)
+(asserteq "dirty flag3" (get-entity-dirty db table e) 1)
+(assert "dirty" (> (length (dbg (dirty-entities db table))) 0))
+
+(for-each
+ (lambda (e)
+   (update-entity-clean
+    db table
+    (list-ref (car e) 1)))
+ (dirty-entities db table))
+
+(asserteq "cleaning" (length (dirty-entities db table)) 0)
+
+
+(msg (db-status db))
+)
+
+(unit-tests)

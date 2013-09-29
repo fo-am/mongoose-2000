@@ -26,16 +26,29 @@ public:
     db(const char *fn);
     ~db();
 
-    list *exec(const char *sql);
-    unsigned int insert(const char *sql);
-    const char *status() { return m_status; }
+
+    sqlite3_stmt *prepare(const char *sql);
+
+    void bind_text(const char *v, int n, sqlite3_stmt *stmt);
+    void bind_int(int v, int n, sqlite3_stmt *stmt);
+    void bind_float(float v, int n, sqlite3_stmt *stmt);
+
+    list *run(sqlite3_stmt *stmt);
+
+    int last_rowid() { return sqlite3_last_insert_rowid(m_db); }
+
 
     class value_node: public list::node
     {
     public:
-        value_node(const char *v) { m_value=strdup(v); }
-        ~value_node() { free(m_value); }
-        char *m_value;
+        value_node(const char *v) { m_type='s'; m_strvalue=strdup(v); }
+        value_node(int v) { m_type='i'; m_intvalue=v; }
+        value_node(float v) { m_type='f'; m_floatvalue=v; }
+        ~value_node() { if (m_type=='s') free(m_strvalue); }
+        char m_type;
+        char *m_strvalue;
+        int m_intvalue;
+        float m_floatvalue;
     };
 
     class row_node: public list::node
@@ -50,5 +63,4 @@ private:
     sqlite3 *m_db;
 
     int m_running;
-    char m_status[4096];
 };
