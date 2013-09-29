@@ -103,11 +103,11 @@
          (entity (db-select
                   db (string-append "select entity_type, unique_id, version from "
                                     table "_entity where entity_id = " (number->string entity-id)))))
-    (if (not (null? entity)
-             (list
-              (cdr entity)
-              (get-entity-plain db table entity-id))
-             (list "entity not found" unique-id)))))
+    (if (not (null? entity))
+        (list
+         (cdr entity)
+         (get-entity-plain db table entity-id))
+        (list "entity not found" unique-id))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
