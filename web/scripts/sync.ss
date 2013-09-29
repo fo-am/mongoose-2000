@@ -105,7 +105,7 @@
                                     table "_entity where entity_id = " (number->string entity-id)))))
     (if (not (null? entity))
         (list
-         (cdr entity)
+         (vector->list (cdr entity))
          (get-entity-plain db table entity-id))
         (list "entity not found" unique-id))))
 
