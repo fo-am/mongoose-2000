@@ -73,26 +73,6 @@
 
 (define url "http://192.168.2.1:8888/mongoose?")
 
-(define (dirty-entities db table)
-  (map
-   (lambda (i)
-     (list
-      ;; build according to url ([table] entity-type unique-id dirty version)
-      (cdr (vector->list i))
-      ;; data entries (todo - only dirty values!)
-      (get-entity-plain db table (string->number (vector-ref i 0)))))
-   (cdr (db-select
-         db (string-append "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;")))))
-
-(define (get-entity-id db table unique-id)
-  (select-first db (string-append "select entity_id from " table "_entity where unique_id = '" unique-id "';")))
-
-(define (get-entity-version db table unique-id)
-  (select-first db (string-append "select version from " table "_entity where unique_id = '" unique-id "';")))
-
-(define (entity-exists? db table unique-id)
-  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
-
 (define (build-url-from-ktv ktv)
   (string-append "&" (ktv-key ktv) ":" (ktv-type ktv) "=" (stringify-value-url ktv)))
 
@@ -127,7 +107,7 @@
             (display "somefink went wrong")(newline)))))
    (dirty-entities db table)))
 
-(define (suck-entity-from-server db table unique-id)
+(define (suck-entity-from-server db table unique-id exists)
   (msg "suck-entity-from-server" unique-id)
   ;; ask for the current version
   (http-request
@@ -136,17 +116,20 @@
    (lambda (data)
      (msg "data from server request" data)
      ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
-     (let ((entity (list-ref data 1))
-           (ktvlist (list-ref data 2)))
+     (let ((entity (list-ref data 0))
+           (ktvlist (list-ref data 1)))
        (msg "1111" exists)
        (if (not exists)
-           (insert-entity-wholesale
-            db table
-            (list-ref entity 0) ;; entity-type
-            (list-ref entity 1) ;; unique-id
-            "0"
-            (list-ref entity 2) ;; version
-            ktvlist)
+           (begin
+             (msg entity)
+             (msg (string? (list-ref entity 2)))
+             (insert-entity-wholesale
+              db table
+              (list-ref entity 0) ;; entity-type
+              (list-ref entity 1) ;; unique-id
+              0 ;; dirty
+              (list-ref entity 2) ;; version
+              ktvlist))
            (update-to-version
             db table (get-entity-id db table unique-id)
             (list-ref entity 4) ktvlist)))
@@ -176,7 +159,7 @@
                      #f)))
            ;; if we don't have this entity or the version on the server is newer
            (if (or (not exists) old)
-               (cons (suck-entity-from-server db table unique-id) r)
+               (cons (suck-entity-from-server db table unique-id exists) r)
                r)))
        '()
        data))))))
@@ -455,16 +438,21 @@
 
   (let ((build-pack-buttons
          (lambda ()
-           (map
-            (lambda (pack)
+           (foldl
+            (lambda (pack r)
               (let ((name (ktv-get pack "name")))
-                (button (make-id (string-append "manage-packs-pack-" name))
-                        name 20 fillwrap
-                        (lambda ()
-                          (msg "going to manage individuals")
-                          (msg pack)
-                          (set-current! 'pack pack)
-                          (list (start-activity "manage-individual" 2 ""))))))
+                (msg name)
+                (if (not (null? name))
+                    (cons (button (make-id (string-append "manage-packs-pack-" name))
+                                  name 20 fillwrap
+                                  (lambda ()
+                                    (msg "going to manage individuals")
+                                    (msg pack)
+                                    (set-current! 'pack pack)
+                                    (list (start-activity "manage-individual" 2 ""))))
+                          r)
+                    r)))
+            '()
             (db-all db "sync" "pack")))))
   (activity
    "manage-packs"
@@ -480,7 +468,7 @@
    (lambda (activity arg)
      (list
       (update-widget 'linear-layout (get-id "manage-packs-pack-list") 'contents
-                     (build-pack-buttons))
+                     (dbg (build-pack-buttons)))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -528,7 +516,7 @@
                           (list (start-activity "manage-individual" 2 ""))))))
             (db-all-where
              db "sync" "mongoose"
-             (list "pack-id" (number->string (ktv-get (get-current 'pack) "entity_id"))))
+             (list "pack-id" (ktv-get (get-current 'pack) "unique_id")))
             ))))
   (activity
    "manage-individual"
@@ -587,7 +575,7 @@
                  (ktv "gender" "varchar" (get-current 'individual-gender))
                  (ktv "litter-code" "varchar" (get-current 'individual-litter-code))
                  (ktv "chip-code" "varchar" (get-current 'individual-chip-code))
-                 (ktv "pack-id" "int" (ktv-get (get-current 'pack) "entity_id"))
+                 (ktv "pack-id" "varchar" (ktv-get (get-current 'pack) "unique_id"))
                  ))
                (list (finish-activity 2)))))
     )
@@ -710,7 +698,8 @@
      (lambda (activity arg)
        (list
         (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
-        (update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))))
+        ;;(update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))
+        ))
      (lambda (activity) '())
      (lambda (activity) '())
      (lambda (activity) '())

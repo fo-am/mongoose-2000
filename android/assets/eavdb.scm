@@ -220,12 +220,13 @@
 
 ;; get an entire entity, as a list of key/value pairs (includes entity id)
 (define (get-entity db table entity-id)
-  (let* ((entity-type (get-entity-type db table entity-id)))
+  (let* ((entity-type (get-entity-type db table entity-id))
+         (unique-id (get-unique-id db table entity-id)))
     (cond
       ((null? entity-type) (msg "entity" entity-id "not found!") '())
       (else
        (cons
-        (list "entity_id" "int" entity-id)
+        (list "unique_id" "varchar" unique-id)
         (map
          (lambda (kt)
            (list (ktv-key kt) (ktv-type kt) (get-value db table entity-id kt)))
@@ -370,3 +371,26 @@
   (select-first
    db (string-append "select version from " table "_entity where unique_id = '"
                      unique-id "'")))
+
+(define (dirty-entities db table)
+  (map
+   (lambda (i)
+     (list
+      ;; build according to url ([table] entity-type unique-id dirty version)
+      (cdr (vector->list i))
+      ;; data entries (todo - only dirty values!)
+      (get-entity-plain db table (string->number (vector-ref i 0)))))
+   (cdr (db-select
+         db (string-append "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;")))))
+
+(define (get-unique-id db table entity-id)
+  (select-first db (string-append "select unique_id from " table "_entity where entity_id = '" (number->string entity-id) "';")))
+
+(define (get-entity-id db table unique-id)
+  (select-first db (string-append "select entity_id from " table "_entity where unique_id = '" unique-id "';")))
+
+(define (get-entity-version db table unique-id)
+  (select-first db (string-append "select version from " table "_entity where unique_id = '" unique-id "';")))
+
+(define (entity-exists? db table unique-id)
+  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
