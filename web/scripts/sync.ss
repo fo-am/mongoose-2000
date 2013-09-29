@@ -91,7 +91,7 @@
          (entity (db-select
                   db (string-append "select entity_type, unique_id, version from "
                                     table "_entity where entity_id = ?")
-                  entity-id))))
+                  entity-id)))
     (if (not (null? entity))
         (list
          (vector->list (cadr entity))
