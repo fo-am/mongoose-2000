@@ -19,6 +19,8 @@
 (define db "/sdcard/test.db")
 (db-open db)
 
+(display "hello one two three")(newline)
+
 (setup db "local")
 (setup db "sync")
 (setup db "stream")
@@ -28,9 +30,14 @@
  (list
   (ktv "user-id" "varchar" "No name yet...")))
 
+(display "sonwassa")(newline)
+
+(msg "001")
 (display (db-all db "local" "app-settings"))(newline)
+(msg "002")
 
 (display (db-status db))(newline)
+(msg "003")
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -120,16 +127,45 @@
             (display "somefink went wrong")(newline)))))
    (dirty-entities db table)))
 
+(define (suck-entity-from-server db table unique-id)
+  (msg "suck-entity-from-server" unique-id)
+  ;; ask for the current version
+  (http-request
+   (string-append unique-id "-update-new")
+   (string-append url "fn=entity&table=" table "&unique-id=" unique-id)
+   (lambda (data)
+     (msg "data from server request" data)
+     ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
+     (let ((entity (list-ref data 1))
+           (ktvlist (list-ref data 2)))
+       (msg "1111" exists)
+       (if (not exists)
+           (insert-entity-wholesale
+            db table
+            (list-ref entity 0) ;; entity-type
+            (list-ref entity 1) ;; unique-id
+            "0"
+            (list-ref entity 2) ;; version
+            ktvlist)
+           (update-to-version
+            db table (get-entity-id db table unique-id)
+            (list-ref entity 4) ktvlist)))
+     (msg "2222" exists)
+
+     '())))
+
 ;; repeatedly read version and request updates
-(define (get-new-entities db table)
+(define (suck-new db table)
+  (msg "suck-new")
   (list
    (http-request
     "new-entities-req"
     (dbg (string-append url "fn=entity-versions&table=" table))
     (lambda (data)
       (msg data)
-      (for-each
-       (lambda (i)
+      (dbg (foldl
+       (lambda (i r)
+         (msg "inner loop" i)
          (let* ((unique-id (car i))
                 (version (cadr i))
                 (exists (entity-exists? db table unique-id))
@@ -139,31 +175,13 @@
                                  (dbg (get-entity-version db table unique-id))))
                      #f)))
            ;; if we don't have this entity or the version on the server is newer
-           (when (or (not exists) old)
-                 (msg "sending for new version")
-                 ;; ask for the current version
-                 (http-request
-                  (string-append unique-id "-update-new")
-                  (string-append url "fn=entity&table=" table "&unique-id=" unique-id)
-                  (lambda (data)
-                    (msg data)
-                    ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
-                    (let ((entity (list-ref data 1))
-                          (ktvlist (list-ref data 2)))
-                      (if (not exists)
-                          (insert-entity-wholesale
-                           db table
-                           (list-ref entity 0) ;; entity-type
-                           (list-ref entity 1) ;; unique-id
-                           "0"
-                           (list-ref entity 2) ;; version
-                           ktvlist)
-                          (update-to-version
-                           db table (get-entity-id db table unique-id)
-                           (list-ref entity 4) ktvlist))))))))
-       data)))))
+           (if (or (not exists) old)
+               (cons (suck-entity-from-server db table unique-id) r)
+               r)))
+       '()
+       data))))))
 
-;;(display (get-new-entities db "local"))(newline)
+(msg "004")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -683,7 +701,7 @@
                   (spit-dirty db "sync")))
        (mbutton "sync-pull" "Pull"
                 (lambda ()
-                  (dbg (get-new-entities db "sync")))))
+                  (dbg (suck-new db "sync")))))
       (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
       (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
 

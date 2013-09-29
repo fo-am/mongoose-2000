@@ -534,7 +534,9 @@
   (let ((dialog (dialog-find dialogs name)))
     (if (not dialog)
         (begin (display "no dialog called ")(display name)(newline))
-        (send (scheme->json (apply (dialog-fn dialog) args))))))
+        (let ((events (apply (dialog-fn dialog) args)))
+          (update-dialogs! events)
+          (send (scheme->json events))))))
 
 ;; called by java
 (define (activity-callback type activity-name args)

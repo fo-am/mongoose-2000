@@ -120,22 +120,18 @@ public class NetworkManager {
 
     private void Request(String u, String CallbackName) {
         try {
-            Log.i("starwisp", "Pinging URL");
-            Log.i("starwisp",u);
+            Log.i("starwisp","pinging: "+u);
             URL url = new URL(u);
             HttpURLConnection con = (HttpURLConnection) url
                 .openConnection();
 
+            con.setUseCaches(false);
             con.setReadTimeout(10000 /* milliseconds */);
             con.setConnectTimeout(15000 /* milliseconds */);
             con.setRequestMethod("GET");
             con.setDoInput(true);
             // Starts the query
             con.connect();
-
-            Log.i("starwisp", "Connection open");
-            //readStream(con.getInputStream());
-            Log.i("starwisp", "read stream, ending");
             m_RequestHandler.sendMessage(
                 Message.obtain(m_RequestHandler, 0,
                                new ReqMsg(con.getInputStream(),CallbackName)));
@@ -163,8 +159,8 @@ public class NetworkManager {
             String all = "";
             while ((line = reader.readLine()) != null) {
                 all+=line+"\n";
-                Log.i("starwisp",line);
             }
+            Log.i("starwisp","got data: "+all);
             m_Builder.DialogCallback(m_Context,m.m_CallbackName,all);
         } catch (IOException e) {
             e.printStackTrace();
