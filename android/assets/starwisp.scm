@@ -18,9 +18,6 @@
 
 (define db "/sdcard/test.db")
 (db-open db)
-
-(display "hello one two three")(newline)
-
 (setup db "local")
 (setup db "sync")
 (setup db "stream")
@@ -30,15 +27,7 @@
  (list
   (ktv "user-id" "varchar" "No name yet...")))
 
-(display "sonwassa")(newline)
-
-(msg "001")
 (display (db-all db "local" "app-settings"))(newline)
-(msg "002")
-
-(display (db-status db))(newline)
-(msg "003")
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
@@ -95,7 +84,6 @@
 
 ;; spit all dirty entities to server
 (define (spit-dirty db table)
-  (msg "hello")
   (map
    (lambda (e)
      (http-request
@@ -106,10 +94,9 @@
         (if (equal? (car v) "inserted")
             (update-entity-clean db table (cadr v))
             (display "somefink went wrong")(newline)))))
-   (dbg (dirty-entities db table))))
+   (dirty-entities db table)))
 
 (define (suck-entity-from-server db table unique-id exists)
-  (msg "suck-entity-from-server" unique-id)
   ;; ask for the current version
   (http-request
    (string-append unique-id "-update-new")
@@ -119,11 +106,8 @@
      ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
      (let ((entity (list-ref data 0))
            (ktvlist (list-ref data 1)))
-       (msg "1111" exists)
        (if (not exists)
            (begin
-             (msg entity)
-             (msg (string? (list-ref entity 2)))
              (insert-entity-wholesale
               db table
               (list-ref entity 0) ;; entity-type
@@ -134,39 +118,32 @@
            (update-to-version
             db table (get-entity-id db table unique-id)
             (list-ref entity 4) ktvlist)))
-     (msg "2222" exists)
-
      '())))
 
 ;; repeatedly read version and request updates
 (define (suck-new db table)
-  (msg "suck-new")
   (list
    (http-request
     "new-entities-req"
-    (dbg (string-append url "fn=entity-versions&table=" table))
+    (string-append url "fn=entity-versions&table=" table)
     (lambda (data)
-      (msg data)
-      (dbg (foldl
+      (foldl
        (lambda (i r)
-         (msg "inner loop" i)
          (let* ((unique-id (car i))
                 (version (cadr i))
                 (exists (entity-exists? db table unique-id))
                 (old
                  (if exists
-                     (> version (dbg (get-entity-version
-                                      db table
-                                      (get-entity-id db table unique-id))))
+                     (> version (get-entity-version
+                                 db table
+                                 (get-entity-id db table unique-id)))
                      #f)))
            ;; if we don't have this entity or the version on the server is newer
            (if (or (not exists) old)
                (cons (suck-entity-from-server db table unique-id exists) r)
                r)))
        '()
-       data))))))
-
-(msg "004")
+       data)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -175,6 +152,71 @@
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
+
+(define (xwise n l)
+  (define (_ c l)
+    (cond
+      ((null? l) (if (null? c) '() (list c)))
+      ((eqv? (length c) (- n 1))
+       (cons (append c (list (car l))) (_ '() (cdr l))))
+      (else
+       (_ (append c (list (car l))) (cdr l)))))
+  (_ '() l))
+
+(define (build-pack-buttons act fn)
+  (map
+   (lambda (packs)
+     (apply
+      horiz
+      (map
+       (lambda (pack)
+         (let ((name (ktv-get pack "name")))
+           (button (make-id (string-append act "-pack-" name))
+                   name 20 fillwrap
+                   (lambda ()
+                     (fn pack)))))
+       packs)))
+   (xwise 2 (db-all db "sync" "pack"))))
+
+;(define (build-individual-buttons act fn)
+; (map
+;   (lambda (individuals)
+;     (apply
+;      horiz
+;      (map
+;       (lambda (individual)
+;         (let ((name (ktv-get individual "name")))
+;           (button (make-id (string-append act "-ind-" name))
+;                   name 20 fillwrap
+;                   (lambda ()
+;                     (fn individual)))))
+;       individuals)))
+;   (xwise
+;    2 (db-all-where
+;       db "sync" "mongoose"
+;       (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id"))))))
+
+;(define (build-pack-buttons act fn)
+;  (map
+;   (lambda (pack)
+;     (let ((name (ktv-get pack "name")))
+;       (button (make-id (string-append act "-pack-" name))
+;               name 20 fillwrap
+;               (lambda ()
+;                 (fn pack)))))
+;   (db-all db "sync" "pack")))
+
+(define (build-individual-buttons act fn)
+  (map
+   (lambda (individual)
+     (let ((name (ktv-get individual "name")))
+       (button (make-id (string-append act "-ind-" name))
+               name 20 fillwrap
+               (lambda ()
+                 (fn individual)))))
+   (db-all-where
+    db "sync" "mongoose"
+    (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))))
 
 (define-activity-list
   (activity
@@ -247,20 +289,22 @@
    (vert
     (text-view (make-id "title") "Select a Pack" 40 fillwrap)
     (spacer 10)
-    (horiz
-     (button (make-id "pack-select-pack-0") "Pack 1" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 ""))))
-     (button (make-id "pack-select-pack-1") "Pack 2" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 "")))))
-    (horiz
-     (button (make-id "pack-select-pack-2") "Pack 3" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 ""))))
-     (button (make-id "pack-select-pack-3") "Pack 4" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 "")))))
-    (horiz
-     (button (make-id "pack-select-pack-4") "Pack 5" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 ""))))
-     (button (make-id "pack-select-pack-5") "Pack 6" 20 fillwrap (lambda () (list (start-activity "individual-select" 2 "")))))
+    (linear-layout
+     (make-id "pack-select-pack-list")
+     'vertical fill (list))
     )
 
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'linear-layout (get-id "pack-select-pack-list") 'contents
+                     (build-pack-buttons
+                      "pack-select"
+                      (lambda (pack)
+                        (set-current! 'pack pack)
+                        (list (start-activity "individual-select" 2 "")))))
+      ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -272,19 +316,20 @@
    (vert
     (text-view (make-id "title") "Select an individual" 40 fillwrap)
     (spacer 10)
-    (horiz
-     (button (make-id "individual-select-pack-0") "Mongoose 1" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "individual-select-pack-1") "Mongoose 2" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
-    (horiz
-     (button (make-id "individual-select-pack-2") "Mongoose 3" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "individual-select-pack-3") "Mongoose 4" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
-    (horiz
-     (button (make-id "individual-select-pack-4") "Mongoose 5" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 ""))))
-     (button (make-id "individual-select-pack-5") "Mongoose 6" 20 fillwrap (lambda () (list (start-activity "pup-focal" 2 "")))))
+    (linear-layout
+     (make-id "individual-select-list")
+     'vertical fill (list))
     )
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'linear-layout (get-id "individual-select-list") 'contents
+                     (build-individual-buttons
+                      "ind-select"
+                      (lambda (individual)
+                        (set-current! 'individual individual)
+                        (list (start-activity "pup-focal" 2 "")))))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -293,11 +338,15 @@
 
 
   (let ((clear-focal-toggles
-         (lambda ()
+         (lambda (v but)
            (list
-            (update-widget 'toggle-button (get-id "pup-focal-moving") 'checked 0)
-            (update-widget 'toggle-button (get-id "pup-focal-foraging") 'checked 0)
-            (update-widget 'toggle-button (get-id "pup-focal-resting") 'checked 0)))))
+            (update-widget 'toggle-button (get-id "pup-focal-moving") 'checked
+                           (if (equal? but "pup-focal-moving") 1 0))
+            (update-widget 'toggle-button (get-id "pup-focal-foraging") 'checked
+                           (if (equal? but "pup-focal-foraging") 1 0))
+            (update-widget 'toggle-button (get-id "pup-focal-resting") 'checked
+                           (if (equal? but "pup-focal-resting") 1 0)))
+           )))
 
     (activity
      "pup-focal"
@@ -307,20 +356,38 @@
        (vert
         (text-view (make-id "pup-focal-timer-text") "Time left" 20 fillwrap)
         (text-view (make-id "pup-focal-timer") "30" 40 fillwrap)))
+      (text-view (make-id "pup-focal-name/pack") "" 25 fillwrap)
       (text-view (make-id "pup-focal") "Current Activity" 20 fillwrap)
       (horiz
-       (toggle-button (make-id "pup-focal-moving") "Moving" 20 fillwrap (lambda (v) (clear-focal-toggles)))
-       (toggle-button (make-id "pup-focal-foraging") "Foraging" 20 fillwrap (lambda (v) (clear-focal-toggles)))
-       (toggle-button (make-id "pup-focal-resting") "Resting" 20 fillwrap (lambda (v) (clear-focal-toggles))))
+       (toggle-button (make-id "pup-focal-moving") "Moving" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-moving")))
+       (toggle-button (make-id "pup-focal-foraging") "Foraging" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-foraging")))
+       (toggle-button (make-id "pup-focal-resting") "Resting" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-resting"))))
       (text-view (make-id "pup-focal-escort-text") "Current Escort" 20 fillwrap)
-      (spinner (make-id "pup-focal-escort") (list "Mongoose 1" "Mongoose 2" "Mongoose 3" "Mongoose 4") fillwrap (lambda (v) '()))
+      (spinner (make-id "pup-focal-escort") (list "mongoose1" "mongoose2")
+                 fillwrap (lambda (v) '()))
       (horiz
        (button (make-id "pup-focal-event") "New event" 20 fillwrap (lambda () (list (start-activity "pup-focal-event" 2 ""))))
        (toggle-button (make-id "pup-focal-pause") "Pause" 20 fillwrap (lambda (v) '()))
        ))
      (lambda (activity arg)
        (activity-layout activity))
-     (lambda (activity arg) (list))
+     (lambda (activity arg)
+       (list
+        (update-widget 'text-view (get-id "pup-focal-name/pack") 'text
+                       (string-append
+                        "Pack: " (ktv-get (get-current 'pack '()) "name") " "
+                        "Pup: " (ktv-get (get-current 'individual '()) "name")))
+        (update-widget 'spinner (get-id "pup-focal-escort") 'array
+                 (foldl
+                  (lambda (individual r)
+                    (let ((name (ktv-get individual "name")))
+                      (if (equal? name (ktv-get (get-current 'individual '()) "name"))
+                          r (cons name r))))
+                  '()
+                  (dbg (db-all-where
+                   db "sync" "mongoose"
+                   (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id"))))))
+        ))
      (lambda (activity) '())
      (lambda (activity) '())
      (lambda (activity) '())
@@ -438,24 +505,6 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-  (let ((build-pack-buttons
-         (lambda ()
-           (foldl
-            (lambda (pack r)
-              (let ((name (ktv-get pack "name")))
-                (msg name)
-                (if (not (null? name))
-                    (cons (button (make-id (string-append "manage-packs-pack-" name))
-                                  name 20 fillwrap
-                                  (lambda ()
-                                    (msg "going to manage individuals")
-                                    (msg pack)
-                                    (set-current! 'pack pack)
-                                    (list (start-activity "manage-individual" 2 ""))))
-                          r)
-                    r)))
-            '()
-            (db-all db "sync" "pack")))))
   (activity
    "manage-packs"
    (vert
@@ -470,13 +519,17 @@
    (lambda (activity arg)
      (list
       (update-widget 'linear-layout (get-id "manage-packs-pack-list") 'contents
-                     (dbg (build-pack-buttons)))
+                     (build-pack-buttons
+                      "manage-packs"
+                      (lambda (pack)
+                        (set-current! 'pack pack)
+                        (list (start-activity "manage-individual" 2 "")))))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '())))
+   (lambda (activity requestcode resultcode) '()))
 
   (activity
    "new-pack"
@@ -485,7 +538,7 @@
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 fillwrap
-               (lambda (v) (msg "edit callback" v) (set-current! 'pack-name v) '()))
+               (lambda (v) (set-current! 'pack-name v) '()))
     (spacer 10)
     (horiz
      (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
@@ -506,21 +559,6 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-  (let ((build-individual-buttons
-         (lambda ()
-           (msg "building individual buttons")
-           (map
-            (lambda (individual)
-              (msg "hello")
-              (let ((name (ktv-get individual "name")))
-                (button (make-id (string-append "manage-individuals-ind-" name))
-                        name 20 fillwrap
-                        (lambda ()
-                          (list (start-activity "manage-individual" 2 ""))))))
-            (dbg (db-all-where
-             db "sync" "mongoose"
-             (dbg (list "pack-id" (ktv-get (dbg (get-current 'pack '())) "unique_id")))))
-            ))))
   (activity
    "manage-individual"
    (vert
@@ -536,7 +574,10 @@
    (lambda (activity arg)
      (list
       (update-widget 'linear-layout (get-id "manage-individuals-list") 'contents
-                     (build-individual-buttons))
+                     (build-individual-buttons
+                      "manage-ind"
+                      (lambda (individual)
+                        (list (start-activity "manage-individual" 2 "")))))
       (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
       ))
@@ -544,7 +585,7 @@
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '())))
+   (lambda (activity requestcode resultcode) '()))
 
   (activity
    "new-individual"
@@ -668,9 +709,9 @@
            (let ((sync (get-dirty-stats db "sync"))
                  (stream (get-dirty-stats db "stream")))
              (msg sync stream)
-             (dbg (string-append
-                   "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
-                   "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream))))))))
+             (string-append
+              "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
+              "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))))
     (activity
      "sync"
      (vert
@@ -684,7 +725,6 @@
                     "network"
                     "mongoose-web"
                     (lambda (state)
-                      (msg state)
                       (list
                        (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
        (mbutton "sync-sync" "Push"
@@ -692,7 +732,7 @@
                   (spit-dirty db "sync")))
        (mbutton "sync-pull" "Pull"
                 (lambda ()
-                  (dbg (suck-new db "sync")))))
+                  (suck-new db "sync"))))
       (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
       (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
 

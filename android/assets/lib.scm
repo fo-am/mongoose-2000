@@ -430,14 +430,14 @@
 
 (define (horiz . l)
   (linear-layout
-   (make-id "h")
+   (make-id "xv")
    'horizontal
    (layout 'fill-parent 'fill-parent 1 'left)
    l))
 
 (define (vert . l)
   (linear-layout
-   (make-id "v")
+   (make-id "xv")
    'vertical
    (layout 'fill-parent 'fill-parent 1 'left)
    l))
@@ -576,7 +576,7 @@
                       ((equal? (widget-type widget) "button")
                        ((button-listener widget)))
                       ((equal? (widget-type widget) "toggle-button")
-                       ((button-listener widget (car args))))
+                       ((toggle-button-listener widget) (car args)))
                       ((equal? (widget-type widget) "seek-bar")
                        ((seek-bar-listener widget) (car args)))
                       ((equal? (widget-type widget) "spinner")

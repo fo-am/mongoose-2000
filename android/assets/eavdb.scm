@@ -77,7 +77,6 @@
 
 ;; get the type from the attribute table with an entity/key
 (define (get-attribute-type db table entity-type key)
-  (msg "get-attribute-type")
   (let ((sql (string-append
               "select attribute_type from " table
               "_attribute where entity_type = ? and attribute_id = ?")))
@@ -85,7 +84,6 @@
 
 ;; search for a type and add it if it doesn't exist
 (define (find/add-attribute-type db table entity-type key type)
-  (msg "find/add-attribute")
   (let ((t (get-attribute-type db table entity-type key)))
     ;; add and return passed in type if not exist
     (cond
@@ -107,7 +105,6 @@
 
 ;; low level insert of a ktv
 (define (insert-value db table entity-id ktv)
-  (msg "insert-value")
   ;; use type to dispatch insert to correct value table
   (db-insert db (string-append "insert into " table "_value_" (ktv-type ktv)
                                " values (null, ?, ?, ?, 0)")
@@ -120,13 +117,10 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
-  (msg "insert-entity")
   (insert-entity-wholesale db table entity-type (get-unique user) 1 0 ktvlist))
 
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
-  (msg "insert-entity-w")
-  (msg table entity-type ktvlist)
   (let ((id (db-insert
              db (string-append
                  "insert into " table "_entity values (null, ?, ?, ?, ?)")
@@ -139,20 +133,16 @@
     ;; add all the keys
     (for-each
      (lambda (ktv)
-       (msg (ktv-key ktv))
        (insert-value db table id ktv))
      ktvlist)
     id))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
 (define (update-value db table entity-id ktv)
-  (msg "update-value" table entity-id ktv)
   (db-exec
    db (string-append "update " table "_value_" (ktv-type ktv)
                      " set value=?  where entity_id = ? and attribute_id = ?")
-   (ktv-value ktv) entity-id (ktv-key ktv))
-  (msg (db-status db)))
-
+   (ktv-value ktv) entity-id (ktv-key ktv)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
@@ -245,7 +235,7 @@
        (if (equal? (ktv-get e (car clause)) (cadr clause))
            (cons e r) r)))
    '()
-   (all-entities db table type)))
+   (dbg (all-entities db table type))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data
