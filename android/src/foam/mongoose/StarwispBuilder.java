@@ -39,6 +39,8 @@ import android.widget.Button;
 import android.widget.ToggleButton;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
+import android.widget.GridLayout;
+import android.widget.GridLayout.Spec;
 import android.widget.ScrollView;
 import android.widget.HorizontalScrollView;
 import android.widget.SeekBar;
@@ -106,6 +108,7 @@ public class StarwispBuilder
         if (p.equals("centre")) return Gravity.CENTER;
         if (p.equals("left")) return Gravity.LEFT;
         if (p.equals("right")) return Gravity.RIGHT;
+        if (p.equals("fill")) return Gravity.FILL;
         return Gravity.LEFT;
     }
 
@@ -169,8 +172,11 @@ public class StarwispBuilder
     }
 
     public void Build(final StarwispActivity ctx, final String ctxname, JSONArray arr, ViewGroup parent) {
+
         try {
             String type = arr.getString(0);
+
+            Log.i("starwisp","building started "+type);
 
             if (type.equals("build-fragment")) {
                 String name = arr.getString(1);
@@ -212,6 +218,23 @@ public class StarwispBuilder
                 }
                 return;
             }
+
+            if (type.equals("grid-layout")) {
+                GridLayout v = new GridLayout(ctx);
+                v.setId(arr.getInt(1));
+                v.setColumnCount(arr.getInt(2));
+                v.setOrientation(BuildOrientation(arr.getString(3)));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(5);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                }
+
+                return;
+            }
+
 
             if (type.equals("scroll-view")) {
                 HorizontalScrollView v = new HorizontalScrollView(ctx);
@@ -259,10 +282,18 @@ public class StarwispBuilder
                 v.setTextSize(arr.getInt(3));
                 v.setMovementMethod(LinkMovementMethod.getInstance());
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
-                if (arr.length()>5 && arr.getString(5).equals("left")) {
-                    v.setGravity(Gravity.LEFT);
+                if (arr.length()>5) {
+                    if (arr.getString(5).equals("left")) {
+                        v.setGravity(Gravity.LEFT);
+                    } else {
+                        if (arr.getString(5).equals("fill")) {
+                            v.setGravity(Gravity.FILL);
+                        } else {
+                            v.setGravity(Gravity.CENTER);
+                        }
+                    }
                 } else {
-                    v.setGravity(Gravity.CENTER);
+                    v.setGravity(Gravity.LEFT);
                 }
                 v.setTypeface(((StarwispActivity)ctx).m_Typeface);
                 parent.addView(v);
@@ -428,6 +459,9 @@ public class StarwispBuilder
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+arr.toString()+"] " + e.toString());
         }
+
+        Log.i("starwisp","building ended");
+
     }
 
     public void UpdateList(Activity ctx, String ctxname, JSONArray arr) {
@@ -654,6 +688,18 @@ public class StarwispBuilder
                     }
                 }
             }
+
+            if (type.equals("grid-layout")) {
+                GridLayout v = (GridLayout)vv;
+                if (token.equals("contents")) {
+                    v.removeAllViews();
+                    JSONArray children = arr.getJSONArray(3);
+                    for (int i=0; i<children.length(); i++) {
+                        Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                    }
+                }
+            }
+
 
             if (type.equals("image-view")) {
                 ImageView v = (ImageView)vv;

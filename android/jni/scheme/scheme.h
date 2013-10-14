@@ -50,7 +50,7 @@ extern "C" {
  * Leave it defined if you want continuations, and also for the Sharp Zaurus.
  * Undefine it if you only care about faster speed and not strict Scheme compatibility.
  */
-#define USE_SCHEME_STACK
+//#define USE_SCHEME_STACK
 
 #if USE_DL
 # define USE_INTERFACE 1
@@ -73,9 +73,9 @@ extern "C" {
 # define USE_STRING_PORTS 1
 #endif
 
-//#ifndef USE_TRACING
-# define USE_TRACING 1
-//#endif
+#ifndef USE_TRACING
+# define USE_TRACING 0
+#endif
 
 #ifndef USE_PLIST
 # define USE_PLIST 0

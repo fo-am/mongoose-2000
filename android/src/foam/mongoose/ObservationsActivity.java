@@ -19,12 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class ExperimentsActivity extends StarwispActivity
+public class ObservationsActivity extends StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "experiments";
+        m_Name = "observations";
         super.onCreate(savedInstanceState);
     }
 }

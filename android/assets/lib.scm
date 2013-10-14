@@ -56,6 +56,30 @@
     ((equal? n (car (car l))) (car l))
     (else (find n (cdr l)))))
 
+(define (sorted-add l i)
+  (cond
+   ((null? l) (list i))
+   ;; overwrite existing
+   ((eqv? (car i) (caar l)) (cons i (cdr l)))
+   ((< (car i) (caar l))
+    (cons i l))
+   (else
+    (cons (car l) (sorted-add (cdr l) i)))))
+
+(define (sorted-find l k)
+  (define (_ bot top)
+    (if (null? l) #f
+        (let* ((m (inexact->exact (floor (+ bot (/ (- top bot) 2)))))
+               (mid (list-ref l m))
+               (v (car mid)))
+          (cond
+           ((eqv? k v) mid)
+           ((eqv? top bot) #f)
+           ((< k v) (_ bot m))
+           (else (_ (+ m 1) top))))))
+  (_ 0 (- (length l) 1)))
+
+
 (define (build-list fn n)
   (define (_ fn n l)
     (cond ((zero? n) l)
@@ -288,6 +312,14 @@
 (define (linear-layout-layout t) (list-ref t 3))
 (define (linear-layout-children t) (list-ref t 4))
 
+(define (grid-layout id cols orientation layout children)
+  (list "grid-layout" id cols orientation layout children))
+(define (grid-layout-id t) (list-ref t 1))
+(define (grid-layout-cols t) (list-ref t 2))
+(define (grid-layout-orientation t) (list-ref t 3))
+(define (grid-layout-layout t) (list-ref t 4))
+(define (grid-layout-children t) (list-ref t 5))
+
 (define (frame-layout id layout children)
   (list "frame-layout" id layout children))
 (define (frame-layout-id t) (list-ref t 1))
@@ -398,6 +430,10 @@
 (define (replace-fragment id type) (list "replace-fragment" id type))
 
 (define (update-widget type id token value) (list type id token value))
+(define (update-widget-type l) (list-ref l 0))
+(define (update-widget-id l) (list-ref l 1))
+(define (update-widget-token l) (list-ref l 2))
+(define (update-widget-value l) (list-ref l 3))
 
 (define id-map ())
 (define current-id 1)
@@ -431,6 +467,7 @@
 (define fill (layout 'fill-parent 'fill-parent 1 'left))
 
 (define (spacer size) (space (layout 'fill-parent size 1 'left)))
+
 
 (define (horiz . l)
   (linear-layout
@@ -471,39 +508,57 @@
    ((equal? (activity-name (car l)) name) (car l))
    (else (activity-list-find (cdr l) name))))
 
-(define (widget-find widget-list id)
-  (cond
-   ((null? widget-list) #f)
-   ((eqv? (widget-id (car widget-list)) id) (car widget-list))
-   ((equal? (widget-type (car widget-list)) "linear-layout")
-    (let ((ret (widget-find (linear-layout-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   ((equal? (widget-type (car widget-list)) "frame-layout")
-    (let ((ret (widget-find (frame-layout-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   ((equal? (widget-type (car widget-list)) "scroll-view")
-    (let ((ret (widget-find (scroll-view-children (car widget-list)) id)))
-      (if ret ret (widget-find (cdr widget-list) id))))
-   (else (widget-find (cdr widget-list) id))))
-
-(define (widget-replace widget-list id w)
-  (cond
-   ((null? widget-list) #f)
-   ((eqv? (widget-id (car widget-list)) id) (cons w (cdr widget-list)))
-   ((equal? (widget-type (car widget-list)) "linear-layout")
-    (cons (widget-replace (linear-layout-children (car widget-list)) id w)
-          (widget-replace (cdr widget-list) id w)))
-   ((equal? (widget-type (car widget-list)) "frame-layout")
-    (cons (widget-replace (frame-layout-children (car widget-list)) id w)
-          (widget-replace (cdr widget-list) id w)))
-   ((equal? (widget-type (car widget-list)) "scroll-view")
-    (cons (widget-replace (scroll-view-children (car widget-list)) id w)
-          (widget-replace (cdr widget-list) id w)))
-   (else (cons (car widget-list) (widget-find (cdr widget-list) id w)))))
-
 (define activities 0)
 (define fragments 0)
-(define dynamic-widgets '())
+
+(define callbacks '())
+(define (callback id type fn) (list id type fn))
+(define (callback-id l) (list-ref l 0))
+(define (callback-type l) (list-ref l 1))
+(define (callback-fn l) (list-ref l 2))
+(define (find-callback id) (sorted-find callbacks id))
+(define (add-callback! cb) (set! callbacks (sorted-add callbacks cb)))
+
+(define (widget-get-children w)
+  (cond
+   ((equal? (widget-type w) "linear-layout") (linear-layout-children w))
+   ((equal? (widget-type w) "frame-layout") (frame-layout-children w))
+   ((equal? (widget-type w) "scroll-view") (scroll-view-children w))
+   ((equal? (widget-type w) "grid-layout") (grid-layout-children w))
+   (else '())))
+
+(define (widget-get-callback w)
+  (cond
+   ((equal? (widget-type w) "edit-text") (edit-text-listener w))
+   ((equal? (widget-type w) "button") (button-listener w))
+   ((equal? (widget-type w) "toggle-button") (toggle-button-listener w))
+   ((equal? (widget-type w) "seek-bar") (seek-bar-listener w))
+   ((equal? (widget-type w) "spinner") (spinner-listener w))
+   (else #f)))
+
+;; walk through activity stripping callbacks
+(define (update-callbacks! widget-list)
+  (cond
+   ((null? widget-list) #f)
+   (else
+    (let* ((w (car widget-list))
+           (c (widget-get-children w)))
+      (if (not (null? c))
+          (update-callbacks! c)
+          (let ((cb (widget-get-callback w)))
+            (when cb (add-callback! (callback (edit-text-id w) (widget-type w) cb))))))
+    (update-callbacks! (cdr widget-list)))))
+
+;; walk through update stripping callbacks
+(define (update-callbacks-from-update! widget-list)
+  (if (null? widget-list) #f
+      (let ((w (car widget-list)))
+        (cond
+         ((null? w) #f)
+         ;; drill deeper
+         ((eq? (update-widget-token w) 'contents)
+          (update-callbacks! (update-widget-value w))))
+        (update-callbacks! (cdr widget-list)))))
 
 (define (define-activity-list . args)
   (set! activities (activity-list args)))
@@ -511,25 +566,8 @@
 (define (define-fragment-list . args)
   (set! fragments (activity-list args)))
 
-
-;; hack for dynamic widgets
-(define (add-new-widget! w)
-  (msg "dynamic widgets now " (length w))
-  ;; todo - speed this stuff up
-  (cond ((widget-find dynamic-widgets (widget-id w))
-         (set! dynamic-widgets (widget-replace dynamic-widgets (widget-id w) w)))
-        (else
-         (set! dynamic-widgets (cons w dynamic-widgets)))))
-
-(define (update-dynamic-widgets! events)
-  (for-each
-   (lambda (event)
-     (if (equal? (list-ref event 2) 'contents)
-         (for-each
-          (lambda (w)
-            (add-new-widget! w))
-          (list-ref event 3))))
-   events))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; replace with new cb system
 
 (define dialogs '())
 
@@ -558,6 +596,8 @@
                   (equal? (list-ref event 0) "network-connect"))
                  (add-new-dialog! event)))
          events)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (dialog-callback name args)
   (let ((dialog (dialog-find dialogs name)))
@@ -593,8 +633,9 @@
                   (else
                    (display "no callback called ")(display type)(newline)
                    '()))))
-        (when (not (eq? type 'on-create))
-              (update-dynamic-widgets! ret))
+        (if (eq? type 'on-create)
+            (update-callbacks! (list ret))
+            (update-callbacks-from-update! ret))
         (send (scheme->json ret)))))
 
 (define (find-activity-or-fragment name)
@@ -602,28 +643,23 @@
     (if r r
         (activity-list-find fragments name))))
 
-;; called by java
 (define (widget-callback activity-name widget-id args)
-  (let ((activity (find-activity-or-fragment activity-name)))
-    (if (not activity)
-        (begin (display "no activity called ")(display activity-name)(newline))
-        (let ((widget (widget-find (cons (activity-layout activity) dynamic-widgets) widget-id)))
-          ;;(display widget)(newline)
-          (if (not widget)
-              (begin (display "no widget ")(display widget-id)(display " in ")(display activity-name)(newline))
-              (let ((events
-                     (cond
-                      ((equal? (widget-type widget) "edit-text")
-                       ((edit-text-listener widget) (car args)))
-                      ((equal? (widget-type widget) "button")
-                       ((button-listener widget)))
-                      ((equal? (widget-type widget) "toggle-button")
-                       ((toggle-button-listener widget) (car args)))
-                      ((equal? (widget-type widget) "seek-bar")
-                       ((seek-bar-listener widget) (car args)))
-                      ((equal? (widget-type widget) "spinner")
-                       ((spinner-listener widget) (car args)))
-                      (else (display "no callbacks for type ")
-                            (display (widget-type widget))(newline)))))
-                (update-dialogs! events)
-                (send (scheme->json events))))))))
+  (let ((cb (find-callback widget-id)))
+    (if (not cb)
+        (msg "no widget" widget-id "found!")
+        (let ((events
+               (cond
+                ((equal? (callback-type cb) "edit-text")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "button")
+                 ((callback-fn cb)))
+                ((equal? (callback-type cb) "toggle-button")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type cb) "seek-bar")
+                 ((callback-fn cb) (car args)))
+                ((equal? (callback-type widget) "spinner")
+                 ((callback-fn cb) (car args)))
+                (else (msg "no callbacks for type" (callback-type cb))))))
+          ;;(update-callbacks! events)
+          (update-dialogs! events)
+          (send (scheme->json events))))))

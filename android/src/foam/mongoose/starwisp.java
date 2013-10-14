@@ -58,7 +58,7 @@ public class starwisp extends StarwispActivity
         // register all activities here
         ActivityManager.RegisterActivity("splash",starwisp.class);
         ActivityManager.RegisterActivity("main",MainActivity.class);
-        ActivityManager.RegisterActivity("experiments",ExperimentsActivity.class);
+        ActivityManager.RegisterActivity("observations",ObservationsActivity.class);
         ActivityManager.RegisterActivity("pack-select",PackSelectActivity.class);
         ActivityManager.RegisterActivity("individual-select",IndividualSelectActivity.class);
         ActivityManager.RegisterActivity("pup-focal",PupFocalActivity.class);

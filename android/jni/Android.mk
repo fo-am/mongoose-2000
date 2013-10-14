@@ -4,7 +4,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := starwisp-core
 
-LOCAL_CFLAGS := -DANDROID_NDK -O3 -Wno-write-strings
+LOCAL_CFLAGS := -DANDROID_NDK -O3 -Wno-write-strings -DNDEBUG
+APP_OPTIM := release
 
 LOCAL_SRC_FILES := \
 	core/list.cpp \

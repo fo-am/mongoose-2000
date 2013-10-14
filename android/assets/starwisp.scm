@@ -170,61 +170,43 @@
        (_ (append c (list (car l))) (cdr l)))))
   (_ '() l))
 
-(define (build-pack-buttons act fn)
-  (map
-   (lambda (packs)
-     (apply
-      horiz
-      (map
-       (lambda (pack)
-         (let ((name (ktv-get pack "name")))
-           (button (make-id (string-append act "-pack-" name))
-                   name 20 fillwrap
-                   (lambda ()
-                     (fn pack)))))
-       packs)))
-   (xwise 2 (db-all db "sync" "pack"))))
-
-;(define (build-individual-buttons act fn)
-; (map
+;(define (build-pack-buttons act fn)
+;  (map
 ;   (lambda (individuals)
 ;     (apply
 ;      horiz
 ;      (map
-;       (lambda (individual)
-;         (let ((name (ktv-get individual "name")))
+;       (lambda (pack)
+;         (let ((name (ktv-get pack "name")))
 ;           (button (make-id (string-append act "-ind-" name))
 ;                   name 20 fillwrap
 ;                   (lambda ()
-;                     (fn individual)))))
+;                     (fn pack)))))
 ;       individuals)))
-;   (xwise
-;    2 (db-all-where
-;       db "sync" "mongoose"
-;       (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id"))))))
+;   (xwise 2 (db-all db "sync" "pack"))))
 
-;(define (build-pack-buttons act fn)
-;  (map
-;   (lambda (pack)
-;     (let ((name (ktv-get pack "name")))
-;       (button (make-id (string-append act "-pack-" name))
-;               name 20 fillwrap
-;               (lambda ()
-;                 (fn pack)))))
-;   (db-all db "sync" "pack")))
+
+(define (build-pack-buttons act fn)
+  (map
+   (lambda (pack)
+     (let ((name (ktv-get pack "name")))
+       (button (make-id (string-append act "-pack-" name))
+               name 20 (layout '150 'wrap-content 1 'centre)
+               (lambda ()
+                 (fn pack)))))
+   (db-all db "sync" "pack")))
 
 (define (build-individual-buttons act fn)
   (map
-   (lambda (individual)
-     (let ((name (ktv-get individual "name")))
+   (lambda (ind)
+     (let ((name (ktv-get ind "name")))
        (button (make-id (string-append act "-ind-" name))
-               name 20 fillwrap
+               name 20 (layout '150 'wrap-content 1 'centre)
                (lambda ()
-                 (fn individual)))))
+                 (fn ind)))))
    (db-all-where
     db "sync" "mongoose"
     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))))
-
 
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
@@ -258,14 +240,14 @@
    "test-fragment2"
    (vert
     (text-view (make-id "splash-title") "This is also a fragment" 40 fillwrap)
-    (text-view (make-id "changeme") "unchanged" 30 fillwrap)
-    (mbutton "frag-but" "sdsds"
+    (text-view (make-id "changeme2") "unchanged" 30 fillwrap)
+    (mbutton "frag-but3" "sdsds"
              (lambda () (list)))
     (spacer 20)
-    (mbutton "frag-but" "Pow wow"
+    (mbutton "frag-but2" "Pow wow"
              (lambda ()
                (list (toast "hello dude")
-                     (update-widget 'text-view (get-id "changeme") 'text "I have changed!")))))
+                     (update-widget 'text-view (get-id "changeme2") 'text "I have changed!")))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg) '())
@@ -307,7 +289,7 @@
     (text-view (make-id "main-title") "Mongoose 2000" 40 fillwrap)
     (text-view (make-id "main-about") "Advanced mongoose technology" 20 fillwrap)
     (spacer 10)
-    (mbutton "main-experiments" "Experiments" (lambda () (list (start-activity "experiments" 2 ""))))
+    (mbutton "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
     (mbutton "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
     (mbutton "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 ""))))
     (mtext "foo" "Your ID")
@@ -334,9 +316,9 @@
    (lambda (activity requestcode resultcode) '()))
 
   (activity
-   "experiments"
+   "observations"
    (vert
-    (text-view (make-id "title") "Experiments" 40 fillwrap)
+    (text-view (make-id "title") "Observation" 40 fillwrap)
     (spacer 10)
     (button (make-id "main-sync") "Pup Focal" 20 fillwrap (lambda () (list (start-activity "pack-select" 2 ""))))
     )
@@ -574,16 +556,16 @@
    "manage-packs"
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
-    (linear-layout
+    (grid-layout
      (make-id "manage-packs-pack-list")
-     'vertical fill (list))
+     3 'horizontal (layout 'wrap-content 'wrap-content 1 'centre) (list))
     (button (make-id "manage-packs-new") "New pack" 20 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'linear-layout (get-id "manage-packs-pack-list") 'contents
+      (update-widget 'grid-layout (get-id "manage-packs-pack-list") 'contents
                      (build-pack-buttons
                       "manage-packs"
                       (lambda (pack)
@@ -629,16 +611,16 @@
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
-    (linear-layout
+    (grid-layout
      (make-id "manage-individuals-list")
-     'vertical fill (list))
+     3 'horizontal (layout 'wrap-content 'wrap-content 1 'centre) (list))
     (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'linear-layout (get-id "manage-individuals-list") 'contents
+      (update-widget 'grid-layout (get-id "manage-individuals-list") 'contents
                      (build-individual-buttons
                       "manage-ind"
                       (lambda (individual)
