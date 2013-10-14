@@ -285,7 +285,7 @@
     (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
     (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
-    (build-fragment "test-fragment" (make-id "fragtesting"))
+    (build-fragment "test-fragment" (make-id "fragtesting") fillwrap)
     (mbutton "f3" "Frag 2"
              (lambda () (list (replace-fragment (get-id "fragtesting") "test-fragment2"))))
     (mbutton "f4" "Frag 1"
@@ -311,7 +311,7 @@
     (mbutton "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
     (mbutton "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 ""))))
     (mtext "foo" "Your ID")
-    (edit-text (make-id "main-id-text") "" 30 fillwrap
+    (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
                  (set-current! 'user-id v)
                  (update-entity
@@ -602,7 +602,7 @@
     (text-view (make-id "title") "New pack" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
-    (edit-text (make-id "new-pack-name") "" 30 fillwrap
+    (edit-text (make-id "new-pack-name") "" 30 "text" fillwrap
                (lambda (v) (set-current! 'pack-name v) '()))
     (spacer 10)
     (horiz
@@ -658,7 +658,7 @@
     (text-view (make-id "title") "New Mongoose" 40 fillwrap)
     (text-view (make-id "new-individual-pack-name") "Pack:" 20 fillwrap)
     (text-view (make-id "new-individual-name-text") "Name" 20 fillwrap)
-    (edit-text (make-id "new-individual-name") "" 30 fillwrap
+    (edit-text (make-id "new-individual-name") "" 30 "text" fillwrap
                (lambda (v) (set-current! 'individual-name v) '()))
     (text-view (make-id "new-individual-name-text") "Gender" 20 fillwrap)
     (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap
@@ -668,10 +668,10 @@
      (text-view (make-id "new-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
     (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
-    (edit-text (make-id "new-individual-litter-code") "" 30 fillwrap
+    (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (set-current! 'individual-litter-code v) '()))
     (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
-    (edit-text (make-id "new-individual-chip-code") "" 30 fillwrap
+    (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (set-current! 'individual-chip-code v) '()))
     (horiz
      (button (make-id "new-individual-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
@@ -706,7 +706,7 @@
     (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "update-individual-name-text") "Name" 20 fillwrap)
-    (edit-text (make-id "update-individual-name") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap (lambda (v) '()))
     (text-view (make-id "update-individual-name-text") "Gender" 20 fillwrap)
     (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap (lambda (v) '()))
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 20 fillwrap)
@@ -714,9 +714,9 @@
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
     (text-view (make-id "update-individual-litter-text") "Litter code" 20 fillwrap)
-    (edit-text (make-id "update-individual-litter-code") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap (lambda (v) '()))
     (text-view (make-id "update-individual-chip-text") "Chip code" 20 fillwrap)
-    (edit-text (make-id "update-individual-chip-code") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap (lambda (v) '()))
     (spacer 10)
     (horiz
      (button (make-id "update-individual-delete") "Delete" 20 fillwrap (lambda () (list (finish-activity 2))))
@@ -745,7 +745,7 @@
      (text-view (make-id "tag-location-gps-lng") "LNG" 20 fillwrap))
 
     (text-view (make-id "tag-location-name-text") "Name" 20 fillwrap)
-    (edit-text (make-id "tag-location-name") "" 30 fillwrap (lambda (v) '()))
+    (edit-text (make-id "tag-location-name") "" 30 "text" fillwrap (lambda (v) '()))
 
     (text-view (make-id "tag-location-pack-text") "Associated pack" 20 fillwrap)
     (spinner (make-id "tag-location-pack") (list "Pack 1" "Pack 2") fillwrap (lambda (v) '()))

@@ -72,6 +72,9 @@ import java.util.Date;
 import java.text.DateFormat;
 import java.util.List;
 import android.content.DialogInterface;
+import android.text.InputType;
+import android.util.TypedValue;
+
 
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog;
@@ -174,7 +177,7 @@ public class StarwispBuilder
                 int ID = arr.getInt(2);
                 Fragment fragment = ActivityManager.GetFragment(name);
                 LinearLayout inner = new LinearLayout(ctx);
-                inner.setLayoutParams(new LinearLayout.LayoutParams(300, ViewGroup.LayoutParams.FILL_PARENT));
+                inner.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
                 inner.setId(ID);
                 FragmentTransaction fragmentTransaction = ctx.getFragmentManager().beginTransaction();
                 fragmentTransaction.add(ID,fragment);
@@ -280,32 +283,30 @@ public class StarwispBuilder
                 v.setId(arr.getInt(1));
                 v.setText(arr.getString(2));
                 v.setTextSize(arr.getInt(3));
-                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+
+                String inputtype = arr.getString(4);
+                if (inputtype.equals("text")) {
+                    //v.setInputType(InputType.TYPE_CLASS_TEXT);
+                } else if (inputtype.equals("numeric")) {
+                    v.setInputType(InputType.TYPE_CLASS_NUMBER);
+                } else if (inputtype.equals("email")) {
+                    v.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
+                }
+
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(5)));
                 v.setTypeface(((StarwispActivity)ctx).m_Typeface);
                 final String fn = arr.getString(5);
                 v.setSingleLine(true);
-/*                v.setOnClickListener(new View.OnClickListener() {
-                    public void onClick(View v) {
-                        v.setFocusable(true);
-                        v.requestFocus();
 
-                        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
-                    }
-                });
-*/
-                v.setOnKeyListener(new View.OnKeyListener() {
-                    public boolean onKey(View a, int keyCode, KeyEvent event) {
-                        if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
-                            (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                            CallbackArgs(ctx,ctxname,v.getId(),"\""+v.getText()+"\"");
-                        }
-                        return false;
-                    }
-                });
+                v.addTextChangedListener(new TextWatcher() {
+                     public void afterTextChanged(Editable s) {
+                         CallbackArgs(ctx,ctxname,v.getId(),"\""+s.toString()+"\"");
+                     }
+                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                     public void onTextChanged(CharSequence s, int start, int before, int count) {}
+                 });
 
                 parent.addView(v);
-
-
             }
 
             if (type.equals("button")) {
