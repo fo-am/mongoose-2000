@@ -486,6 +486,21 @@
       (if ret ret (widget-find (cdr widget-list) id))))
    (else (widget-find (cdr widget-list) id))))
 
+(define (widget-replace widget-list id w)
+  (cond
+   ((null? widget-list) #f)
+   ((eqv? (widget-id (car widget-list)) id) (cons w (cdr widget-list)))
+   ((equal? (widget-type (car widget-list)) "linear-layout")
+    (cons (widget-replace (linear-layout-children (car widget-list)) id w)
+          (widget-replace (cdr widget-list) id w)))
+   ((equal? (widget-type (car widget-list)) "frame-layout")
+    (cons (widget-replace (frame-layout-children (car widget-list)) id w)
+          (widget-replace (cdr widget-list) id w)))
+   ((equal? (widget-type (car widget-list)) "scroll-view")
+    (cons (widget-replace (scroll-view-children (car widget-list)) id w)
+          (widget-replace (cdr widget-list) id w)))
+   (else (cons (car widget-list) (widget-find (cdr widget-list) id w)))))
+
 (define activities 0)
 (define fragments 0)
 (define dynamic-widgets '())
@@ -496,12 +511,15 @@
 (define (define-fragment-list . args)
   (set! fragments (activity-list args)))
 
+
 ;; hack for dynamic widgets
 (define (add-new-widget! w)
-  ;; todo - when to clear out?
-  (when (not (widget-find dynamic-widgets (widget-id w)))
-        ;;(display "adding widget ")(display w)(newline)
-        (set! dynamic-widgets (cons w dynamic-widgets))))
+  (msg "dynamic widgets now " (length w))
+  ;; todo - speed this stuff up
+  (cond ((widget-find dynamic-widgets (widget-id w))
+         (set! dynamic-widgets (widget-replace dynamic-widgets (widget-id w) w)))
+        (else
+         (set! dynamic-widgets (cons w dynamic-widgets)))))
 
 (define (update-dynamic-widgets! events)
   (for-each
@@ -552,14 +570,14 @@
 ;; called by java
 (define (activity-callback type activity-name args)
   (let ((activity (activity-list-find activities activity-name)))
-    (top-callback type activity args)))
+    (top-callback type activity-name activity args)))
 
 ;; called by java
 (define (fragment-callback type fragment-name args)
   (let ((fragment (activity-list-find fragments fragment-name)))
-    (top-callback type fragment args)))
+    (top-callback type fragment-name fragment args)))
 
-(define (top-callback type activity args)
+(define (top-callback type activity-name activity args)
   ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
   (if (not activity)
       (begin (display "no activity/fragment called ")(display activity-name)(newline))
