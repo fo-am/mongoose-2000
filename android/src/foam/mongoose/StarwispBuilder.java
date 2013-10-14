@@ -18,6 +18,9 @@ package foam.mongoose;
 import java.util.ArrayList;
 
 import android.app.Activity;
+import android.app.Fragment;
+import android.app.FragmentTransaction;
+import android.app.FragmentManager;
 import android.util.Log;
 import android.content.Context;
 import android.graphics.Color;
@@ -131,44 +134,55 @@ public class StarwispBuilder
         }
     }
 
-    public void DialogCallback(StarwispActivity ctx, String name, String args)
+    public void DialogCallback(StarwispActivity ctx, String ctxname, String name, String args)
     {
         try {
             String ret=m_Scheme.eval("(dialog-callback \""+name+"\" '("+args+"))");
-            UpdateList(ctx, new JSONArray(ret));
+            UpdateList(ctx, ctxname, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
 
-    private void Callback(StarwispActivity ctx, int wid)
+    private void Callback(StarwispActivity ctx, String ctxname, int wid)
     {
         try {
-            String ret=m_Scheme.eval("(widget-callback \""+
-                                     ctx.m_Name+"\" "+
-                                     wid+" '())");
-            UpdateList(ctx, new JSONArray(ret));
+            String ret=m_Scheme.eval("(widget-callback \""+ctxname+"\" "+wid+" '())");
+            UpdateList(ctx, ctxname, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    private void CallbackArgs(StarwispActivity ctx, int wid, String args)
+    private void CallbackArgs(StarwispActivity ctx, String ctxname, int wid, String args)
     {
         try {
-            String ret=m_Scheme.eval("(widget-callback \""+
-                                     ctx.m_Name+"\" "+
-                                     wid+" '("+args+"))");
-            UpdateList(ctx, new JSONArray(ret));
+            String ret=m_Scheme.eval("(widget-callback \""+ctxname+"\" "+wid+" '("+args+"))");
+            UpdateList(ctx, ctxname, new JSONArray(ret));
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    public void Build(final StarwispActivity ctx, JSONArray arr, ViewGroup parent) {
+    public void Build(final StarwispActivity ctx, final String ctxname, JSONArray arr, ViewGroup parent) {
         try {
             String type = arr.getString(0);
+
+            if (type.equals("build-fragment")) {
+                String name = arr.getString(1);
+                int ID = arr.getInt(2);
+                Fragment fragment = ActivityManager.GetFragment(name);
+                LinearLayout inner = new LinearLayout(ctx);
+                inner.setLayoutParams(new LinearLayout.LayoutParams(300, ViewGroup.LayoutParams.FILL_PARENT));
+                inner.setId(ID);
+                FragmentTransaction fragmentTransaction = ctx.getFragmentManager().beginTransaction();
+                fragmentTransaction.add(ID,fragment);
+                fragmentTransaction.commit();
+                parent.addView(inner);
+                return;
+            }
+
 
             if (type.equals("linear-layout")) {
                 LinearLayout v = new LinearLayout(ctx);
@@ -179,7 +193,7 @@ public class StarwispBuilder
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(4);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
@@ -191,7 +205,7 @@ public class StarwispBuilder
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(3);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
@@ -203,7 +217,7 @@ public class StarwispBuilder
                 parent.addView(v);
                 JSONArray children = arr.getJSONArray(3);
                 for (int i=0; i<children.length(); i++) {
-                    Build(ctx,new JSONArray(children.getString(i)), v);
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }
                 return;
             }
@@ -283,7 +297,7 @@ public class StarwispBuilder
                     public boolean onKey(View a, int keyCode, KeyEvent event) {
                         if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
                             (keyCode == KeyEvent.KEYCODE_ENTER)) {
-                            CallbackArgs(ctx,v.getId(),"\""+v.getText()+"\"");
+                            CallbackArgs(ctx,ctxname,v.getId(),"\""+v.getText()+"\"");
                         }
                         return false;
                     }
@@ -304,7 +318,7 @@ public class StarwispBuilder
                 final String fn = arr.getString(5);
                 v.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
-                        Callback(ctx,v.getId());
+                        Callback(ctx,ctxname,v.getId());
                     }
                 });
                 parent.addView(v);
@@ -322,7 +336,7 @@ public class StarwispBuilder
                     public void onClick(View v) {
                         String arg="#f";
                         if (((ToggleButton) v).isChecked()) arg="#t";
-                        CallbackArgs(ctx,v.getId(),arg);
+                        CallbackArgs(ctx,ctxname,v.getId(),arg);
                     }
                 });
                 parent.addView(v);
@@ -339,7 +353,7 @@ public class StarwispBuilder
 
                 v.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
                     public void onProgressChanged(SeekBar v, int a, boolean s) {
-                        CallbackArgs(ctx,v.getId(),Integer.toString(a));
+                        CallbackArgs(ctx,ctxname,v.getId(),Integer.toString(a));
                     }
                     public void onStartTrackingTouch(SeekBar v) {}
                     public void onStopTrackingTouch(SeekBar v) {}
@@ -374,7 +388,7 @@ public class StarwispBuilder
                 v.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                     public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
                         try {
-                            CallbackArgs(ctx,wid,"\""+items.getString(pos)+"\"");
+                            CallbackArgs(ctx,ctxname,wid,"\""+items.getString(pos)+"\"");
                         } catch (JSONException e) {
                             Log.e("starwisp", "Error parsing data " + e.toString());
                         }
@@ -415,17 +429,17 @@ public class StarwispBuilder
         }
     }
 
-    public void UpdateList(Activity ctx, JSONArray arr) {
+    public void UpdateList(Activity ctx, String ctxname, JSONArray arr) {
         try {
             for (int i=0; i<arr.length(); i++) {
-                Update(ctx,new JSONArray(arr.getString(i)));
+                Update((StarwispActivity)ctx,ctxname,new JSONArray(arr.getString(i)));
             }
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
         }
     }
 
-    public void Update(final Activity ctx, JSONArray arr) {
+    public void Update(final StarwispActivity ctx, final String ctxname, JSONArray arr) {
         try {
 
             String type = arr.getString(0);
@@ -438,6 +452,23 @@ public class StarwispBuilder
             if (token.equals("toast")) {
                 Toast msg = Toast.makeText(ctx.getBaseContext(),arr.getString(3),Toast.LENGTH_SHORT);
                 msg.show();
+                return;
+            }
+
+            if (type.equals("replace-fragment")) {
+                int ID = arr.getInt(1);
+                String name = arr.getString(2);
+                Fragment fragment = ActivityManager.GetFragment(name);
+                FragmentTransaction ft = ctx.getFragmentManager().beginTransaction();
+
+                ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+
+                //ft.setCustomAnimations(
+                //    R.animator.card_flip_right_in, R.animator.card_flip_right_out,
+                //    R.animator.card_flip_left_in, R.animator.card_flip_left_out);
+                ft.replace(ID, fragment);
+                //ft.addToBackStack(null);
+                ft.commit();
                 return;
             }
 
@@ -474,7 +505,7 @@ public class StarwispBuilder
                         }
                         code+=")";
 
-                        DialogCallback((StarwispActivity)ctx, name, code);
+                        DialogCallback(ctx, ctxname, name, code);
                     }
                 }
                 return;
@@ -546,7 +577,7 @@ public class StarwispBuilder
                     ctx,
                     new DatePickerDialog.OnDateSetListener() {
                         public void onDateSet(DatePicker view, int year, int month, int day) {
-                            DialogCallback((StarwispActivity)ctx, name, day+" "+month+" "+year);
+                            DialogCallback(ctx, ctxname, name, day+" "+month+" "+year);
                         }
                     }, year, month, day);
                 d.show();
@@ -563,7 +594,7 @@ public class StarwispBuilder
                     public void onClick(DialogInterface dialog, int which) {
                         int result = 0;
                         if (which==DialogInterface.BUTTON_POSITIVE) result=1;
-                        DialogCallback((StarwispActivity)ctx, name, ""+result);
+                        DialogCallback(ctx, ctxname, name, ""+result);
                     }
                 };
 
@@ -618,7 +649,7 @@ public class StarwispBuilder
                     v.removeAllViews();
                     JSONArray children = arr.getJSONArray(3);
                     for (int i=0; i<children.length(); i++) {
-                        Build((StarwispActivity)ctx,new JSONArray(children.getString(i)), v);
+                        Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                     }
                 }
             }
@@ -777,7 +808,7 @@ public class StarwispBuilder
                     v.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
                         public void onItemSelected(AdapterView<?> a, View v, int pos, long id) {
                             try {
-                                CallbackArgs((StarwispActivity)ctx,wid,"\""+items.getString(pos)+"\"");
+                                CallbackArgs(ctx,ctxname,wid,"\""+items.getString(pos)+"\"");
                             } catch (JSONException e) {
                                 Log.e("starwisp", "Error parsing data " + e.toString());
                             }

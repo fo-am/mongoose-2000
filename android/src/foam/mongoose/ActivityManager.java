@@ -17,8 +17,11 @@ package foam.mongoose;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.lang.InstantiationException;
+import java.lang.IllegalAccessException;
 
 import android.app.Activity;
+import android.app.Fragment;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -28,14 +31,21 @@ import android.view.View;
 
 public class ActivityManager {
     static private HashMap<String,Class> m_Activities;
+    static private HashMap<String,Class> m_Fragments;
 
     static {
         m_Activities = new HashMap<String,Class>();
+        m_Fragments = new HashMap<String,Class>();
     }
 
-    static public void Register(String name, Class actclass)
+    static public void RegisterActivity(String name, Class actclass)
     {
         m_Activities.put(name,actclass);
+    }
+
+    static public void RegisterFragment(String name, Class fragclass)
+    {
+        m_Fragments.put(name,fragclass);
     }
 
     static public void StartActivity(Activity src, String name, int requestcode, String arg)
@@ -67,4 +77,24 @@ public class ActivityManager {
             src.startActivity(intent);
         }
     }
+
+    static public Fragment GetFragment(String name)
+    {
+        Class FragClass = m_Fragments.get(name);
+        if (FragClass == null)
+        {
+            Log.i("starwisp","fragment "+name+" not found in registry");
+        }
+        try {
+            return (Fragment)FragClass.newInstance();
+        } catch (InstantiationException e) {
+            Log.i("starwisp","fragment "+name+" error InstantiationException");
+            return null;
+        } catch (IllegalAccessException e) {
+            Log.i("starwisp","fragment "+name+" error IllegalAccessException");
+            return null;
+        }
+    }
+
+
 }

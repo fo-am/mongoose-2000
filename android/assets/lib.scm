@@ -393,6 +393,9 @@
 (define (start-activity-goto act request arg) (list "start-activity" 0 "start-activity-goto" act arg))
 (define (finish-activity result) (list "finish-activity" 0 "finish-activity" result))
 
+(define (build-fragment type id) (list "build-fragment" type id))
+(define (replace-fragment id type) (list "replace-fragment" id type))
+
 (define (update-widget type id token value) (list type id token value))
 
 (define id-map ())
@@ -445,6 +448,9 @@
 (define (activity name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result)
   (list name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result))
 
+(define (fragment name layout on-create on-start on-resume on-pause on-stop on-destroy)
+  (list name layout on-create on-start on-resume on-pause on-stop on-destroy))
+
 (define (activity-name a) (list-ref a 0))
 (define (activity-layout a) (list-ref a 1))
 (define (activity-modify-layout a v) (list-replace a 1 v))
@@ -479,11 +485,15 @@
       (if ret ret (widget-find (cdr widget-list) id))))
    (else (widget-find (cdr widget-list) id))))
 
-(define root 0)
+(define activities 0)
+(define fragments 0)
 (define dynamic-widgets '())
 
 (define (define-activity-list . args)
-  (set! root (activity-list args)))
+  (set! activities (activity-list args)))
+
+(define (define-fragment-list . args)
+  (set! fragments (activity-list args)))
 
 ;; hack for dynamic widgets
 (define (add-new-widget! w)
@@ -540,29 +550,42 @@
 
 ;; called by java
 (define (activity-callback type activity-name args)
+  (let ((activity (activity-list-find activities activity-name)))
+    (top-callback type activity args)))
+
+;; called by java
+(define (fragment-callback type fragment-name args)
+  (let ((fragment (activity-list-find fragments fragment-name)))
+    (top-callback type fragment args)))
+
+(define (top-callback type activity args)
   ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
-  (let ((activity (activity-list-find root activity-name)))
-    (if (not activity)
-        (begin (display "no activity called ")(display activity-name)(newline))
-        (let ((ret (cond
-                    ;; todo update activity...?
-                    ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
-                    ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
-                    ((eq? type 'on-stop) ((activity-on-stop activity) activity))
-                    ((eq? type 'on-resume) ((activity-on-resume activity) activity))
-                    ((eq? type 'on-pause) ((activity-on-pause activity) activity))
-                    ((eq? type 'on-destroy) ((activity-on-destroy activity) activity))
-                    ((eq? type 'on-activity-result) ((activity-on-activity-result activity) activity (car args) (cadr args)))
-                    (else
-                     (display "no callback called ")(display type)(newline)
-                     '()))))
-          (when (not (eq? type 'on-create))
-                (update-dynamic-widgets! ret))
-          (send (scheme->json ret))))))
+  (if (not activity)
+      (begin (display "no activity/fragment called ")(display activity-name)(newline))
+      (let ((ret (cond
+                  ;; todo update activity...?
+                  ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
+                  ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
+                  ((eq? type 'on-stop) ((activity-on-stop activity) activity))
+                  ((eq? type 'on-resume) ((activity-on-resume activity) activity))
+                  ((eq? type 'on-pause) ((activity-on-pause activity) activity))
+                  ((eq? type 'on-destroy) ((activity-on-destroy activity) activity))
+                  ((eq? type 'on-activity-result) ((activity-on-activity-result activity) activity (car args) (cadr args)))
+                  (else
+                   (display "no callback called ")(display type)(newline)
+                   '()))))
+        (when (not (eq? type 'on-create))
+              (update-dynamic-widgets! ret))
+        (send (scheme->json ret)))))
+
+(define (find-activity-or-fragment name)
+  (let ((r (activity-list-find activities name)))
+    (if r r
+        (activity-list-find fragments name))))
 
 ;; called by java
 (define (widget-callback activity-name widget-id args)
-  (let ((activity (activity-list-find root activity-name)))
+  (let ((activity (find-activity-or-fragment activity-name)))
     (if (not activity)
         (begin (display "no activity called ")(display activity-name)(newline))
         (let ((widget (widget-find (cons (activity-layout activity) dynamic-widgets) widget-id)))

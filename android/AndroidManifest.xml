@@ -6,6 +6,7 @@
     <application android:label="@string/app_name"
                  android:icon="@drawable/logo"
                  android:theme="@style/StarwispTheme"
+                 android:hardwareAccelerated="true"
                  >
 
         <activity android:name="starwisp"

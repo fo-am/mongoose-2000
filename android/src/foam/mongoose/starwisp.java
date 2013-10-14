@@ -56,25 +56,29 @@ public class starwisp extends StarwispActivity
 {
     static {
         // register all activities here
-        ActivityManager.Register("splash",starwisp.class);
-        ActivityManager.Register("main",MainActivity.class);
-        ActivityManager.Register("experiments",ExperimentsActivity.class);
-        ActivityManager.Register("pack-select",PackSelectActivity.class);
-        ActivityManager.Register("individual-select",IndividualSelectActivity.class);
-        ActivityManager.Register("pup-focal",PupFocalActivity.class);
-        ActivityManager.Register("pup-focal-event",PupFocalEventActivity.class);
-        ActivityManager.Register("event-self",EventSelfActivity.class);
-        ActivityManager.Register("event-fed",EventFedActivity.class);
-        ActivityManager.Register("event-aggression",EventAggressionActivity.class);
+        ActivityManager.RegisterActivity("splash",starwisp.class);
+        ActivityManager.RegisterActivity("main",MainActivity.class);
+        ActivityManager.RegisterActivity("experiments",ExperimentsActivity.class);
+        ActivityManager.RegisterActivity("pack-select",PackSelectActivity.class);
+        ActivityManager.RegisterActivity("individual-select",IndividualSelectActivity.class);
+        ActivityManager.RegisterActivity("pup-focal",PupFocalActivity.class);
+        ActivityManager.RegisterActivity("pup-focal-event",PupFocalEventActivity.class);
+        ActivityManager.RegisterActivity("event-self",EventSelfActivity.class);
+        ActivityManager.RegisterActivity("event-fed",EventFedActivity.class);
+        ActivityManager.RegisterActivity("event-aggression",EventAggressionActivity.class);
 
-        ActivityManager.Register("manage-packs",ManagePacksActivity.class);
-        ActivityManager.Register("new-pack",NewPackActivity.class);
-        ActivityManager.Register("manage-individual",ManageIndividualActivity.class);
-        ActivityManager.Register("new-individual",NewIndividualActivity.class);
-        ActivityManager.Register("update-individual",UpdateIndividualActivity.class);
+        ActivityManager.RegisterActivity("manage-packs",ManagePacksActivity.class);
+        ActivityManager.RegisterActivity("new-pack",NewPackActivity.class);
+        ActivityManager.RegisterActivity("manage-individual",ManageIndividualActivity.class);
+        ActivityManager.RegisterActivity("new-individual",NewIndividualActivity.class);
+        ActivityManager.RegisterActivity("update-individual",UpdateIndividualActivity.class);
 
-        ActivityManager.Register("tag-location",TagLocationActivity.class);
-        ActivityManager.Register("sync",SyncActivity.class);
+        ActivityManager.RegisterActivity("tag-location",TagLocationActivity.class);
+        ActivityManager.RegisterActivity("sync",SyncActivity.class);
+
+        ActivityManager.RegisterFragment("test-fragment",TestFragment.class);
+        ActivityManager.RegisterFragment("test-fragment2",TestFragmentTwo.class);
+
     };
 
     /** Called when the activity is first created. */

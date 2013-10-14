@@ -59,7 +59,8 @@ public class NetworkManager {
 		c.registerReceiver(receiver, new IntentFilter(
                                WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
-        m_Builder.DialogCallback(m_Context,m_CallbackName,"\"Scanning\"");
+        // todo - won't work from inside fragments
+        m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Scanning\"");
     }
 
     void Connect() {
@@ -78,7 +79,7 @@ public class NetworkManager {
                 wifi.enableNetwork(i.networkId, true);
                 wifi.reconnect();
                 Log.i("starwisp", "Connected");
-                m_Builder.DialogCallback(m_Context,m_CallbackName,"\"Connected\"");
+                m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Connected\"");
                 break;
             }
         }
@@ -161,7 +162,7 @@ public class NetworkManager {
                 all+=line+"\n";
             }
             Log.i("starwisp","got data: "+all);
-            m_Builder.DialogCallback(m_Context,m.m_CallbackName,all);
+            m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -198,7 +199,7 @@ public class NetworkManager {
 
                 for (ScanResult result : results) {
                     if (result.SSID.equals(SSID)) {
-                        m_Builder.DialogCallback(m_Context,m_CallbackName,"\"In range\"");
+                        m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"In range\"");
                         nm.Connect();
                         return;
                     }

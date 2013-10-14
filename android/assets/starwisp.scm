@@ -92,8 +92,10 @@
       (lambda (v)
         (display v)(newline)
         (if (equal? (car v) "inserted")
-            (update-entity-clean db table (cadr v))
-            (display "somefink went wrong")(newline)))))
+            (begin
+              (update-entity-clean db table (cadr v))
+              (toast "Uploaded " (ktv-get (cadr e) "name")))
+            (toast "Problem uploading " (ktv-get (cadr e) "name"))))))
    (dirty-entities db table)))
 
 (define (suck-entity-from-server db table unique-id exists)
@@ -117,8 +119,10 @@
               ktvlist))
            (update-to-version
             db table (get-entity-id db table unique-id)
-            (list-ref entity 4) ktvlist)))
-     '())))
+            (list-ref entity 4) ktvlist))
+       (list
+        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+        (toast (string-append "Downloaded " (ktv-get ktvlist "name"))))))))
 
 ;; repeatedly read version and request updates
 (define (suck-new db table)
@@ -127,23 +131,26 @@
     "new-entities-req"
     (string-append url "fn=entity-versions&table=" table)
     (lambda (data)
-      (foldl
-       (lambda (i r)
-         (let* ((unique-id (car i))
-                (version (cadr i))
-                (exists (entity-exists? db table unique-id))
-                (old
-                 (if exists
-                     (> version (get-entity-version
-                                 db table
-                                 (get-entity-id db table unique-id)))
-                     #f)))
-           ;; if we don't have this entity or the version on the server is newer
-           (if (or (not exists) old)
-               (cons (suck-entity-from-server db table unique-id exists) r)
-               r)))
-       '()
-       data)))))
+      (let ((r (foldl
+                (lambda (i r)
+                  (let* ((unique-id (car i))
+                         (version (cadr i))
+                         (exists (entity-exists? db table unique-id))
+                         (old
+                          (if exists
+                              (> version (get-entity-version
+                                          db table
+                                          (get-entity-id db table unique-id)))
+                              #f)))
+                    ;; if we don't have this entity or the version on the server is newer
+                    (if (or (not exists) old)
+                        (cons (suck-entity-from-server db table unique-id exists) r)
+                        r)))
+                '()
+                data)))
+        (if (null? r)
+            (cons (toast "All files up to date") r)
+            (cons (toast "Requesting " (length r) " entities") r)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -218,6 +225,58 @@
     db "sync" "mongoose"
     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))))
 
+
+(define (build-dirty)
+  (let ((sync (get-dirty-stats db "sync"))
+        (stream (get-dirty-stats db "stream")))
+    (msg sync stream)
+    (string-append
+     "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
+     "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
+
+
+(define-fragment-list
+  (fragment
+   "test-fragment"
+   (vert
+    (text-view (make-id "splash-title") "This is a fragment" 40 fillwrap)
+    (text-view (make-id "changeme") "unchanged" 30 fillwrap)
+    (spacer 20)
+    (mbutton "frag-but" "Pow wow"
+             (lambda ()
+               (list (toast "hello dude")
+                     (update-widget 'text-view (get-id "changeme") 'text "I have changed!")))))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "test-fragment2"
+   (vert
+    (text-view (make-id "splash-title") "This is also a fragment" 40 fillwrap)
+    (text-view (make-id "changeme") "unchanged" 30 fillwrap)
+    (mbutton "frag-but" "sdsds"
+             (lambda () (list)))
+    (spacer 20)
+    (mbutton "frag-but" "Pow wow"
+             (lambda ()
+               (list (toast "hello dude")
+                     (update-widget 'text-view (get-id "changeme") 'text "I have changed!")))))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  )
+
+
 (define-activity-list
   (activity
    "splash"
@@ -225,7 +284,13 @@
     (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
     (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
-    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 "")))))
+    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
+    (build-fragment "test-fragment" (make-id "fragtesting"))
+    (mbutton "f3" "Frag 2"
+             (lambda () (list (replace-fragment (get-id "fragtesting") "test-fragment2"))))
+    (mbutton "f4" "Frag 1"
+             (lambda () (list (replace-fragment (get-id "fragtesting") "test-fragment")))))
+
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) '())
@@ -704,52 +769,44 @@
    (lambda (activity requestcode resultcode) '()))
 
 
-  (let ((build-dirty
-         (lambda ()
-           (let ((sync (get-dirty-stats db "sync"))
-                 (stream (get-dirty-stats db "stream")))
-             (msg sync stream)
-             (string-append
-              "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
-              "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))))
-    (activity
-     "sync"
-     (vert
-      (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
-      (mtext "sync-dirty" "...")
-      (horiz
-       (mbutton "sync-connect" "Connect"
-                (lambda ()
-                  (list
-                   (network-connect
-                    "network"
-                    "mongoose-web"
-                    (lambda (state)
+  (activity
+   "sync"
+   (vert
+    (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
+    (mtext "sync-dirty" "...")
+    (horiz
+     (mbutton "sync-connect" "Connect"
+              (lambda ()
+                (list
+                 (network-connect
+                  "network"
+                  "mongoose-web"
+                  (lambda (state)
                       (list
                        (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
-       (mbutton "sync-sync" "Push"
-                (lambda ()
-                  (spit-dirty db "sync")))
-       (mbutton "sync-pull" "Pull"
-                (lambda ()
-                  (suck-new db "sync"))))
-      (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
-      (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
+     (mbutton "sync-sync" "Push"
+              (lambda ()
+                (let ((r (spit-dirty db "sync")))
+                  (cons (if (> (length r) 0)
+                            (toast "Uploading data...")
+                            (toast "No data changed to upload")) r))))
+     (mbutton "sync-pull" "Pull"
+              (lambda ()
+                (cons (toast "Downloading data...") (suck-new db "sync")))))
+    (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
+    (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
 
-     (lambda (activity arg)
-       (activity-layout activity))
-     (lambda (activity arg)
-       (list
-        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
-        ;;(update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))
-        ))
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity requestcode resultcode) '())))
-
-
-
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (list
+      (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+      ;;(update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))
+      ))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
 
   )
