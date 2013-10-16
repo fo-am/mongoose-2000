@@ -19,7 +19,7 @@
         </activity>
         <activity android:name="MainActivity"></activity>
         <activity android:name="ObservationsActivity"></activity>
-        <activity android:name="PackSelectActivity"></activity>
+        <activity android:name="ObservationActivity"></activity>
         <activity android:name="IndividualSelectActivity"></activity>
         <activity android:name="PupFocalActivity"></activity>
         <activity android:name="PupFocalEventActivity"></activity>

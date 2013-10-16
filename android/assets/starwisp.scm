@@ -34,19 +34,27 @@
 
 (define (store-set store key value)
   (cond
-    ((null? store) (list (list key value)))
-    ((eq? key (car (car store)))
-     (cons (list key value) (cdr store)))
-    (else
-     (cons (car store) (store-set (cdr store) key value)))))
+   ((null? store) (list (list key value)))
+   ((eq? key (car (car store)))
+    (cons (list key value) (cdr store)))
+   (else
+    (cons (car store) (store-set (cdr store) key value)))))
 
 (define (store-get store key default)
   (cond
-    ((null? store) default)
-    ((eq? key (car (car store)))
-     (cadr (car store)))
-    (else
-     (store-get (cdr store) key default))))
+   ((null? store) default)
+   ((eq? key (car (car store)))
+    (cadr (car store)))
+   (else
+    (store-get (cdr store) key default))))
+
+(define (store-exists? store key)
+  (cond
+   ((null? store) #f)
+   ((eq? key (car (car store)))
+    #t)
+   (else
+    (store-exists? (cdr store) key))))
 
 
 (define store '())
@@ -56,6 +64,9 @@
 
 (define (get-current key default)
   (store-get store key default))
+
+(define (current-exists? key)
+  (store-exists? store key))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
@@ -152,13 +163,37 @@
             (cons (toast "All files up to date") r)
             (cons (toast "Requesting " (length r) " entities") r)))))))
 
+(define (build-dirty)
+  (let ((sync (get-dirty-stats db "sync"))
+        (stream (get-dirty-stats db "stream")))
+    (msg sync stream)
+    (string-append
+     "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
+     "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; user interface abstraction
 
 (define (mbutton id title fn)
   (button (make-id id) title 20 fillwrap fn))
 
+(define (mtoggle-button id title fn)
+  (toggle-button (make-id id) title 20 fillwrap fn))
+
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
+
+(define (medit-text id text type fn)
+  (vert
+   (text-view (make-id (string-append id "-title")) text 20 type fillwrap)
+   (edit-text (make-id id) "" 30 fillwrap fn)))
+
+(define (mclear-toggles id-list)
+  (map
+   (lambda (id)
+     (update-widget 'toggle-button (get-id id) 'checked 0))
+   id-list))
 
 (define (xwise n l)
   (define (_ c l)
@@ -170,84 +205,82 @@
        (_ (append c (list (car l))) (cdr l)))))
   (_ '() l))
 
-;(define (build-pack-buttons act fn)
-;  (map
-;   (lambda (individuals)
-;     (apply
-;      horiz
-;      (map
-;       (lambda (pack)
-;         (let ((name (ktv-get pack "name")))
-;           (button (make-id (string-append act "-ind-" name))
-;                   name 20 fillwrap
-;                   (lambda ()
-;                     (fn pack)))))
-;       individuals)))
-;   (xwise 2 (db-all db "sync" "pack"))))
+(define (build-grid-selector name title)
+  (vert
+   (mtext "foo" title)
+   (horiz
+    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left))
+    (scroll-view
+     (make-id "scroller")
+     (layout 'wrap-content 'wrap-content 1 'left)
+     (list
+      (linear-layout
+       (make-id name) 'horizontal
+       (layout 'wrap-content 'wrap-content 1 'centre) (list))))
+    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right)))))
 
+(define (populate-grid-selector name items fn)
+  (update-widget
+   'linear-layout (get-id name) 'contents
+   (map
+    (lambda (items)
+      ;; todo add space for empty parts
+      (linear-layout
+       (make-id "foo") 'vertical wrap
+       (map
+        (lambda (item)
+          (let ((item-name (ktv-get item "name")))
+            (button (make-id (string-append name item-name))
+                    item-name 20 (layout 100 60 1 'left)
+                    (lambda ()
+                      (fn item)))))
+        items)))
+    (xwise 3 items))))
 
-(define (build-pack-buttons act fn)
-  (map
-   (lambda (pack)
-     (let ((name (ktv-get pack "name")))
-       (button (make-id (string-append act "-pack-" name))
-               name 20 (layout '150 'wrap-content 1 'centre)
-               (lambda ()
-                 (fn pack)))))
-   (db-all db "sync" "pack")))
+(define (populate-grid-selector-single name items fn)
+  (update-widget
+   'linear-layout (get-id name) 'contents
+   (map
+    (lambda (chopped-items)
+      ;; todo add space for empty parts
+      (linear-layout
+       (make-id "foo") 'vertical wrap
+       (map
+        (lambda (item)
+          (let ((item-name (ktv-get item "name")))
+            (toggle-button (make-id (string-append name item-name))
+                    item-name 20 (layout 100 60 1 'left)
+                    (lambda (v)
+                      (append
+                       ;; clear all the others except us
+                       (mclear-toggles
+                        (foldl
+                         (lambda (item r)
+                           (let ((tname (ktv-get item "name")))
+                             (if (equal? tname item-name) r
+                                 (cons
+                                  (string-append name tname) r))))
+                         '() items))
+                       (fn item))))))
+        chopped-items)))
+    (xwise 3 items))))
 
-(define (build-individual-buttons act fn)
-  (map
-   (lambda (ind)
-     (let ((name (ktv-get ind "name")))
-       (button (make-id (string-append act "-ind-" name))
-               name 20 (layout '150 'wrap-content 1 'centre)
-               (lambda ()
-                 (fn ind)))))
-   (db-all-where
-    db "sync" "mongoose"
-    (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
 
-(define (build-dirty)
-  (let ((sync (get-dirty-stats db "sync"))
-        (stream (get-dirty-stats db "stream")))
-    (msg sync stream)
-    (string-append
-     "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
-     "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; fragments
 
 (define-fragment-list
-  (fragment
-   "test-fragment"
-   (vert
-    (text-view (make-id "splash-title") "This is a fragment" 40 fillwrap)
-    (text-view (make-id "changeme") "unchanged" 30 fillwrap)
-    (spacer 20)
-    (mbutton "frag-but" "Pow wow"
-             (lambda ()
-               (list (toast "hello dude")
-                     (update-widget 'text-view (get-id "changeme") 'text "I have changed!")))))
-   (lambda (fragment arg)
-     (activity-layout fragment))
-   (lambda (fragment arg) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '()))
 
   (fragment
-   "test-fragment2"
+   "gc-start"
    (vert
-    (text-view (make-id "splash-title") "This is also a fragment" 40 fillwrap)
-    (text-view (make-id "changeme2") "unchanged" 30 fillwrap)
-    (mbutton "frag-but3" "sdsds"
-             (lambda () (list)))
-    (spacer 20)
-    (mbutton "frag-but2" "Pow wow"
-             (lambda ()
-               (list (toast "hello dude")
-                     (update-widget 'text-view (get-id "changeme2") 'text "I have changed!")))))
+;    (mtoggle-button "gc-main-obs" "Main observer" (lambda (v) '()))
+;    (medit-text "gc-code" "Code" "numeric" (lambda (v) '()))
+;    (build-grid-selector "gc-present" "Who's present?")
+    (mbutton "gc-save" "Save" (lambda () '())))
+
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg) '())
@@ -258,6 +291,10 @@
 
   )
 
+(msg "one")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; activities
 
 (define-activity-list
   (activity
@@ -266,12 +303,7 @@
     (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
     (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
-    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
-    (build-fragment "test-fragment" (make-id "fragtesting") fillwrap)
-    (mbutton "f3" "Frag 2"
-             (lambda () (list (replace-fragment (get-id "fragtesting") "test-fragment2"))))
-    (mbutton "f4" "Frag 1"
-             (lambda () (list (replace-fragment (get-id "fragtesting") "test-fragment")))))
+    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 "")))))
 
    (lambda (activity arg)
      (activity-layout activity))
@@ -318,45 +350,71 @@
   (activity
    "observations"
    (vert
-    (text-view (make-id "title") "Observation" 40 fillwrap)
-    (spacer 10)
-    (button (make-id "main-sync") "Pup Focal" 20 fillwrap (lambda () (list (start-activity "pack-select" 2 ""))))
+    (text-view (make-id "title") "Start Observation" 40 fillwrap)
+    (vert
+     (mtext "type" "Choose observation type")
+     (mtoggle-button "choose-obs-gc" "Group Composition"
+              (lambda ()
+                (set-current! 'observation "Group Composition")
+                (mclear-toggles (list "obs-pf"))))
+     (mtoggle-button "choose-obs-pf" "Pup Focal"
+              (lambda ()
+                (set-current! 'observation "Pup Focal")
+                (mclear-toggles (list "obs-gc")))))
+    (build-grid-selector "choose-obs-pack-selector" "Choose pack")
+    (mbutton
+     "choose-obs-start" "Start"
+     (lambda ()
+       (if (and (current-exists? 'pack)
+                (current-exists? 'observation))
+           (list (start-activity "observation" 2 ""))
+           (list
+            (alert-dialog
+             "choose-obs-finish"
+             "Need to specify a pack and an observation"
+             (lambda () '()))))))
     )
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (populate-grid-selector-single
+       "choose-obs-pack-selector" (db-all db "sync" "pack")
+       (lambda (pack)
+         (set-current! 'pack pack)))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
+
+
   (activity
-   "pack-select"
+   "observation"
    (vert
-    (text-view (make-id "title") "Select a Pack" 40 fillwrap)
-    (spacer 10)
-    (linear-layout
-     (make-id "pack-select-pack-list")
-     'vertical fill (list))
+    (text-view (make-id "obs-title") "" 40 fillwrap)
     )
 
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'linear-layout (get-id "pack-select-pack-list") 'contents
-                     (build-pack-buttons
-                      "pack-select"
-                      (lambda (pack)
-                        (set-current! 'pack pack)
-                        (list (start-activity "individual-select" 2 "")))))
+      (update-widget 'text-view (get-id "obs-title") 'text
+                     (string-append
+                      (get-current 'observation "No observation")
+                      " with " (ktv-get (get-current 'pack '()) "name")))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
+
+
+
+
 
   (activity
    "individual-select"
@@ -556,21 +614,18 @@
    "manage-packs"
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
-    (grid-layout
-     (make-id "manage-packs-pack-list")
-     3 'horizontal (layout 'wrap-content 'wrap-content 1 'centre) (list))
+    (build-grid-selector "manage-packs-list" "Choose pack")
     (button (make-id "manage-packs-new") "New pack" 20 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'grid-layout (get-id "manage-packs-pack-list") 'contents
-                     (build-pack-buttons
-                      "manage-packs"
-                      (lambda (pack)
-                        (set-current! 'pack pack)
-                        (list (start-activity "manage-individual" 2 "")))))
+      (populate-grid-selector
+       "manage-packs-list" (db-all db "sync" "pack")
+       (lambda (pack)
+         (set-current! 'pack pack)
+         (list (start-activity "manage-individual" 2 ""))))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -611,20 +666,18 @@
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
-    (grid-layout
-     (make-id "manage-individuals-list")
-     3 'horizontal (layout 'wrap-content 'wrap-content 1 'centre) (list))
+    (build-grid-selector "manage-individuals-list" "Choose individual")
     (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'grid-layout (get-id "manage-individuals-list") 'contents
-                     (build-individual-buttons
-                      "manage-ind"
-                      (lambda (individual)
-                        (list (start-activity "manage-individual" 2 "")))))
+      (populate-grid-selector
+       "manage-individuals-list"
+       (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list (start-activity "manage-individual" 2 ""))))
       (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
       ))

@@ -59,7 +59,10 @@ public class starwisp extends StarwispActivity
         ActivityManager.RegisterActivity("splash",starwisp.class);
         ActivityManager.RegisterActivity("main",MainActivity.class);
         ActivityManager.RegisterActivity("observations",ObservationsActivity.class);
-        ActivityManager.RegisterActivity("pack-select",PackSelectActivity.class);
+        ActivityManager.RegisterActivity("observation",ObservationActivity.class);
+
+
+
         ActivityManager.RegisterActivity("individual-select",IndividualSelectActivity.class);
         ActivityManager.RegisterActivity("pup-focal",PupFocalActivity.class);
         ActivityManager.RegisterActivity("pup-focal-event",PupFocalEventActivity.class);
@@ -75,10 +78,6 @@ public class starwisp extends StarwispActivity
 
         ActivityManager.RegisterActivity("tag-location",TagLocationActivity.class);
         ActivityManager.RegisterActivity("sync",SyncActivity.class);
-
-        ActivityManager.RegisterFragment("test-fragment",TestFragment.class);
-        ActivityManager.RegisterFragment("test-fragment2",TestFragmentTwo.class);
-
     };
 
     /** Called when the activity is first created. */

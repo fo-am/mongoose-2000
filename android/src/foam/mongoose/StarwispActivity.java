@@ -17,7 +17,7 @@ package foam.mongoose;
 
 import java.util.ArrayList;
 
-import android.app.Activity;
+import android.support.v4.app.FragmentActivity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
@@ -31,7 +31,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
-public class StarwispActivity extends Activity
+public class StarwispActivity extends FragmentActivity
 {
     public String m_Name;
     static public Scheme m_Scheme;

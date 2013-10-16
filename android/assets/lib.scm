@@ -312,13 +312,13 @@
 (define (linear-layout-layout t) (list-ref t 3))
 (define (linear-layout-children t) (list-ref t 4))
 
-(define (grid-layout id cols orientation layout children)
-  (list "grid-layout" id cols orientation layout children))
-(define (grid-layout-id t) (list-ref t 1))
-(define (grid-layout-cols t) (list-ref t 2))
-(define (grid-layout-orientation t) (list-ref t 3))
-(define (grid-layout-layout t) (list-ref t 4))
-(define (grid-layout-children t) (list-ref t 5))
+;;(define (grid-layout id cols orientation layout children)
+ ;; (list "grid-layout" id cols orientation layout children))
+;;(define (grid-layout-id t) (list-ref t 1))
+;;(define (grid-layout-cols t) (list-ref t 2))
+;;(define (grid-layout-orientation t) (list-ref t 3))
+;;(define (grid-layout-layout t) (list-ref t 4))
+;;(define (grid-layout-children t) (list-ref t 5))
 
 (define (frame-layout id layout children)
   (list "frame-layout" id layout children))
@@ -331,6 +331,9 @@
 (define (scroll-view-id t) (list-ref t 1))
 (define (scroll-view-layout t) (list-ref t 2))
 (define (scroll-view-children t) (list-ref t 3))
+
+(define (view-pager id layout fragment-list)
+  (list "view-pager" id layout fragment-list))
 
 (define (space layout) (list "space" "999" layout))
 (define (space-view-layout t) (list-ref t 2))
@@ -409,8 +412,10 @@
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
-
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
+
+(define (dialog-fragment id layout fragment-name fn)
+  (list "dialog-fragment" 0 "dialog-fragment" id layout fragment-name fn))
 
 (define (time-picker-dialog name fn)
   (list "time-picker-dialog" 0 "time-picker-dialog" name fn))
@@ -524,7 +529,7 @@
    ((equal? (widget-type w) "linear-layout") (linear-layout-children w))
    ((equal? (widget-type w) "frame-layout") (frame-layout-children w))
    ((equal? (widget-type w) "scroll-view") (scroll-view-children w))
-   ((equal? (widget-type w) "grid-layout") (grid-layout-children w))
+;;   ((equal? (widget-type w) "grid-layout") (grid-layout-children w))
    (else '())))
 
 (define (widget-get-callback w)

@@ -17,10 +17,18 @@ package foam.mongoose;
 
 import java.util.ArrayList;
 
-import android.app.Activity;
-import android.app.Fragment;
-import android.app.FragmentTransaction;
-import android.app.FragmentManager;
+import android.support.v4.app.FragmentActivity;
+import android.support.v4.app.Fragment;
+import android.app.DialogFragment;
+import android.support.v4.app.FragmentTransaction;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
+
+// removed due to various aggravating factors
+//import android.support.v7.widget.GridLayout;
+//import android.widget.GridLayout;
+
 import android.util.Log;
 import android.content.Context;
 import android.graphics.Color;
@@ -39,8 +47,7 @@ import android.widget.Button;
 import android.widget.ToggleButton;
 import android.widget.LinearLayout;
 import android.widget.FrameLayout;
-import android.widget.GridLayout;
-import android.widget.GridLayout.Spec;
+//import android.widget.GridLayout.Spec;
 import android.widget.ScrollView;
 import android.widget.HorizontalScrollView;
 import android.widget.SeekBar;
@@ -57,6 +64,7 @@ import android.view.WindowManager;
 import android.view.View;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
 import android.text.TextWatcher;
 import android.text.Html;
 import android.text.Editable;
@@ -77,12 +85,13 @@ import android.content.DialogInterface;
 import android.text.InputType;
 import android.util.TypedValue;
 
-
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog;
 import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Intent;
 import java.util.Calendar;
+import android.os.Bundle;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -185,7 +194,7 @@ public class StarwispBuilder
                 LinearLayout inner = new LinearLayout(ctx);
                 inner.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
                 inner.setId(ID);
-                FragmentTransaction fragmentTransaction = ctx.getFragmentManager().beginTransaction();
+                FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
                 fragmentTransaction.add(ID,fragment);
                 fragmentTransaction.commit();
                 parent.addView(inner);
@@ -219,10 +228,12 @@ public class StarwispBuilder
                 return;
             }
 
+            /*
             if (type.equals("grid-layout")) {
                 GridLayout v = new GridLayout(ctx);
                 v.setId(arr.getInt(1));
-                v.setColumnCount(arr.getInt(2));
+                v.setRowCount(arr.getInt(2));
+                //v.setColumnCount(arr.getInt(2));
                 v.setOrientation(BuildOrientation(arr.getString(3)));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
 
@@ -234,7 +245,7 @@ public class StarwispBuilder
 
                 return;
             }
-
+            */
 
             if (type.equals("scroll-view")) {
                 HorizontalScrollView v = new HorizontalScrollView(ctx);
@@ -248,6 +259,34 @@ public class StarwispBuilder
                 return;
             }
 
+
+            if (type.equals("view-pager")) {
+                ViewPager v = new ViewPager(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                final JSONArray items = arr.getJSONArray(3);
+
+                v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
+
+                    @Override
+                    public int getCount() {
+                        return items.length();
+                    }
+
+                    @Override
+                    public Fragment getItem(int position) {
+                        try {
+                            String fragname = items.getString(position);
+                            return ActivityManager.GetFragment(fragname);
+                        } catch (JSONException e) {
+                            Log.e("starwisp", "Error parsing data " + e.toString());
+                        }
+                        return null;
+                    }
+                });
+                parent.addView(v);
+                return;
+            }
 
             if (type.equals("space")) {
                 // Space v = new Space(ctx); (class not found runtime error??)
@@ -464,7 +503,7 @@ public class StarwispBuilder
 
     }
 
-    public void UpdateList(Activity ctx, String ctxname, JSONArray arr) {
+    public void UpdateList(FragmentActivity ctx, String ctxname, JSONArray arr) {
         try {
             for (int i=0; i<arr.length(); i++) {
                 Update((StarwispActivity)ctx,ctxname,new JSONArray(arr.getString(i)));
@@ -494,7 +533,7 @@ public class StarwispBuilder
                 int ID = arr.getInt(1);
                 String name = arr.getString(2);
                 Fragment fragment = ActivityManager.GetFragment(name);
-                FragmentTransaction ft = ctx.getFragmentManager().beginTransaction();
+                FragmentTransaction ft = ctx.getSupportFragmentManager().beginTransaction();
 
                 ft.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
 
@@ -505,6 +544,58 @@ public class StarwispBuilder
                 //ft.addToBackStack(null);
                 ft.commit();
                 return;
+            }
+
+
+            if (token.equals("dialog-fragment")) {
+                FragmentManager fm = ctx.getSupportFragmentManager();
+                final int ID = arr.getInt(3);
+                final JSONArray lp = arr.getJSONArray(4);
+                final String name = arr.getString(5);
+
+                final Dialog dialog = new Dialog(ctx);
+                dialog.setTitle("Title...");
+
+                LinearLayout inner = new LinearLayout(ctx);
+                inner.setId(ID);
+                inner.setLayoutParams(BuildLayoutParams(lp));
+
+                dialog.setContentView(inner);
+
+//                Fragment fragment = ActivityManager.GetFragment(name);
+//                FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
+//                fragmentTransaction.add(ID,fragment);
+//                fragmentTransaction.commit();
+
+                dialog.show();
+
+
+
+/*                DialogFragment df = new DialogFragment() {
+                    @Override
+                    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                                             Bundle savedInstanceState) {
+                        LinearLayout inner = new LinearLayout(ctx);
+                        inner.setId(ID);
+                        inner.setLayoutParams(BuildLayoutParams(lp));
+
+                        return inner;
+                    }
+
+                    @Override
+                    public Dialog onCreateDialog(Bundle savedInstanceState) {
+                        Dialog ret = super.onCreateDialog(savedInstanceState);
+                        Log.i("starwisp","MAKINGDAMNFRAGMENT");
+
+                        Fragment fragment = ActivityManager.GetFragment(name);
+                        FragmentTransaction fragmentTransaction = ctx.getSupportFragmentManager().beginTransaction();
+                        fragmentTransaction.add(1,fragment);
+                        fragmentTransaction.commit();
+                        return ret;
+                    }
+                };
+                df.show(ctx.getFragmentManager(), "foo");
+*/
             }
 
             if (token.equals("time-picker-dialog")) {
@@ -658,6 +749,8 @@ public class StarwispBuilder
                 return;
             }
 
+///////////////////////////////////////////////////////////
+
             // now try and find the widget
             View vv=ctx.findViewById(id);
             if (vv==null)
@@ -677,6 +770,13 @@ public class StarwispBuilder
                 return;
             }
 
+            // tokens that work on everything
+            if (token.equals("set-enabled")) {
+                vv.setEnabled(arr.getInt(3)==1);
+                return;
+            }
+
+
             // special cases
             if (type.equals("linear-layout")) {
                 LinearLayout v = (LinearLayout)vv;
@@ -688,7 +788,7 @@ public class StarwispBuilder
                     }
                 }
             }
-
+/*
             if (type.equals("grid-layout")) {
                 GridLayout v = (GridLayout)vv;
                 if (token.equals("contents")) {
@@ -699,7 +799,13 @@ public class StarwispBuilder
                     }
                 }
             }
-
+*/
+            if (type.equals("view-pager")) {
+                ViewPager v = (ViewPager)vv;
+                if (token.equals("switch")) {
+                    v.setCurrentItem(arr.getInt(3));
+                }
+            }
 
             if (type.equals("image-view")) {
                 ImageView v = (ImageView)vv;
