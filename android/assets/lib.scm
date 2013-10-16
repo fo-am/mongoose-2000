@@ -403,6 +403,10 @@
 (define (canvas-layout t) (list-ref t 2))
 (define (canvas-drawlist t) (list-ref t 3))
 
+(define (button-grid id height textsize layout buttons listener)
+  (list "button-grid" id height textsize layout buttons listener))
+(define (button-grid-listener b) (list-ref b 6))
+
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
@@ -522,7 +526,9 @@
 (define (callback-type l) (list-ref l 1))
 (define (callback-fn l) (list-ref l 2))
 (define (find-callback id) (sorted-find callbacks id))
-(define (add-callback! cb) (set! callbacks (sorted-add callbacks cb)))
+(define (add-callback! cb)
+  ;;(msg "adding" cb)
+  (set! callbacks (sorted-add callbacks cb)))
 
 (define (widget-get-children w)
   (cond
@@ -539,6 +545,7 @@
    ((equal? (widget-type w) "toggle-button") (toggle-button-listener w))
    ((equal? (widget-type w) "seek-bar") (seek-bar-listener w))
    ((equal? (widget-type w) "spinner") (spinner-listener w))
+   ((equal? (widget-type w) "button-grid") (button-grid-listener w))
    (else #f)))
 
 ;; walk through activity stripping callbacks
@@ -562,7 +569,11 @@
          ((null? w) #f)
          ;; drill deeper
          ((eq? (update-widget-token w) 'contents)
-          (update-callbacks! (update-widget-value w))))
+          (update-callbacks! (update-widget-value w)))
+         ((eq? (update-widget-token w) 'grid-buttons)
+          (add-callback! (callback (update-widget-id w)
+                                   "button-grid"
+                                   (list-ref (update-widget-value w) 4)))))
         (update-callbacks! (cdr widget-list)))))
 
 (define (define-activity-list . args)
@@ -629,7 +640,11 @@
       (let ((ret (cond
                   ;; todo update activity...?
                   ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
-                  ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
+                  ((eq? type 'on-start)
+                   (alog "running on create")
+                   (let ((r ((activity-on-start activity) activity (car args))))
+                     (alog "done on create") r))
+
                   ((eq? type 'on-stop) ((activity-on-stop activity) activity))
                   ((eq? type 'on-resume) ((activity-on-resume activity) activity))
                   ((eq? type 'on-pause) ((activity-on-pause activity) activity))
@@ -640,6 +655,7 @@
                    '()))))
         (if (eq? type 'on-create)
             (update-callbacks! (list ret))
+            ;; todo: fixme - callbacks from update only working for first list element???
             (update-callbacks-from-update! ret))
         (send (scheme->json ret)))))
 
@@ -662,9 +678,12 @@
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "seek-bar")
                  ((callback-fn cb) (car args)))
-                ((equal? (callback-type widget) "spinner")
+                ((equal? (callback-type cb) "spinner")
                  ((callback-fn cb) (car args)))
-                (else (msg "no callbacks for type" (callback-type cb))))))
+                ((equal? (callback-type cb) "button-grid")
+                 ((callback-fn cb) (car args)))
+                (else
+                 (msg "no callbacks for type" (callback-type cb))))))
           ;;(update-callbacks! events)
           (update-dialogs! events)
           (send (scheme->json events))))))

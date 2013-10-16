@@ -191,6 +191,7 @@
     _OP_DEF(opexe_6, "closure?",                       1,  1,       TST_NONE,                        OP_CLOSUREP         )
     _OP_DEF(opexe_6, "macro?",                         1,  1,       TST_NONE,                        OP_MACROP           )
 
+    _OP_DEF(opexe_6, "alog",                           1,  1,       TST_NONE,                        OP_ALOG             )
     _OP_DEF(opexe_6, "send",                           1,  1,       TST_NONE,                        OP_SEND             )
     _OP_DEF(opexe_6, "db-open",                        1,  1,       TST_NONE,                        OP_OPEN_DB          )
     _OP_DEF(opexe_6, "db-exec",                        2,  INF_ARG, TST_NONE,                        OP_EXEC_DB          )

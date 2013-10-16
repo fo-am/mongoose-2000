@@ -235,7 +235,7 @@
        (if (equal? (ktv-get e (car clause)) (cadr clause))
            (cons e r) r)))
    '()
-   (dbg (all-entities db table type))))
+   (all-entities db table type)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data

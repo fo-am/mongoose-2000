@@ -31,6 +31,7 @@
 #include <float.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <android/log.h>
 
 #include "core/db_container.h"
 db_container the_db_container;
@@ -4307,6 +4308,9 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
      case OP_MACROP:          /* macro? */
           s_retbool(is_macro(car(sc->args)));
 ///////////// FLUXUS
+     case OP_ALOG:
+          __android_log_print(ANDROID_LOG_INFO, "starwisp", string_value(car(sc->args)));
+          s_return(sc,sc->F);
      case OP_SEND:
           if (is_string(car(sc->args))) {
                starwisp_data=string_value(car(sc->args));

@@ -51,7 +51,7 @@ public class Scheme
         {
             String ret=nativeEval(code);
             Log.i("starwisp","eval done: "+ret.length());
-            Log.i("starwisp",ret);
+            //Log.i("starwisp",ret);
             return ret;
         }
     }

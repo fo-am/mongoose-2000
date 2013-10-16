@@ -185,7 +185,7 @@ public class StarwispBuilder
         try {
             String type = arr.getString(0);
 
-            Log.i("starwisp","building started "+type);
+            //Log.i("starwisp","building started "+type);
 
             if (type.equals("build-fragment")) {
                 String name = arr.getString(1);
@@ -259,11 +259,11 @@ public class StarwispBuilder
                 return;
             }
 
-
             if (type.equals("view-pager")) {
                 ViewPager v = new ViewPager(ctx);
                 v.setId(arr.getInt(1));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                v.setOffscreenPageLimit(3);
                 final JSONArray items = arr.getJSONArray(3);
 
                 v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
@@ -495,11 +495,54 @@ public class StarwispBuilder
                 parent.addView(v);
             }
 
+            if (type.equals("button-grid")) {
+                LinearLayout horiz = new LinearLayout(ctx);
+                final int id = arr.getInt(1);
+                horiz.setId(id);
+                horiz.setOrientation(LinearLayout.HORIZONTAL);
+                parent.addView(horiz);
+                int height = arr.getInt(2);
+                int textsize = arr.getInt(3);
+                LinearLayout.LayoutParams lp = BuildLayoutParams(arr.getJSONArray(4));
+                JSONArray buttons = arr.getJSONArray(5);
+                int count = buttons.length();
+                int vertcount = 0;
+                LinearLayout vert = null;
+
+                for (int i=0; i<count; i++) {
+                    JSONArray button = buttons.getJSONArray(i);
+
+                    if (vertcount==0) {
+                        vert = new LinearLayout(ctx);
+                        vert.setId(0);
+                        vert.setOrientation(LinearLayout.VERTICAL);
+                        horiz.addView(vert);
+                    }
+                    vertcount=(vertcount+1)%height;
+
+                    Button b = new Button(ctx);
+                    b.setId(button.getInt(0));
+                    b.setText(button.getString(1));
+                    b.setTextSize(textsize);
+                    b.setLayoutParams(lp);
+                    b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                    final String fn = arr.getString(5);
+                    b.setOnClickListener(new View.OnClickListener() {
+                        public void onClick(View v) {
+                            CallbackArgs(ctx,ctxname,id,""+v.getId());
+                        }
+                    });
+                    vert.addView(b);
+                }
+            }
+
+
+
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing ["+arr.toString()+"] " + e.toString());
         }
 
-        Log.i("starwisp","building ended");
+        //Log.i("starwisp","building ended");
 
     }
 
@@ -517,7 +560,7 @@ public class StarwispBuilder
         try {
 
             String type = arr.getString(0);
-            Integer id = arr.getInt(1);
+            final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
 //            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
@@ -545,7 +588,6 @@ public class StarwispBuilder
                 ft.commit();
                 return;
             }
-
 
             if (token.equals("dialog-fragment")) {
                 FragmentManager fm = ctx.getSupportFragmentManager();
@@ -788,6 +830,56 @@ public class StarwispBuilder
                     }
                 }
             }
+
+            if (type.equals("button-grid")) {
+                Log.i("starwisp","button-grid update");
+                LinearLayout horiz = (LinearLayout)vv;
+                if (token.equals("grid-buttons")) {
+                    Log.i("starwisp","button-grid contents");
+                    horiz.removeAllViews();
+
+                    JSONArray params = arr.getJSONArray(3);
+
+                    int height = params.getInt(0);
+                    int textsize = params.getInt(1);
+                    LinearLayout.LayoutParams lp = BuildLayoutParams(params.getJSONArray(2));
+                    JSONArray buttons = params.getJSONArray(3);
+                    int count = buttons.length();
+                    int vertcount = 0;
+                    LinearLayout vert = null;
+
+                    for (int i=0; i<count; i++) {
+                        JSONArray button = buttons.getJSONArray(i);
+
+                        if (vertcount==0) {
+                            vert = new LinearLayout(ctx);
+                            vert.setId(0);
+                            vert.setOrientation(LinearLayout.VERTICAL);
+                            horiz.addView(vert);
+                        }
+                        vertcount=(vertcount+1)%height;
+
+                        Button b = new Button(ctx);
+                        b.setId(button.getInt(0));
+                        b.setText(button.getString(1));
+                        b.setTextSize(textsize);
+                        b.setLayoutParams(lp);
+                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                        final String fn = params.getString(4);
+                        b.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View v) {
+                                CallbackArgs(ctx,ctxname,id,""+v.getId());
+                            }
+                        });
+                        vert.addView(b);
+                    }
+                }
+            }
+
+
+
+
+
 /*
             if (type.equals("grid-layout")) {
                 GridLayout v = (GridLayout)vv;
@@ -804,6 +896,26 @@ public class StarwispBuilder
                 ViewPager v = (ViewPager)vv;
                 if (token.equals("switch")) {
                     v.setCurrentItem(arr.getInt(3));
+                }
+                if (token.equals("contents")) {
+                    final JSONArray items = arr.getJSONArray(3);
+                    v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
+                        @Override
+                        public int getCount() {
+                            return items.length();
+                        }
+
+                        @Override
+                        public Fragment getItem(int position) {
+                            try {
+                                String fragname = items.getString(position);
+                                return ActivityManager.GetFragment(fragname);
+                            } catch (JSONException e) {
+                                Log.e("starwisp", "Error parsing data " + e.toString());
+                            }
+                            return null;
+                        }
+                    });
                 }
             }
 

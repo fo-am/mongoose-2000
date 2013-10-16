@@ -14,6 +14,30 @@
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; strings
+
+(define obs-gc "Group Composition")
+(define obs-pf "Pup Focal")
+
+(define (get-fragment-index name frag)
+  (define (_ i l)
+    (cond
+     ((null? l) 0)
+     ((equal? name (cadr (car l))) i)
+     (else (_ (+ i 1) (cdr l)))))
+  (_ 0 frag))
+
+(define gc-fragments
+  (list
+   (list "Start" "gc-start")
+   (list "Weights" "gc-weights")
+   (list "Pregnant" "gc-preg")
+   (list "Pup Assoc" "gc-pup-assoc")
+   (list "Oestrus" "gc-oestrus")
+   (list "Babysit" "gc-babysitting")
+   (list "End" "gc-end")))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; persistent database
 
 (define db "/sdcard/test.db")
@@ -184,16 +208,26 @@
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
 
+(define (mtitle id text)
+  (text-view (make-id id) text 40 fillwrap))
+
 (define (medit-text id text type fn)
   (vert
-   (text-view (make-id (string-append id "-title")) text 20 type fillwrap)
-   (edit-text (make-id id) "" 30 fillwrap fn)))
+   (mtext (string-append id "-title") text)
+   (edit-text (make-id id) "" 20 type fillwrap fn)))
 
 (define (mclear-toggles id-list)
   (map
    (lambda (id)
      (update-widget 'toggle-button (get-id id) 'checked 0))
    id-list))
+
+(define (mclear-toggles-not-me me id-list)
+  (foldl
+   (lambda (id r)
+     (if (equal? me id)
+         r (cons (update-widget 'toggle-button (get-id id) 'checked 0) r)))
+   '() id-list))
 
 (define (xwise n l)
   (define (_ c l)
@@ -219,8 +253,9 @@
        (layout 'wrap-content 'wrap-content 1 'centre) (list))))
     (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right)))))
 
-(define (populate-grid-selector name items fn)
-  (update-widget
+(define (populate-grid name items buildfn)
+  (alog "populate-grid start")
+  (let ((r (update-widget
    'linear-layout (get-id name) 'contents
    (map
     (lambda (items)
@@ -229,41 +264,59 @@
        (make-id "foo") 'vertical wrap
        (map
         (lambda (item)
-          (let ((item-name (ktv-get item "name")))
-            (button (make-id (string-append name item-name))
-                    item-name 20 (layout 100 60 1 'left)
-                    (lambda ()
-                      (fn item)))))
+          (alog "startttt")
+          (let ((r (buildfn item)))
+            (alog "endddd")
+            r))
         items)))
-    (xwise 3 items))))
+    (xwise 3 items)))))
+    (alog "populate-grid end")
+    r))
+
+(define (populate-grid-selector name items fn)
+  (populate-grid
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left)
+        (lambda ()
+          (fn item)))))
+   items))
+
+(define (populate-grid-selector-toggle name items fn)
+  (populate-grid
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (toggle-button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left)
+        (lambda ()
+          (fn item)))))
+   items))
 
 (define (populate-grid-selector-single name items fn)
-  (update-widget
-   'linear-layout (get-id name) 'contents
-   (map
-    (lambda (chopped-items)
-      ;; todo add space for empty parts
-      (linear-layout
-       (make-id "foo") 'vertical wrap
-       (map
-        (lambda (item)
-          (let ((item-name (ktv-get item "name")))
-            (toggle-button (make-id (string-append name item-name))
-                    item-name 20 (layout 100 60 1 'left)
-                    (lambda (v)
-                      (append
-                       ;; clear all the others except us
-                       (mclear-toggles
-                        (foldl
-                         (lambda (item r)
-                           (let ((tname (ktv-get item "name")))
-                             (if (equal? tname item-name) r
-                                 (cons
-                                  (string-append name tname) r))))
-                         '() items))
-                       (fn item))))))
-        chopped-items)))
-    (xwise 3 items))))
+  (populate-grid
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (toggle-button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left)
+        (lambda (v)
+          (append
+           ;; clear all the others except us
+           (mclear-toggles
+            (foldl
+             (lambda (item r)
+               (let ((tname (ktv-get item "name")))
+                 (if (equal? tname item-name) r
+                     (cons
+                      (string-append name tname) r))))
+             '() items))
+           (fn item))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -275,19 +328,164 @@
 
   (fragment
    "gc-start"
-   (vert
-;    (mtoggle-button "gc-main-obs" "Main observer" (lambda (v) '()))
-;    (medit-text "gc-code" "Code" "numeric" (lambda (v) '()))
-;    (build-grid-selector "gc-present" "Who's present?")
-    (mbutton "gc-save" "Save" (lambda () '())))
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Start")
+     (mtoggle-button "gc-start-main-obs" "Main observer" (lambda (v) '()))
+     (mtext "" "Code")
+     (edit-text (make-id "gc-start-code") "" 20 "numeric" fillwrap (lambda (v) '()))
+     (build-grid-selector "gc-start-present" "Who's present?")))
 
    (lambda (fragment arg)
      (activity-layout fragment))
-   (lambda (fragment arg) '())
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "gc-start-present"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '()))
+
+  (fragment
+   "gc-weights"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Weights")
+     (build-grid-selector "gc-weigh-choose" "Choose mongoose")
+     (mtext "gc-weigh-current" "No mongoose yet...")
+     (mtext "" "Weight")
+     (edit-text (make-id "gc-weigh-weight") "" 20 "numeric" fillwrap (lambda (v) '()))
+     (mtoggle-button "gc-weigh-accuracy" "Accurate?" (lambda (v) '()))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "gc-weigh-choose"
+       (db-all-where
+        db "sync" "mongoose"
+        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "gc-preg"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Pregnant females")
+     (build-grid-selector "gc-preg-choose" "Choose mongoose")))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector-toggle
+       "gc-preg-choose"
+       (db-all-where
+        db "sync" "mongoose"
+        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "gc-pup-assoc"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Pregnant females")
+     (build-grid-selector "gc-pup-choose" "Choose pup")
+     (build-grid-selector "gc-pup-escort" "Escort")))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector-single
+       "gc-pup-choose"
+       (db-all-where
+        db "sync" "mongoose"
+        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      (populate-grid-selector-single
+       "gc-pup-escort"
+       (db-all-where
+        db "sync" "mongoose"
+        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "gc-oestrus"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtext "" "Oestrus...")))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "gc-babysitting"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtext "" "Babysittings...")))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "gc-end"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtext "" "end!...")))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
 
   )
 
@@ -303,11 +501,33 @@
     (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
     (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
-    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 "")))))
+    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
+    (button-grid (make-id "bg") 3 20 (layout 200 40 1 'left)
+                 (list) (lambda (v) (msg v) '()))
+    )
 
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) '())
+   (lambda (activity arg)
+     (list
+      (update-widget
+       'button-grid (get-id "bg") 'grid-buttons
+       (list
+        3 20 (layout 200 40 1 'left)
+        (list
+         (list (make-id "1") "one")
+         (list (make-id "2") "two")
+         (list (make-id "3") "three")
+         (list (make-id "4") "four")
+         (list (make-id "5") "five")
+         (list (make-id "6") "six")
+         (list (make-id "7") "seven")
+         (list (make-id "8") "eight")
+         (list (make-id "9") "nine")
+         (list (make-id "10") "ten")
+         )
+        (lambda (v) (msg "updated" v) '())))
+     ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -353,18 +573,30 @@
     (text-view (make-id "title") "Start Observation" 40 fillwrap)
     (vert
      (mtext "type" "Choose observation type")
-     (mtoggle-button "choose-obs-gc" "Group Composition"
-              (lambda ()
-                (set-current! 'observation "Group Composition")
-                (mclear-toggles (list "obs-pf"))))
-     (mtoggle-button "choose-obs-pf" "Pup Focal"
-              (lambda ()
-                (set-current! 'observation "Pup Focal")
-                (mclear-toggles (list "obs-gc")))))
+     (mtoggle-button "choose-obs-gc" obs-gc
+              (lambda (v)
+                (set-current! 'observation obs-gc)
+                (mclear-toggles (list "choose-obs-pf"))))
+     (mtoggle-button "choose-obs-pf" obs-pf
+              (lambda (v)
+                (set-current! 'observation obs-gc)
+                (mclear-toggles (list "choose-obs-gc")))))
     (build-grid-selector "choose-obs-pack-selector" "Choose pack")
     (mbutton
      "choose-obs-start" "Start"
      (lambda ()
+       ;; set up the observation fragments
+       (let ((obs (get-current 'observation "none")))
+         (when (not (equal? obs "none"))
+           (set-current!
+            'observation-fragments
+            (cond
+             ((equal? obs obs-gc) gc-fragments)
+             ((equal? obs obs-pf)
+              (list
+               (list "Start" "gc-start")))))))
+
+       ;; go to observation
        (if (and (current-exists? 'pack)
                 (current-exists? 'observation))
            (list (start-activity "observation" 2 ""))
@@ -381,7 +613,9 @@
       (populate-grid-selector-single
        "choose-obs-pack-selector" (db-all db "sync" "pack")
        (lambda (pack)
-         (set-current! 'pack pack)))))
+         (msg "in selector" pack)
+         (set-current! 'pack pack)
+         '()))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -394,16 +628,45 @@
    "observation"
    (vert
     (text-view (make-id "obs-title") "" 40 fillwrap)
-    )
+    (linear-layout
+     (make-id "obs-buttons-bar") 'horizontal fillwrap '())
+    (view-pager
+     (make-id "obs-container") (layout 'wrap-content 700 1 'left) '())
+    (mbutton "obs-done" "Done" (lambda () '())))
 
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
+      (update-widget 'linear-layout (get-id "obs-buttons-bar") 'contents
+                     (let ((all-toggles
+                            (map
+                             (lambda (i) (string-append "obs-bar-" (cadr i)))
+                             (get-current 'observation-fragments '()))))
+                       (map
+                        (lambda (frag)
+                          (let ((id (string-append "obs-bar-" (cadr frag))))
+                            (toggle-button
+                             (make-id id) (car frag) 12 fillwrap
+                             (lambda (v)
+                               (append
+                                (mclear-toggles-not-me id all-toggles)
+                                (list
+                                 (update-widget
+                                  'view-pager (get-id "obs-container") 'switch
+                                  (get-fragment-index
+                                   (cadr frag)
+                                   (get-current 'observation-fragments '())))))))))
+                        (get-current 'observation-fragments '()))))
       (update-widget 'text-view (get-id "obs-title") 'text
                      (string-append
                       (get-current 'observation "No observation")
                       " with " (ktv-get (get-current 'pack '()) "name")))
+      (update-widget 'view-pager (get-id "obs-container") 'contents
+                     (map
+                      (lambda (frag)
+                        (cadr frag))
+                      (get-current 'observation-fragments '())))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
