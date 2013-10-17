@@ -203,10 +203,13 @@
   (button (make-id id) title 20 fillwrap fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 20 (layout 100 100 1 'left) fn))
+  (button (make-id id) title 20 (layout 100 100 1 'centre) fn))
 
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 20 fillwrap fn))
+
+(define (mtoggle-button2 id title fn)
+  (toggle-button (make-id id) title 20 (layout 100 100 1 'centre) fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
@@ -296,9 +299,9 @@
     (make-id "") 'vertical fillwrap
     (list
      (mtitle "title" "Time left: 20 mins")
-     (mtitle "title" "Next nearest neighbour: 60 secs")
+     (mtitle "title" "Next scan: 60 secs")
      (mbutton "pft-trigger" "NN scan"
-              (lambda () (list (replace-fragment (get-id "pf-top") "pf-scan"))))))
+              (lambda () (list (replace-fragment (get-id "pf-top") "pf-scan1"))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -326,8 +329,6 @@
       (mbutton2 "evb-grpalarm" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
       (mbutton2 "evb-grpmov" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov")))))
      ))
-
-
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -336,6 +337,66 @@
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '()))
+
+  (fragment
+   "pf-scan1"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (build-grid-selector "pf-scan-nearest" "single" "Nearest neighbour scan: Closest Mongoose")
+     (build-grid-selector "pf-scan-close" "toggle" "Nearest neighbour scan: Mongooses within 2m")
+     (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "pf-scan-nearest" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      (populate-grid-selector
+       "pf-scan-close" "toggle"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+  (fragment
+   "ev-pupfeed"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (build-grid-selector "pf-pupfeed-who" "single" "Who fed the pup?")
+     (mtext "text" "Food size")
+     (horiz
+      (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
+      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "pf-pupfeed-who" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
 
 
 
@@ -553,9 +614,10 @@
     (text-view (make-id "main-title") "Mongoose 2000" 40 fillwrap)
     (text-view (make-id "main-about") "Advanced mongoose technology" 20 fillwrap)
     (spacer 10)
-    (mbutton "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
-    (mbutton "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
-    (mbutton "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 ""))))
+    (horiz
+     (mbutton2 "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
+     (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
+     (mbutton2 "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 "")))))
     (mtext "foo" "Your ID")
     (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
@@ -564,8 +626,8 @@
                   db "local" 1 (list (ktv "user-id" "varchar" v)))))
     (mtext "foo" "Database")
     (horiz
-     (mbutton "main-send" "Email" (lambda () (list)))
-     (mbutton "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 ""))))))
+     (mbutton2 "main-send" "Email" (lambda () (list)))
+     (mbutton2 "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 ""))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -585,14 +647,15 @@
     (text-view (make-id "title") "Start Observation" 40 fillwrap)
     (vert
      (mtext "type" "Choose observation type")
-     (mtoggle-button "choose-obs-gc" obs-gc
-              (lambda (v)
-                (set-current! 'observation obs-gc)
-                (mclear-toggles (list "choose-obs-pf"))))
-     (mtoggle-button "choose-obs-pf" obs-pf
-              (lambda (v)
-                (set-current! 'observation obs-pf)
-                (mclear-toggles (list "choose-obs-gc")))))
+     (horiz
+      (mtoggle-button2 "choose-obs-gc" obs-gc
+                       (lambda (v)
+                         (set-current! 'observation obs-gc)
+                         (mclear-toggles (list "choose-obs-pf"))))
+      (mtoggle-button2 "choose-obs-pf" obs-pf
+                       (lambda (v)
+                         (set-current! 'observation obs-pf)
+                         (mclear-toggles (list "choose-obs-gc"))))))
     (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
     (mbutton
      "choose-obs-start" "Start"
@@ -724,9 +787,9 @@
      (mtitle "title" "Pup Focal")
      (mtext "pf-details" "")
      (mtoggle-button "pf-pause" "Pause" (lambda (v) '())))
-    (build-fragment "pf-timer" (make-id "pf-top") (layout 550 350 1 'left))
+    (build-fragment "pf-timer" (make-id "pf-top") (layout 580 400 1 'left))
     (mtitle "title" "Events")
-    (build-fragment "pf-events" (make-id "pf-bot") (layout 550 350 1 'left))
+    (build-fragment "pf-events" (make-id "pf-bot") (layout 580 400 1 'left))
     (mbutton "pf-done" "Done" (lambda () (list (start-activity-goto "observations" 2 "")))))
 
    (lambda (activity arg)

@@ -141,7 +141,7 @@ public class StarwispBuilder
                                               BuildLayoutParam(arr.getString(2)),
                                               (float)arr.getDouble(3));
             lp.gravity=BuildLayoutGravity(arr.getString(4));
-            lp.setMargins(5,5,5,5);
+            //lp.setMargins(5,5,5,5);
             return lp;
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
