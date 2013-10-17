@@ -32,7 +32,7 @@
    (list "Start" "gc-start")
    (list "Weights" "gc-weights")
    (list "Pregnant" "gc-preg")
-   (list "Pup Assoc" "gc-pup-assoc")
+   (list "Pup assoc" "gc-pup-assoc")
    (list "Oestrus" "gc-oestrus")
    (list "Babysit" "gc-babysitting")
    (list "End" "gc-end")))
@@ -202,6 +202,9 @@
 (define (mbutton id title fn)
   (button (make-id id) title 20 fillwrap fn))
 
+(define (mbutton2 id title fn)
+  (button (make-id id) title 20 (layout 100 100 1 'left) fn))
+
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 20 fillwrap fn))
 
@@ -239,9 +242,9 @@
        (_ (append c (list (car l))) (cdr l)))))
   (_ '() l))
 
-(define (build-grid-selector name title)
+(define (build-grid-selector name type title)
   (vert
-   (mtext "foo" title)
+   (mtext "title" title)
    (horiz
     (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left))
     (scroll-view
@@ -250,73 +253,34 @@
      (list
       (linear-layout
        (make-id name) 'horizontal
-       (layout 'wrap-content 'wrap-content 1 'centre) (list))))
+       (layout 'wrap-content 'wrap-content 1 'centre)
+       (list
+        (button-grid (make-id name) type 3 20 (layout 100 40 1 'left)
+                     (list) (lambda (v) '()))))))
     (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right)))))
 
-(define (populate-grid name items buildfn)
-  (alog "populate-grid start")
-  (let ((r (update-widget
-   'linear-layout (get-id name) 'contents
-   (map
-    (lambda (items)
-      ;; todo add space for empty parts
-      (linear-layout
-       (make-id "foo") 'vertical wrap
-       (map
-        (lambda (item)
-          (alog "startttt")
-          (let ((r (buildfn item)))
-            (alog "endddd")
-            r))
-        items)))
-    (xwise 3 items)))))
-    (alog "populate-grid end")
-    r))
+(define (fast-get-name item)
+  (list-ref (list-ref item 1) 2))
 
-(define (populate-grid-selector name items fn)
-  (populate-grid
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left)
-        (lambda ()
-          (fn item)))))
-   items))
-
-(define (populate-grid-selector-toggle name items fn)
-  (populate-grid
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (toggle-button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left)
-        (lambda ()
-          (fn item)))))
-   items))
-
-(define (populate-grid-selector-single name items fn)
-  (populate-grid
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (toggle-button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left)
-        (lambda (v)
-          (append
-           ;; clear all the others except us
-           (mclear-toggles
-            (foldl
-             (lambda (item r)
-               (let ((tname (ktv-get item "name")))
-                 (if (equal? tname item-name) r
-                     (cons
-                      (string-append name tname) r))))
-             '() items))
-           (fn item))))))))
+(define (populate-grid-selector name type items fn)
+  (let ((id->items
+         (map
+          (lambda (item)
+            (let ((item-name (fast-get-name item)))
+              (list (make-id (string-append name item-name))
+                           item
+                           item-name)))
+          items)))
+    (update-widget
+     'button-grid (get-id name) 'grid-buttons
+     (list
+      type 3 20 (layout 100 40 1 'left)
+      (map
+       (lambda (ii)
+         (list (car ii) (caddr ii)))
+       id->items)
+      (lambda (v)
+        (fn (cadr (findv v id->items))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -327,6 +291,55 @@
 (define-fragment-list
 
   (fragment
+   "pf-timer"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Time left: 20 mins")
+     (mtitle "title" "Next nearest neighbour: 60 secs")
+     (mbutton "pft-trigger" "NN scan"
+              (lambda () (list (replace-fragment (get-id "pf-top") "pf-scan"))))))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+  (fragment
+   "pf-events"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtext "text" "Pup Focal Events")
+     (horiz
+      (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
+      (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
+      (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
+      (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr")))))
+     (mtext "text" "Group Events")
+     (horiz
+      (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
+      (mbutton2 "evb-grpalarm" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
+      (mbutton2 "evb-grpmov" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov")))))
+     ))
+
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+
+  (fragment
    "gc-start"
    (linear-layout
     (make-id "") 'vertical fillwrap
@@ -335,14 +348,14 @@
      (mtoggle-button "gc-start-main-obs" "Main observer" (lambda (v) '()))
      (mtext "" "Code")
      (edit-text (make-id "gc-start-code") "" 20 "numeric" fillwrap (lambda (v) '()))
-     (build-grid-selector "gc-start-present" "Who's present?")))
+     (build-grid-selector "gc-start-present" "toggle" "Who's present?")))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
       (populate-grid-selector
-       "gc-start-present"
+       "gc-start-present" "toggle"
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
@@ -359,18 +372,16 @@
     (make-id "") 'vertical fillwrap
     (list
      (mtitle "title" "Weights")
-     (build-grid-selector "gc-weigh-choose" "Choose mongoose")
-     (mtext "gc-weigh-current" "No mongoose yet...")
-     (mtext "" "Weight")
+     (build-grid-selector "gc-weigh-choose" "toggle" "Choose mongoose")
      (edit-text (make-id "gc-weigh-weight") "" 20 "numeric" fillwrap (lambda (v) '()))
-     (mtoggle-button "gc-weigh-accuracy" "Accurate?" (lambda (v) '()))))
+     (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
       (populate-grid-selector
-       "gc-weigh-choose"
+       "gc-weigh-choose" "toggle"
        (db-all-where
         db "sync" "mongoose"
         (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
@@ -388,14 +399,14 @@
     (make-id "") 'vertical fillwrap
     (list
      (mtitle "title" "Pregnant females")
-     (build-grid-selector "gc-preg-choose" "Choose mongoose")))
+     (build-grid-selector "gc-preg-choose" "toggle" "Choose")))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
-      (populate-grid-selector-toggle
-       "gc-preg-choose"
+      (populate-grid-selector
+       "gc-preg-choose" "toggle"
        (db-all-where
         db "sync" "mongoose"
         (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
@@ -407,28 +418,29 @@
    (lambda (fragment) '())
    (lambda (fragment) '()))
 
+
   (fragment
    "gc-pup-assoc"
    (linear-layout
     (make-id "") 'vertical fillwrap
     (list
      (mtitle "title" "Pregnant females")
-     (build-grid-selector "gc-pup-choose" "Choose pup")
-     (build-grid-selector "gc-pup-escort" "Escort")))
+     (build-grid-selector "gc-pup-choose" "toggle" "Choose pup")
+     (build-grid-selector "gc-pup-escort" "toggle" "Escort")))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
-      (populate-grid-selector-single
-       "gc-pup-choose"
+      (populate-grid-selector
+       "gc-pup-choose" "toggle"
        (db-all-where
         db "sync" "mongoose"
         (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
          (list)))
-      (populate-grid-selector-single
-       "gc-pup-escort"
+      (populate-grid-selector
+       "gc-pup-escort" "toggle"
        (db-all-where
         db "sync" "mongoose"
         (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
@@ -502,7 +514,7 @@
     (mtext "splash-about" "Advanced mongoose technology")
     (spacer 20)
     (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
-    (button-grid (make-id "bg") 3 20 (layout 200 40 1 'left)
+    (button-grid (make-id "bg") "toggle" 3 20 (layout 100 40 1 'left)
                  (list) (lambda (v) (msg v) '()))
     )
 
@@ -513,7 +525,7 @@
       (update-widget
        'button-grid (get-id "bg") 'grid-buttons
        (list
-        3 20 (layout 200 40 1 'left)
+        "toggle" 3 20 (layout 100 40 1 'left)
         (list
          (list (make-id "1") "one")
          (list (make-id "2") "two")
@@ -579,9 +591,9 @@
                 (mclear-toggles (list "choose-obs-pf"))))
      (mtoggle-button "choose-obs-pf" obs-pf
               (lambda (v)
-                (set-current! 'observation obs-gc)
+                (set-current! 'observation obs-pf)
                 (mclear-toggles (list "choose-obs-gc")))))
-    (build-grid-selector "choose-obs-pack-selector" "Choose pack")
+    (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
     (mbutton
      "choose-obs-start" "Start"
      (lambda ()
@@ -592,14 +604,14 @@
             'observation-fragments
             (cond
              ((equal? obs obs-gc) gc-fragments)
-             ((equal? obs obs-pf)
-              (list
-               (list "Start" "gc-start")))))))
+             ((equal? obs obs-pf) '())))))
 
        ;; go to observation
        (if (and (current-exists? 'pack)
                 (current-exists? 'observation))
-           (list (start-activity "observation" 2 ""))
+           (if (eq? (get-current 'observation "none") obs-pf)
+               (list (start-activity "individual-select" 2 ""))
+               (list (start-activity "observation" 2 "")))
            (list
             (alert-dialog
              "choose-obs-finish"
@@ -610,8 +622,9 @@
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (populate-grid-selector-single
-       "choose-obs-pack-selector" (db-all db "sync" "pack")
+      (populate-grid-selector
+       "choose-obs-pack-selector" "single"
+       (db-all db "sync" "pack")
        (lambda (pack)
          (msg "in selector" pack)
          (set-current! 'pack pack)
@@ -674,117 +687,63 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-
-
-
-
-
   (activity
-   "individual-select"
+   "individual-select" ;; pup focal #1
    (vert
-    (text-view (make-id "title") "Select an individual" 40 fillwrap)
-    (spacer 10)
-    (linear-layout
-     (make-id "individual-select-list")
-     'vertical fill (list))
+    (mtitle "" "Pup focal setup")
+    (mtext "pf1-pack" "Pack")
+    (build-grid-selector "pf1-grid" "single" "Select pup")
+    (horiz
+     (medit-text "pf1-width" "Pack width" 20 "numeric" (lambda (v) '()))
+     (medit-text "pf1-height" "Pack height" 20 "numeric" (lambda (v) '())))
+    (medit-text "pf1-count" "How many mongooses present?" 20 "numeric" (lambda (v) '()))
+    (mbutton "pf1-done" "Done"
+             (lambda ()
+               (list (start-activity "pup-focal" 2 ""))))
     )
+
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      (update-widget 'linear-layout (get-id "individual-select-list") 'contents
-                     (build-individual-buttons
-                      "ind-select"
-                      (lambda (individual)
-                        (set-current! 'individual individual)
-                        (list (start-activity "pup-focal" 2 "")))))))
+      (populate-grid-selector
+       "pf1-grid" "single"
+       (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         '()))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
-
-
-  (let ((clear-focal-toggles
-         (lambda (v but)
-           (list
-            (update-widget 'toggle-button (get-id "pup-focal-moving") 'checked
-                           (if (equal? but "pup-focal-moving") 1 0))
-            (update-widget 'toggle-button (get-id "pup-focal-foraging") 'checked
-                           (if (equal? but "pup-focal-foraging") 1 0))
-            (update-widget 'toggle-button (get-id "pup-focal-resting") 'checked
-                           (if (equal? but "pup-focal-resting") 1 0)))
-           )))
-
-    (activity
-     "pup-focal"
-     (vert
-      (horiz
-       (text-view (make-id "pup-focal-title") "Pup Focal" 40 fillwrap)
-       (vert
-        (text-view (make-id "pup-focal-timer-text") "Time left" 20 fillwrap)
-        (text-view (make-id "pup-focal-timer") "30" 40 fillwrap)))
-      (text-view (make-id "pup-focal-name/pack") "" 25 fillwrap)
-      (text-view (make-id "pup-focal") "Current Activity" 20 fillwrap)
-      (horiz
-       (toggle-button (make-id "pup-focal-moving") "Moving" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-moving")))
-       (toggle-button (make-id "pup-focal-foraging") "Foraging" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-foraging")))
-       (toggle-button (make-id "pup-focal-resting") "Resting" 20 fillwrap (lambda (v) (clear-focal-toggles v "pup-focal-resting"))))
-      (text-view (make-id "pup-focal-escort-text") "Current Escort" 20 fillwrap)
-      (spinner (make-id "pup-focal-escort") (list "mongoose1" "mongoose2")
-                 fillwrap (lambda (v) '()))
-      (horiz
-       (button (make-id "pup-focal-event") "New event" 20 fillwrap (lambda () (list (start-activity "pup-focal-event" 2 ""))))
-       (toggle-button (make-id "pup-focal-pause") "Pause" 20 fillwrap (lambda (v) '()))
-       ))
-     (lambda (activity arg)
-       (activity-layout activity))
-     (lambda (activity arg)
-       (list
-        (update-widget 'text-view (get-id "pup-focal-name/pack") 'text
-                       (string-append
-                        "Pack: " (ktv-get (get-current 'pack '()) "name") " "
-                        "Pup: " (ktv-get (get-current 'individual '()) "name")))
-        (update-widget 'spinner (get-id "pup-focal-escort") 'array
-                 (foldl
-                  (lambda (individual r)
-                    (let ((name (ktv-get individual "name")))
-                      (if (equal? name (ktv-get (get-current 'individual '()) "name"))
-                          r (cons name r))))
-                  '()
-                  (dbg (db-all-where
-                   db "sync" "mongoose"
-                   (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id"))))))
-        ))
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity) '())
-     (lambda (activity requestcode resultcode) '())))
 
   (activity
-   "pup-focal-event"
+   "pup-focal" ;; pup focal #2
    (vert
-    (text-view (make-id "main-title") "Pup focal event" 40 fillwrap)
-    (spacer 10)
-    (button (make-id "event-self") "Self feeding" 20 fillwrap
-            (lambda () (list (start-activity "event-self" 2 ""))))
-    (button (make-id "event-fed") "Being fed" 20 fillwrap
-            (lambda () (list (start-activity "event-fed" 2 ""))))
-    (button (make-id "event-aggression") "Aggression" 20 fillwrap
-            (lambda () (list (start-activity "event-aggression" 2 ""))))
-    (spacer 10)
-    (button (make-id "event-cancel") "Cancel" 20 fillwrap
-            (lambda () (list (finish-activity 0))))
-    )
+    (horiz
+     (mtitle "title" "Pup Focal")
+     (mtext "pf-details" "")
+     (mtoggle-button "pf-pause" "Pause" (lambda (v) '())))
+    (build-fragment "pf-timer" (make-id "pf-top") (layout 550 350 1 'left))
+    (mtitle "title" "Events")
+    (build-fragment "pf-events" (make-id "pf-bot") (layout 550 350 1 'left))
+    (mbutton "pf-done" "Done" (lambda () (list (start-activity-goto "observations" 2 "")))))
+
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (list
+      (update-widget 'text-view (get-id "pf-details") 'text
+                     (string-append
+                      "Pack: " (ktv-get (get-current 'pack '()) "name") " "
+                      "Pup: " (ktv-get (get-current 'individual '()) "name")))
+      ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
 
   (activity
    "event-self"
@@ -877,7 +836,7 @@
    "manage-packs"
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
-    (build-grid-selector "manage-packs-list" "Choose pack")
+    (build-grid-selector "manage-packs-list" "button" "Choose pack")
     (button (make-id "manage-packs-new") "New pack" 20 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
     )
    (lambda (activity arg)
@@ -885,7 +844,7 @@
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-packs-list" (db-all db "sync" "pack")
+       "manage-packs-list" "button" (db-all db "sync" "pack")
        (lambda (pack)
          (set-current! 'pack pack)
          (list (start-activity "manage-individual" 2 ""))))
@@ -929,7 +888,7 @@
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
-    (build-grid-selector "manage-individuals-list" "Choose individual")
+    (build-grid-selector "manage-individuals-list" "button" "Choose individual")
     (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
     )
    (lambda (activity arg)
@@ -937,7 +896,7 @@
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-individuals-list"
+       "manage-individuals-list" "button"
        (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
          (list (start-activity "manage-individual" 2 ""))))

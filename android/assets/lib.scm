@@ -56,7 +56,36 @@
     ((equal? n (car (car l))) (car l))
     (else (find n (cdr l)))))
 
+(define (findv n l)
+  (cond
+    ((null? l) #f)
+    ((eqv? n (car (car l))) (car l))
+    (else (findv n (cdr l)))))
+
 (define (sorted-add l i)
+  (cond
+   ((null? l) (list i))
+   ;; overwrite existing
+   ((equal? (car i) (caar l)) (cons i (cdr l)))
+   ((string<? (car i) (caar l))
+    (cons i l))
+   (else
+    (cons (car l) (sorted-add (cdr l) i)))))
+
+(define (sorted-find l k)
+  (define (_ bot top)
+    (if (null? l) #f
+        (let* ((m (inexact->exact (floor (+ bot (/ (- top bot) 2)))))
+               (mid (list-ref l m))
+               (v (car mid)))
+          (cond
+           ((equal? k v) mid)
+           ((eqv? top bot) #f)
+           ((string<? k v) (_ bot m))
+           (else (_ (+ m 1) top))))))
+  (_ 0 (- (length l) 1)))
+
+(define (sorted-addv l i)
   (cond
    ((null? l) (list i))
    ;; overwrite existing
@@ -64,9 +93,9 @@
    ((< (car i) (caar l))
     (cons i l))
    (else
-    (cons (car l) (sorted-add (cdr l) i)))))
+    (cons (car l) (sorted-addv (cdr l) i)))))
 
-(define (sorted-find l k)
+(define (sorted-findv l k)
   (define (_ bot top)
     (if (null? l) #f
         (let* ((m (inexact->exact (floor (+ bot (/ (- top bot) 2)))))
@@ -403,9 +432,9 @@
 (define (canvas-layout t) (list-ref t 2))
 (define (canvas-drawlist t) (list-ref t 3))
 
-(define (button-grid id height textsize layout buttons listener)
-  (list "button-grid" id height textsize layout buttons listener))
-(define (button-grid-listener b) (list-ref b 6))
+(define (button-grid id type height textsize layout buttons listener)
+  (list "button-grid" id type height textsize layout buttons listener))
+(define (button-grid-listener b) (list-ref b 7))
 
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
@@ -447,27 +476,35 @@
 (define id-map ())
 (define current-id 1)
 
-(define (find-id name id-map)
-  (cond
-   ((null? id-map) #f)
-   ((equal? name (car (car id-map))) (cadr (car id-map)))
-   (else (find-id name (cdr id-map)))))
+;(define (find-id name id-map)
+;  (cond
+;   ((null? id-map) #f)
+;   ((equal? name (car (car id-map))) (cadr (car id-map)))
+;   (else (find-id name (cdr id-map)))))
 
-(define (get-id name)
-  (find-id name id-map))
+;(define (get-id name)
+;  (find-id name id-map))
 
 ;(define (make-id name)
-;  (set! id-map (cons (list name (length id-map)) id-map))
-;  (get-id name))
+;  (let ((existing (get-id name)))
+;    (cond
+;     (existing existing)
+;     (else
+;      (set! id-map (cons (list name current-id) id-map))
+;      (set! current-id (+ current-id 1))
+;      (get-id name)))))
+
+(define (get-id name)
+  (cadr (sorted-find id-map name)))
 
 (define (make-id name)
-  (let ((existing (get-id name)))
-    (cond
-     (existing existing)
-     (else
-      (set! id-map (cons (list name current-id) id-map))
-      (set! current-id (+ current-id 1))
-      (get-id name)))))
+  (let ((sf (sorted-find id-map name)))
+    (if (not sf)
+        (let ((id current-id))
+          (set! id-map (sorted-add id-map (list name id)))
+          (set! current-id (+ current-id 1))
+          id)
+        (cadr sf))))
 
 
 (define wrap (layout 'wrap-content 'wrap-content 1 'left))
@@ -525,10 +562,10 @@
 (define (callback-id l) (list-ref l 0))
 (define (callback-type l) (list-ref l 1))
 (define (callback-fn l) (list-ref l 2))
-(define (find-callback id) (sorted-find callbacks id))
+(define (find-callback id) (sorted-findv callbacks id))
 (define (add-callback! cb)
   ;;(msg "adding" cb)
-  (set! callbacks (sorted-add callbacks cb)))
+  (set! callbacks (sorted-addv callbacks cb)))
 
 (define (widget-get-children w)
   (cond
@@ -573,7 +610,7 @@
          ((eq? (update-widget-token w) 'grid-buttons)
           (add-callback! (callback (update-widget-id w)
                                    "button-grid"
-                                   (list-ref (update-widget-value w) 4)))))
+                                   (list-ref (update-widget-value w) 5)))))
         (update-callbacks! (cdr widget-list)))))
 
 (define (define-activity-list . args)

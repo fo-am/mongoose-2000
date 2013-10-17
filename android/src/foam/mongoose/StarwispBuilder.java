@@ -498,13 +498,14 @@ public class StarwispBuilder
             if (type.equals("button-grid")) {
                 LinearLayout horiz = new LinearLayout(ctx);
                 final int id = arr.getInt(1);
+                final String buttontype = arr.getString(2);
                 horiz.setId(id);
                 horiz.setOrientation(LinearLayout.HORIZONTAL);
                 parent.addView(horiz);
-                int height = arr.getInt(2);
-                int textsize = arr.getInt(3);
-                LinearLayout.LayoutParams lp = BuildLayoutParams(arr.getJSONArray(4));
-                JSONArray buttons = arr.getJSONArray(5);
+                int height = arr.getInt(3);
+                int textsize = arr.getInt(4);
+                LinearLayout.LayoutParams lp = BuildLayoutParams(arr.getJSONArray(5));
+                JSONArray buttons = arr.getJSONArray(6);
                 int count = buttons.length();
                 int vertcount = 0;
                 LinearLayout vert = null;
@@ -520,19 +521,38 @@ public class StarwispBuilder
                     }
                     vertcount=(vertcount+1)%height;
 
-                    Button b = new Button(ctx);
-                    b.setId(button.getInt(0));
-                    b.setText(button.getString(1));
-                    b.setTextSize(textsize);
-                    b.setLayoutParams(lp);
-                    b.setTypeface(((StarwispActivity)ctx).m_Typeface);
-                    final String fn = arr.getString(5);
-                    b.setOnClickListener(new View.OnClickListener() {
-                        public void onClick(View v) {
-                            CallbackArgs(ctx,ctxname,id,""+v.getId());
-                        }
-                    });
-                    vert.addView(b);
+                    if (buttontype.equals("button")) {
+                        Button b = new Button(ctx);
+                        b.setId(button.getInt(0));
+                        b.setText(button.getString(1));
+                        b.setTextSize(textsize);
+                        b.setLayoutParams(lp);
+                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                        final String fn = arr.getString(6);
+                        b.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View v) {
+                                CallbackArgs(ctx,ctxname,id,""+v.getId());
+                            }
+                        });
+                        vert.addView(b);
+                    }
+                    else if (buttontype.equals("toggle")) {
+                        ToggleButton b = new ToggleButton(ctx);
+                        b.setId(button.getInt(0));
+                        b.setText(button.getString(1));
+                        b.setTextSize(textsize);
+                        b.setLayoutParams(lp);
+                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                        final String fn = arr.getString(6);
+                        b.setOnClickListener(new View.OnClickListener() {
+                            public void onClick(View v) {
+                                String arg="#f";
+                                if (((ToggleButton) v).isChecked()) arg="#t";
+                                CallbackArgs(ctx,ctxname,id,""+v.getId()+" "+arg);
+                            }
+                        });
+                        vert.addView(b);
+                    }
                 }
             }
 
@@ -839,12 +859,12 @@ public class StarwispBuilder
                     horiz.removeAllViews();
 
                     JSONArray params = arr.getJSONArray(3);
-
-                    int height = params.getInt(0);
-                    int textsize = params.getInt(1);
-                    LinearLayout.LayoutParams lp = BuildLayoutParams(params.getJSONArray(2));
-                    JSONArray buttons = params.getJSONArray(3);
-                    int count = buttons.length();
+                    String buttontype = params.getString(0);
+                    int height = params.getInt(1);
+                    int textsize = params.getInt(2);
+                    LinearLayout.LayoutParams lp = BuildLayoutParams(params.getJSONArray(3));
+                    final JSONArray buttons = params.getJSONArray(4);
+                    final int count = buttons.length();
                     int vertcount = 0;
                     LinearLayout vert = null;
 
@@ -859,19 +879,69 @@ public class StarwispBuilder
                         }
                         vertcount=(vertcount+1)%height;
 
-                        Button b = new Button(ctx);
-                        b.setId(button.getInt(0));
-                        b.setText(button.getString(1));
-                        b.setTextSize(textsize);
-                        b.setLayoutParams(lp);
-                        b.setTypeface(((StarwispActivity)ctx).m_Typeface);
-                        final String fn = params.getString(4);
-                        b.setOnClickListener(new View.OnClickListener() {
-                            public void onClick(View v) {
-                                CallbackArgs(ctx,ctxname,id,""+v.getId());
-                            }
-                        });
-                        vert.addView(b);
+                        if (buttontype.equals("button")) {
+
+                            Button b = new Button(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId());
+                                }
+                            });
+                            vert.addView(b);
+                        }
+                        else if (buttontype.equals("toggle")) {
+                            ToggleButton b = new ToggleButton(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    String arg="#f";
+                                    if (((ToggleButton) v).isChecked()) arg="#t";
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" "+arg);
+                                }
+                            });
+                            vert.addView(b);
+                        }
+                        else if (buttontype.equals("single")) {
+                            ToggleButton b = new ToggleButton(ctx);
+                            b.setId(button.getInt(0));
+                            b.setText(button.getString(1));
+                            b.setTextSize(textsize);
+                            b.setLayoutParams(lp);
+                            b.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                            final String fn = params.getString(5);
+                            b.setOnClickListener(new View.OnClickListener() {
+                                public void onClick(View v) {
+                                    try {
+                                        for (int i=0; i<count; i++) {
+                                            JSONArray button = buttons.getJSONArray(i);
+                                            int bid = button.getInt(0);
+                                            if (bid!=v.getId()) {
+                                                ToggleButton tb=(ToggleButton)ctx.findViewById(bid);
+                                                tb.setChecked(false);
+                                            }
+                                        }
+                                    } catch (JSONException e) {
+                                        Log.e("starwisp", "Error parsing data " + e.toString());
+                                    }
+
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId());
+                                }
+                            });
+                            vert.addView(b);
+                        }
+
+
                     }
                 }
             }
