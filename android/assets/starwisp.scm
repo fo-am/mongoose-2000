@@ -375,11 +375,12 @@
    (linear-layout
     (make-id "") 'vertical fillwrap
     (list
+     (mtitle "title" "Pup is fed")
      (build-grid-selector "pf-pupfeed-who" "single" "Who fed the pup?")
      (mtext "text" "Food size")
      (horiz
       (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+      (mbutton "pf-pupfeed-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -387,6 +388,93 @@
      (list
       (populate-grid-selector
        "pf-pupfeed-who" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "ev-pupfind"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Pup found food")
+     (mtext "text" "Food size")
+     (horiz
+      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
+      (mbutton "pf-pupfind-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+  (fragment
+   "ev-pupcare"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Pup is cared for")
+     (build-grid-selector "pf-pupcare-who" "single" "Who cared for the pup?")
+     (mtext "text" "Type of care")
+     (horiz
+      (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap (lambda (v) '()))
+      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "pf-pupcare-who" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "ev-pupaggr"
+   (linear-layout
+    (make-id "") 'vertical fillwrap
+    (list
+     (mtitle "title" "Pup aggression")
+     (build-grid-selector "pf-pupaggr-partner" "single" "Aggressive mongoose")
+
+     (linear-layout
+      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left)
+      (list
+       (vert
+        (mtext "" "Fighting over")
+        (spinner (make-id "pf-pupaggr-over") (list "Food" "Escort" "Nothing" "Other") fillwrap (lambda (v) '())))
+       (vert
+        (mtext "" "Level")
+        (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap (lambda (v) '())))
+       (mtoggle-button "pf-pupaggr-in" "Initiate?" (lambda (v) '()))
+       (mtoggle-button "pf-pupaggr-win" "Win?" (lambda (v) '()))))
+     (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events"))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "pf-pupaggr-partner" "single"
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
