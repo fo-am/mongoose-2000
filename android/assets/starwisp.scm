@@ -18,6 +18,19 @@
 
 (define obs-gc "Group Composition")
 (define obs-pf "Pup Focal")
+(define obs-gp "Group Events")
+
+;; colours
+
+(define pf-col (list  22  19 178  96))
+(define gp-col (list 255 236   0  96))
+(define gc-col (list 255  97   0  96))
+
+;(define gc-col (list   0 176  96 64))
+;(define pf-col (list 226   0  72 64))
+;(define gp-col (list 255 144   0 64))
+
+(define trans-col (list 0 0 0 0))
 
 (define (get-fragment-index name frag)
   (define (_ i l)
@@ -203,13 +216,13 @@
   (button (make-id id) title 20 fillwrap fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 20 (layout 100 100 1 'centre) fn))
+  (button (make-id id) title 20 (layout 150 100 1 'centre) fn))
 
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 20 fillwrap fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 20 (layout 100 100 1 'centre) fn))
+  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre) fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
@@ -256,7 +269,7 @@
      (list
       (linear-layout
        (make-id name) 'horizontal
-       (layout 'wrap-content 'wrap-content 1 'centre)
+       (layout 'wrap-content 'wrap-content 1 'centre) trans-col
        (list
         (button-grid (make-id name) type 3 20 (layout 100 40 1 'left)
                      (list) (lambda (v) '()))))))
@@ -296,7 +309,7 @@
   (fragment
    "pf-timer"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
      (mtitle "title" "Time left: 20 mins")
      (mtitle "title" "Next scan: 60 secs")
@@ -313,26 +326,35 @@
 
 
   (fragment
-   "pf-events"
+   "events"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    0 'vertical fillwrap trans-col
     (list
-     (mtext "text" "Pup Focal Events")
-     (horiz
-      (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
-      (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
-      (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
-      (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr")))))
-     (mtext "text" "Group Events")
-     (horiz
-      (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
-      (mbutton2 "evb-grpalarm" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
-      (mbutton2 "evb-grpmov" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov")))))
-     ))
+     (mtitle "ev-pf-text" "Pup Focal Events")
+     (linear-layout
+      (make-id "ev-pf") 'horizontal fill pf-col
+      (list
+       (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
+       (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
+       (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
+       (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr"))))))
+     (mtitle "text" "Group Events")
+     (linear-layout
+      0 'horizontal fill gp-col
+      (list
+       (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
+       (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
+       (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov"))))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list))
+     (if (equal? (get-current 'observation "none") obs-gp)
+         (list
+          (update-widget 'text-view (get-id "ev-pf-text") 'hide 0)
+          (update-widget 'linear-layout (get-id "ev-pf") 'hide 0))
+         (list
+          (update-widget 'text-view (get-id "ev-pf-text") 'show 0)
+          (update-widget 'linear-layout (get-id "ev-pf") 'show 0))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -341,10 +363,11 @@
   (fragment
    "pf-scan1"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
-     (build-grid-selector "pf-scan-nearest" "single" "Nearest neighbour scan: Closest Mongoose")
-     (build-grid-selector "pf-scan-close" "toggle" "Nearest neighbour scan: Mongooses within 2m")
+     (mtext "title" "Nearest Neighbour Scan")
+     (build-grid-selector "pf-scan-nearest" "single" "Closest Mongoose")
+     (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
    (lambda (fragment arg)
@@ -373,14 +396,14 @@
   (fragment
    "ev-pupfeed"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
-     (mtitle "title" "Pup is fed")
+     (mtitle "title" "Event: Pup is fed")
      (build-grid-selector "pf-pupfeed-who" "single" "Who fed the pup?")
      (mtext "text" "Food size")
      (horiz
       (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-      (mbutton "pf-pupfeed-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+      (mbutton "pf-pupfeed-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -401,13 +424,13 @@
   (fragment
    "ev-pupfind"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
-     (mtitle "title" "Pup found food")
+     (mtitle "title" "Event: Pup found food")
      (mtext "text" "Food size")
      (horiz
       (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-      (mbutton "pf-pupfind-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+      (mbutton "pf-pupfind-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -423,14 +446,14 @@
   (fragment
    "ev-pupcare"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
-     (mtitle "title" "Pup is cared for")
+     (mtitle "title" "Event: Pup is cared for")
      (build-grid-selector "pf-pupcare-who" "single" "Who cared for the pup?")
      (mtext "text" "Type of care")
      (horiz
       (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap (lambda (v) '()))
-      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events")))))))
+      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -451,13 +474,13 @@
   (fragment
    "ev-pupaggr"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap pf-col
     (list
-     (mtitle "title" "Pup aggression")
+     (mtitle "title" "Event: Pup aggression")
      (build-grid-selector "pf-pupaggr-partner" "single" "Aggressive mongoose")
 
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left)
+      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left) trans-col
       (list
        (vert
         (mtext "" "Fighting over")
@@ -467,7 +490,7 @@
         (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap (lambda (v) '())))
        (mtoggle-button "pf-pupaggr-in" "Initiate?" (lambda (v) '()))
        (mtoggle-button "pf-pupaggr-win" "Win?" (lambda (v) '()))))
-     (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "pf-events"))))))
+     (mbutton "pf-pupaggr-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -485,13 +508,126 @@
    (lambda (fragment) '())
    (lambda (fragment) '()))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+  (fragment
+   "ev-grpint"
+   (linear-layout
+    (make-id "") 'vertical fillwrap gp-col
+    (list
+     (mtitle "title" "Event: Group Interaction")
+     (build-grid-selector "gp-int-pack" "single" "Inter-group interaction: Other pack identity")
+     (build-grid-selector "gp-int-leader" "single" "Leader")
+     (linear-layout
+      (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left) trans-col
+      (list
+       (vert
+        (mtext "text" "Outcome")
+        (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight & retreat" "Fight & win") fillwrap (lambda (v) '())))
+       (vert
+        (mtext "text" "Duration")
+        (edit-text (make-id "gp-int-dur") "" 20 "numeric" fillwrap (lambda (v) '())))
+       (mbutton "pf-grpint-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events"))))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "gp-int-pack" "single"
+       (db-all db "sync" "pack")
+       (lambda (individual)
+         (list)))
+      (populate-grid-selector
+       "gp-int-leader" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+  (fragment
+   "ev-grpalarm"
+   (linear-layout
+    (make-id "") 'vertical fillwrap gp-col
+    (list
+     (mtitle "title" "Event: Group alarm")
+     (build-grid-selector "gp-alarm-caller" "single" "Alarm caller")
+     (mtext "text" "Cause")
+     (horiz
+      (spinner (make-id "gp-alarm-cause") (list "Predator" "Other mongoose pack" "Humans" "Other" "Unknown") fillwrap (lambda (v) '()))
+      (mtoggle-button "gp-alarm-join" "Did the others join in?" (lambda (v) '())))
+     (mbutton "pf-grpalarm-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events"))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "gp-alarm-caller" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+  (fragment
+   "ev-grpmov"
+   (linear-layout
+    (make-id "") 'vertical fillwrap gp-col
+    (list
+     (mtitle "title" "Event: Group movement")
+     (build-grid-selector "gp-mov-leader" "single" "Leader")
+     (linear-layout
+      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left) trans-col
+      (list
+       (medit-text "gp-mov-w" "Width" "numeric" (lambda (v) '()))
+       (medit-text "gp-mov-l" "Length" "numeric" (lambda (v) '()))
+       (medit-text "gp-mov-l" "How many" "numeric" (lambda (v) '()))))
+     (linear-layout
+      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left) trans-col
+      (list
+       (vert
+        (mtext "" "Where to")
+        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Unknown") fillwrap (lambda (v) '())))
+       (mbutton "pf-grpmov-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events"))))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (populate-grid-selector
+       "gp-mov-leader" "single"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individual)
+         (list)))
+      ))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 
 
 
   (fragment
    "gc-start"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtitle "title" "Start")
      (mtoggle-button "gc-start-main-obs" "Main observer" (lambda (v) '()))
@@ -518,7 +654,7 @@
   (fragment
    "gc-weights"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtitle "title" "Weights")
      (build-grid-selector "gc-weigh-choose" "toggle" "Choose mongoose")
@@ -545,7 +681,7 @@
   (fragment
    "gc-preg"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtitle "title" "Pregnant females")
      (build-grid-selector "gc-preg-choose" "toggle" "Choose")))
@@ -571,9 +707,9 @@
   (fragment
    "gc-pup-assoc"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
-     (mtitle "title" "Pregnant females")
+     (mtitle "title" "Pup Associations")
      (build-grid-selector "gc-pup-choose" "toggle" "Choose pup")
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")))
 
@@ -604,7 +740,7 @@
   (fragment
    "gc-oestrus"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtext "" "Oestrus...")))
    (lambda (fragment arg)
@@ -619,7 +755,7 @@
   (fragment
    "gc-babysitting"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtext "" "Babysittings...")))
    (lambda (fragment arg)
@@ -634,7 +770,7 @@
   (fragment
    "gc-end"
    (linear-layout
-    (make-id "") 'vertical fillwrap
+    (make-id "") 'vertical fillwrap gc-col
     (list
      (mtext "" "end!...")))
    (lambda (fragment arg)
@@ -656,44 +792,24 @@
 ;; activities
 
 (define-activity-list
-  (activity
-   "splash"
-   (vert
-    (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
-    (mtext "splash-about" "Advanced mongoose technology")
-    (spacer 20)
-    (mbutton "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
-    (button-grid (make-id "bg") "toggle" 3 20 (layout 100 40 1 'left)
-                 (list) (lambda (v) (msg v) '()))
-    )
-
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg)
-     (list
-      (update-widget
-       'button-grid (get-id "bg") 'grid-buttons
-       (list
-        "toggle" 3 20 (layout 100 40 1 'left)
-        (list
-         (list (make-id "1") "one")
-         (list (make-id "2") "two")
-         (list (make-id "3") "three")
-         (list (make-id "4") "four")
-         (list (make-id "5") "five")
-         (list (make-id "6") "six")
-         (list (make-id "7") "seven")
-         (list (make-id "8") "eight")
-         (list (make-id "9") "nine")
-         (list (make-id "10") "ten")
-         )
-        (lambda (v) (msg "updated" v) '())))
-     ))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
+;  (activity
+;   "splash"
+;   (vert
+;    (text-view (make-id "splash-title") "Mongoose 2000" 40 fillwrap)
+;    (mtext "splash-about" "Advanced mongoose technology")
+;    (spacer 20)
+;    (mbutton2 "f2" "Get started!" (lambda () (list (start-activity-goto "main" 2 ""))))
+;    )
+;
+;   (lambda (activity arg)
+;     (activity-layout activity))
+;   (lambda (activity arg)
+;     (list))
+;   (lambda (activity) '())
+;   (lambda (activity) '())
+;   (lambda (activity) '())
+;   (lambda (activity) '())
+;   (lambda (activity requestcode resultcode) '()))
 
 
   (activity
@@ -736,14 +852,27 @@
     (vert
      (mtext "type" "Choose observation type")
      (horiz
-      (mtoggle-button2 "choose-obs-gc" obs-gc
-                       (lambda (v)
-                         (set-current! 'observation obs-gc)
-                         (mclear-toggles (list "choose-obs-pf"))))
-      (mtoggle-button2 "choose-obs-pf" obs-pf
-                       (lambda (v)
-                         (set-current! 'observation obs-pf)
-                         (mclear-toggles (list "choose-obs-gc"))))))
+      (linear-layout
+       0 'vertical wrap gc-col
+       (list
+        (mtoggle-button2 "choose-obs-gc" obs-gc
+                         (lambda (v)
+                           (set-current! 'observation obs-gc)
+                           (mclear-toggles (list "choose-obs-pf" "choose-obs-gp"))))))
+      (linear-layout
+       0 'vertical wrap pf-col
+       (list
+        (mtoggle-button2 "choose-obs-pf" obs-pf
+                         (lambda (v)
+                           (set-current! 'observation obs-pf)
+                           (mclear-toggles (list "choose-obs-gc" "choose-obs-gp"))))))
+      (linear-layout
+       0 'vertical wrap gp-col
+       (list
+        (mtoggle-button2 "choose-obs-gp" obs-gp
+                         (lambda (v)
+                           (set-current! 'observation obs-gp)
+                           (mclear-toggles (list "choose-obs-pf" "choose-obs-gc"))))))))
     (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
     (mbutton
      "choose-obs-start" "Start"
@@ -755,14 +884,18 @@
             'observation-fragments
             (cond
              ((equal? obs obs-gc) gc-fragments)
-             ((equal? obs obs-pf) '())))))
+             (else '())))))
 
        ;; go to observation
        (if (and (current-exists? 'pack)
                 (current-exists? 'observation))
-           (if (eq? (get-current 'observation "none") obs-pf)
-               (list (start-activity "individual-select" 2 ""))
-               (list (start-activity "observation" 2 "")))
+           (cond
+            ((eq? (get-current 'observation "none") obs-pf)
+             (list (start-activity-goto "individual-select" 2 "")))
+            ((eq? (get-current 'observation "none") obs-gp)
+             (list (start-activity-goto "event-self" 2 "")))
+            (else
+             (list (start-activity-goto "observation" 2 ""))))
            (list
             (alert-dialog
              "choose-obs-finish"
@@ -787,16 +920,17 @@
    (lambda (activity requestcode resultcode) '()))
 
 
-
   (activity
-   "observation"
-   (vert
-    (text-view (make-id "obs-title") "" 40 fillwrap)
-    (linear-layout
-     (make-id "obs-buttons-bar") 'horizontal fillwrap '())
-    (view-pager
-     (make-id "obs-container") (layout 'wrap-content 700 1 'left) '())
-    (mbutton "obs-done" "Done" (lambda () '())))
+   "observation" ;; group-composition
+   (linear-layout
+    0 'vertical fillwrap gc-col
+    (list
+     (text-view (make-id "obs-title") "" 40 fillwrap)
+     (linear-layout
+      (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
+     (view-pager
+      (make-id "obs-container") (layout 'wrap-content 700 1 'left) '())
+     (mbutton "obs-done" "Done" (lambda () (list (finish-activity 0))))))
 
    (lambda (activity arg)
      (activity-layout activity))
@@ -840,19 +974,21 @@
 
   (activity
    "individual-select" ;; pup focal #1
-   (vert
-    (mtitle "" "Pup focal setup")
-    (mtext "pf1-pack" "Pack")
-    (build-grid-selector "pf1-grid" "single" "Select pup")
-    (horiz
-     (medit-text "pf1-width" "Pack width" 20 "numeric" (lambda (v) '()))
-     (medit-text "pf1-height" "Pack height" 20 "numeric" (lambda (v) '())))
-    (medit-text "pf1-count" "How many mongooses present?" 20 "numeric" (lambda (v) '()))
-    (mbutton "pf1-done" "Done"
-             (lambda ()
-               (list (start-activity "pup-focal" 2 ""))))
-    )
-
+   (linear-layout
+    0 'vertical fillwrap pf-col
+    (list
+     (vert
+      (mtitle "" "Pup focal setup")
+      (mtext "pf1-pack" "Pack")
+      (build-grid-selector "pf1-grid" "single" "Select pup")
+      (horiz
+       (medit-text "pf1-width" "Pack width" "numeric" (lambda (v) '()))
+       (medit-text "pf1-height" "Pack height" "numeric" (lambda (v) '())))
+      (medit-text "pf1-count" "How many mongooses present?" "numeric" (lambda (v) '()))
+      (mbutton "pf1-done" "Done"
+               (lambda ()
+                 (list (start-activity-goto "pup-focal" 2 ""))))
+      )))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -871,14 +1007,15 @@
   (activity
    "pup-focal" ;; pup focal #2
    (vert
-    (horiz
-     (mtitle "title" "Pup Focal")
-     (mtext "pf-details" "")
-     (mtoggle-button "pf-pause" "Pause" (lambda (v) '())))
-    (build-fragment "pf-timer" (make-id "pf-top") (layout 580 400 1 'left))
-    (mtitle "title" "Events")
-    (build-fragment "pf-events" (make-id "pf-bot") (layout 580 400 1 'left))
-    (mbutton "pf-done" "Done" (lambda () (list (start-activity-goto "observations" 2 "")))))
+    (linear-layout
+     0 'horizontal fillwrap pf-col
+     (list
+      (mtitle "title" "Pup Focal")
+      (mtext "pf-details" "")
+      (mtoggle-button "pf-pause" "Pause" (lambda (v) '()))))
+    (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left))
+    (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left))
+    (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0)))))
 
    (lambda (activity arg)
      (activity-layout activity))
@@ -897,80 +1034,14 @@
 
 
   (activity
-   "event-self"
-   (vert
-    (text-view (make-id "main-title") "Self feeding event" 40 fillwrap)
-    (spacer 10)
-    (toggle-button (make-id "event-self-found") "Found item?" 20 fillwrap
-                   (lambda (v) '()))
-    (toggle-button (make-id "event-self-kept") "Kept item?" 20 fillwrap
-                   (lambda (v) '()))
-
-    (text-view (make-id "event-self-type-text") "Food type" 20 fillwrap)
-    (spinner (make-id "event-self-type") (list "Beetle" "Millipede") fillwrap (lambda (v) '()))
-
-    (text-view (make-id "event-self-type-text") "Food size" 20 fillwrap)
-    (spinner (make-id "event-self-type") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-    (spacer 10)
-    (horiz
-     (button (make-id "event-self-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 0))))
-     (button (make-id "event-self-done") "Done" 20 fillwrap (lambda () (list (finish-activity 0)))))
-    )
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg) (list))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
-
-  (activity
-   "event-fed"
-   (vert
-    (text-view (make-id "main-title") "Being fed event" 40 fillwrap)
-    (spacer 10)
-    (text-view (make-id "event-fed-who-text") "Who by" 20 fillwrap)
-    (spinner (make-id "event-fed-who") (list "Mongoose 1" "Mongoose 2" "Mongoose 3") fillwrap (lambda (v) '()))
-    (toggle-button (make-id "event-fed-closest") "Closest to feeder?" 20 fillwrap
-                   (lambda (v) '()))
-
-    (text-view (make-id "event-self-type-text") "Who moved?" 20 fillwrap)
-    (spinner (make-id "event-self-type") (list "Pup" "Feeder") fillwrap (lambda (v) '()))
-
-    (text-view (make-id "event-fed-type-text") "Food type" 20 fillwrap)
-    (spinner (make-id "event-fed-type") (list "Beetle" "Millipede") fillwrap (lambda (v) '()))
-
-    (text-view (make-id "event-fed-type-text") "Food size" 20 fillwrap)
-    (spinner (make-id "event-fed-type") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-    (spacer 10)
-    (horiz
-     (button (make-id "event-fed-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 0))))
-     (button (make-id "event-fed-done") "Done" 20 fillwrap (lambda () (list (finish-activity 0)))))
-    )
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg) (list))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
-
-  (activity
-   "event-aggression"
-   (vert
-    (text-view (make-id "main-title") "Aggression event" 40 fillwrap)
-    (spacer 10)
-    (text-view (make-id "event-agg-who-text") "Other individual" 20 fillwrap)
-    (spinner (make-id "event-agg-who") (list "Mongoose 1" "Mongoose 2" "Mongoose 3") fillwrap (lambda (v) '()))
-    (text-view (make-id "event-agg-severity-text") "Severity" 20 fillwrap)
-    (seek-bar (make-id "event-agg-severity") 100 fillwrap (lambda (v) '()))
-    (spacer 10)
-    (horiz
-     (button (make-id "event-agg-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 0))))
-     (button (make-id "event-agg-done") "Done" 20 fillwrap (lambda () (list (finish-activity 0)))))
-    )
+   "event-self" ;; group-event
+   (linear-layout
+    0 'vertical wrap gp-col
+    (list
+     (build-fragment "events" (make-id "pf-bot") (layout 580 450 1 'left))
+     (horiz
+      (mbutton "gpe-save" "Save" (lambda () (list)))
+      (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0)))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) (list))

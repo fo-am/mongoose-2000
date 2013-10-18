@@ -334,12 +334,13 @@
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
 
-(define (linear-layout id orientation layout children)
-  (list "linear-layout" id orientation layout children))
+(define (linear-layout id orientation layout colour children)
+  (list "linear-layout" id orientation layout colour children))
 (define (linear-layout-id t) (list-ref t 1))
 (define (linear-layout-orientation t) (list-ref t 2))
 (define (linear-layout-layout t) (list-ref t 3))
-(define (linear-layout-children t) (list-ref t 4))
+(define (linear-layout-colour t) (list-ref t 4))
+(define (linear-layout-children t) (list-ref t 5))
 
 ;;(define (grid-layout id cols orientation layout children)
  ;; (list "grid-layout" id cols orientation layout children))
@@ -517,16 +518,16 @@
 
 (define (horiz . l)
   (linear-layout
-   (make-id "xv")
-   'horizontal
+   0 'horizontal
    (layout 'fill-parent 'fill-parent 1 'left)
+   (list 0 0 0 0)
    l))
 
 (define (vert . l)
   (linear-layout
-   (make-id "xv")
-   'vertical
+   0 'vertical
    (layout 'fill-parent 'fill-parent 1 'left)
+   (list 0 0 0 0)
    l))
 
 (define (activity name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result)

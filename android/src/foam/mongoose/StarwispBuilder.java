@@ -141,7 +141,7 @@ public class StarwispBuilder
                                               BuildLayoutParam(arr.getString(2)),
                                               (float)arr.getDouble(3));
             lp.gravity=BuildLayoutGravity(arr.getString(4));
-            //lp.setMargins(5,5,5,5);
+            lp.setMargins(0,0,0,0);
             return lp;
         } catch (JSONException e) {
             Log.e("starwisp", "Error parsing data " + e.toString());
@@ -207,9 +207,11 @@ public class StarwispBuilder
                 v.setId(arr.getInt(1));
                 v.setOrientation(BuildOrientation(arr.getString(2)));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(3)));
-                v.setPadding(5,5,5,5);
+                v.setPadding(2,2,2,2);
+                JSONArray col = arr.getJSONArray(4);
+                v.setBackgroundColor(Color.argb(col.getInt(3), col.getInt(0), col.getInt(1), col.getInt(2)));
                 parent.addView(v);
-                JSONArray children = arr.getJSONArray(4);
+                JSONArray children = arr.getJSONArray(5);
                 for (int i=0; i<children.length(); i++) {
                     Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
                 }

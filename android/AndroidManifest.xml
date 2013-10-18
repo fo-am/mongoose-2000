@@ -10,22 +10,18 @@
                  >
 
         <activity android:name="starwisp"
-                  android:noHistory="true"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="MainActivity"></activity>
         <activity android:name="ObservationsActivity"></activity>
-        <activity android:name="ObservationActivity"></activity>
-        <activity android:name="IndividualSelectActivity"></activity>
-        <activity android:name="PupFocalActivity"></activity>
-        <activity android:name="PupFocalEventActivity"></activity>
-        <activity android:name="EventSelfActivity"></activity>
-        <activity android:name="EventFedActivity"></activity>
-        <activity android:name="EventAggressionActivity"></activity>
+        <activity android:name="ObservationActivity" android:noHistory="true"></activity>
+        <activity android:name="IndividualSelectActivity" android:noHistory="true"></activity>
+        <activity android:name="PupFocalActivity" android:noHistory="true"></activity>
+        <activity android:name="EventSelfActivity" android:noHistory="true"></activity>
+
         <activity android:name="ManagePacksActivity"></activity>
         <activity android:name="NewPackActivity"></activity>
         <activity android:name="ManageIndividualActivity"></activity>
