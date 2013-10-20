@@ -145,8 +145,19 @@
           (cons (car sorted-lst)
                 (insert elt fn (cdr sorted-lst))))))
 
+(define (choose l) 
+  (list-ref l (abs (random (- (length l) 1)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; time
+
+(define (time->seconds t)
+   (+ (car t) (/ (cadr t) 1000000)))
+
+(define start-time (time->seconds (time)))
+
+(define (time-now)
+  (- (time->seconds (time)) start-time))
 
 ;; just for graph so don't have to be accurate!!!
 (define (date->day d)
@@ -495,19 +506,93 @@
 ;      (set! current-id (+ current-id 1))
 ;      (get-id name)))))
 
+;(define (get-id name)
+;  (cadr (sorted-find id-map name)))
+
+;(define (make-id name)
+;  (prof-start "make-id")
+;  (prof-start "make-id sorted find")                 
+;  (let ((sf (sorted-find id-map name)))
+;    (prof-end "make-id sorted find")
+;    (let ((r (if (not sf)
+;                 (let ((id current-id))
+;                   (prof-start "make-id sorted add")
+;                   (set! id-map (sorted-add id-map (list name id)))
+ ;                  (prof-end "make-id sorted add")
+;                   (set! current-id (+ current-id 1))
+;                   id)
+;                 (cadr sf))))
+;      (prof-end "make-id") 
+;      r)))
+
 (define (get-id name)
-  (cadr (sorted-find id-map name)))
+  (id-map-get name))
 
 (define (make-id name)
-  (let ((sf (sorted-find id-map name)))
-    (if (not sf)
-        (let ((id current-id))
-          (set! id-map (sorted-add id-map (list name id)))
-          (set! current-id (+ current-id 1))
-          id)
-        (cadr sf))))
+  (let ((id (id-map-get name)))
+    (cond 
+     ((zero? id)
+     ; (prof-start "make-id")
+      (id-map-add name current-id)
+      (set! current-id (+ current-id 1))
+     ; (prof-end "make-id")
+      (- current-id 1))
+     (else id))))
 
+(define prof-map '())
 
+(define (new-prof-item id)
+  (list id (time-now) 0 0))
+(define (prof-item-id p) (list-ref p 0))
+(define (prof-item-time p) (list-ref p 1))
+(define (prof-item-accum p) (list-ref p 2))
+(define (prof-item-calls p) (list-ref p 3))
+
+(define (prof-item-restart p)
+  (list 
+   (prof-item-id p)
+   (time-now)
+   (prof-item-accum p)
+   (prof-item-calls p)))
+
+(define (prof-item-end p)
+  (list 
+   (prof-item-id p)
+   0
+   (+ (prof-item-accum p) 
+      (- (time-now) (prof-item-time p)))
+   (+ (prof-item-calls p) 1)))
+
+(define (prof-start id)
+  (let ((dd (sorted-find prof-map id)))
+    (if dd
+        (set! prof-map 
+              (sorted-add 
+               prof-map (prof-item-restart dd)))
+        (set! prof-map 
+              (sorted-add 
+               prof-map (new-prof-item id))))))
+
+(define (prof-end id)
+  (let ((d (sorted-find prof-map id)))
+    (set! prof-map 
+          (sorted-add 
+           prof-map 
+           (prof-item-end d)))))
+ 
+(define (prof-print)
+  (let ((tot (foldl 
+              (lambda (d r)
+                (+ (prof-item-accum d) r))
+              0 prof-map)))
+    (for-each
+     (lambda (d)
+       (msg (prof-item-id d) 
+            (prof-item-calls d) 
+             (prof-item-accum d)
+             (* (/ (prof-item-accum d) tot) 100) "%"))
+     prof-map)))
+  
 (define wrap (layout 'wrap-content 'wrap-content 1 'left))
 (define fillwrap (layout 'fill-parent 'wrap-content 1 'left))
 (define wrapfill (layout 'wrap-content 'fill-parent 1 'left))
@@ -663,13 +748,19 @@
 
 ;; called by java
 (define (activity-callback type activity-name args)
-  (let ((activity (activity-list-find activities activity-name)))
-    (top-callback type activity-name activity args)))
+  (prof-start "activity-callback")
+  (let ((r (let ((activity (activity-list-find activities activity-name)))
+             (top-callback type activity-name activity args))))
+    (prof-end "activity-callback")
+    r))
 
 ;; called by java
 (define (fragment-callback type fragment-name args)
-  (let ((fragment (activity-list-find fragments fragment-name)))
-    (top-callback type fragment-name fragment args)))
+  (prof-start "activity-callback")
+  (let ((r (let ((fragment (activity-list-find fragments fragment-name)))
+             (top-callback type fragment-name fragment args))))
+    (prof-end "activity-callback")
+    r))
 
 (define (top-callback type activity-name activity args)
   ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
@@ -703,6 +794,7 @@
         (activity-list-find fragments name))))
 
 (define (widget-callback activity-name widget-id args)
+  (prof-start "widget-callback")
   (let ((cb (find-callback widget-id)))
     (if (not cb)
         (msg "no widget" widget-id "found!")
@@ -724,4 +816,5 @@
                  (msg "no callbacks for type" (callback-type cb))))))
           ;;(update-callbacks! events)
           (update-dialogs! events)
-          (send (scheme->json events))))))
+          (send (scheme->json events))
+          (prof-end "widget-callback")))))

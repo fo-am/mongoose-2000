@@ -13,6 +13,7 @@ LOCAL_SRC_FILES := \
 	core/db_container.cpp \
 	sqlite/sqlite3.c \
 	scheme/scheme.cpp \
+	core/idmap.cpp \
     app-android.c
 
 LOCAL_LDLIBS := -lGLESv1_CM -ldl -llog

@@ -284,7 +284,7 @@
           (lambda (item)
             (let ((item-name (fast-get-name item)))
               (list (make-id (string-append name item-name))
-                           item
+                    item
                            item-name)))
           items)))
     (update-widget
@@ -453,7 +453,7 @@
      (mtext "text" "Type of care")
      (horiz
       (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap (lambda (v) '()))
-      (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
+      (mbutton "pf-pupcare-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1273,7 +1273,9 @@
               (lambda ()
                 (cons (toast "Downloading data...") (suck-new db "sync")))))
     (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
-    (mbutton "main-send" "Done" (lambda () (list (finish-activity 2)))))
+    (horiz
+     (mbutton2 "sync-prof" "Profile" (lambda () (prof-print) '()))
+     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))))
 
    (lambda (activity arg)
      (activity-layout activity))

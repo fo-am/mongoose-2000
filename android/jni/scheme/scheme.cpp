@@ -31,10 +31,17 @@
 #include <float.h>
 #include <ctype.h>
 #include <sys/time.h>
+
+#ifdef ANDROID_NDK
 #include <android/log.h>
+#endif
+
+char *starwisp_data = NULL;
 
 #include "core/db_container.h"
 db_container the_db_container;
+#include "core/idmap.h"
+idmap the_idmap;
 
 #ifdef _EE
 #define USE_STRLWR 0
@@ -48,7 +55,6 @@ db_container the_db_container;
 # endif
 #endif
 
-char *starwisp_data = NULL;
 
 /* Used for documentation purposes, to signal functions in 'interface' */
 #define INTERFACE
@@ -4309,11 +4315,17 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           s_retbool(is_macro(car(sc->args)));
 ///////////// FLUXUS
      case OP_ALOG:
+          #ifdef ANDROID_NDK
           __android_log_print(ANDROID_LOG_INFO, "starwisp", string_value(car(sc->args)));
+          #endif
           s_return(sc,sc->F);
      case OP_SEND:
           if (is_string(car(sc->args))) {
-               starwisp_data=string_value(car(sc->args));
+               if (starwisp_data!=NULL) { 
+                    __android_log_print(ANDROID_LOG_INFO, "starwisp", "deleting starwisp data: something is wrong!");
+                    free(starwisp_data);
+               }               
+               starwisp_data=strdup(string_value(car(sc->args)));
           }
           s_return(sc,sc->F);
      case OP_OPEN_DB: {
@@ -4361,6 +4373,17 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
             gettimeofday(&t,NULL);
             s_return(sc,cons(sc,mk_integer(sc,t.tv_sec),
                              cons(sc,mk_integer(sc,t.tv_usec),sc->NIL)));
+     }
+     case OP_ID_MAP_ADD: {
+          the_idmap.add(
+               string_value(car(sc->args)),
+               ivalue(cadr(sc->args)));
+          s_return(sc,sc->F);
+     }
+     case OP_ID_MAP_GET: {
+          s_return(
+               sc,mk_integer(sc,the_idmap.get(
+                               string_value(car(sc->args)))));
      }
 ////////////////////
      default:

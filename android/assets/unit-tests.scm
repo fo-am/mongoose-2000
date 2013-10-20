@@ -98,7 +98,6 @@
 (update-entity db table e (list (ktv "param3" "real" 3.3)))
 
 (let ((e (get-entity db table e)))
-  (msg e)
   (asserteq "update-entity 3" (ktv-get e "param1") "wotzit")
   (asserteq "update-entity 4" (ktv-get e "param2") 1)
   (assert "update-entity 5" (feq (ktv-get e "param3") 3.3)))
@@ -133,5 +132,58 @@
 
 (asserteq "cleaning" (length (dirty-entities db table)) 0)
 
-
 (msg (db-status db))
+
+(msg "testing some interface building...")
+
+(setup db "sync")
+
+(define i (insert-entity
+           db "sync" "pack" "user"
+           (list (ktv "name" "varchar" "pack one"))))
+
+(define p (get-entity db "sync" i))
+
+(msg (ktv-get p "unique_id"))
+
+(define (make-mongoose name)
+  (insert-entity
+   db "sync" "mongoose" (ktv-get p "unique_id") 
+   (list
+    (ktv "name" "varchar" name)
+    (ktv "gender" "varchar" "Female")
+    (ktv "litter-code" "varchar" "34")
+    (ktv "chip-code" "varchar" "34")
+    (ktv "pack-id" "varchar" "unique_id")
+    )))
+
+(make-mongoose "bob")
+(make-mongoose "fred")
+(make-mongoose "arnold")
+(make-mongoose "lucy")
+(make-mongoose "doris")
+(make-mongoose "kylie")
+(make-mongoose "jenny")
+
+
+(for-each 
+ (lambda (fragment)
+   (msg "calling fragment" fragment)
+   (fragment-callback 'on-create fragment '("")))
+ (build-list 
+  (lambda (i) 
+    (choose (list
+             "pf-timer"
+             "pf-scan1"
+             "events"
+             "pf-timer"
+             "ev-pupfeed"
+             "ev-pupcare"
+             "ev-pupfind"
+             "ev-pupaggr"
+             "ev-grpint"
+             "ev-grpalarm"
+             "ev-grpmov")))
+  100))
+
+

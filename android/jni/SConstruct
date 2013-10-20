@@ -18,6 +18,7 @@ env.Program( target = 'app',
                        'core/list.cpp',
                        'core/db.cpp',
                        'core/db_container.cpp',
+                       'core/idmap.cpp',
                        'sqlite/sqlite3.c',
                        'scheme/scheme.cpp'
                        ] )
