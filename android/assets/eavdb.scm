@@ -222,6 +222,14 @@
     (ktv-value (car ktv-list)))
    (else (ktv-get (cdr ktv-list) key))))
 
+(define (ktv-set ktv-list ktv)
+  (cond
+   ((null? ktv-list) (list ktv))
+   ((equal? (ktv-key (car ktv-list)) (ktv-key ktv))
+    (cons ktv (cdr ktv-list)))
+   (else (cons ktv (ktv-set (cdr ktv-list) ktv)))))
+
+
 (define (db-all db table type)
   (map
    (lambda (i)

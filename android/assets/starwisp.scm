@@ -77,6 +77,14 @@
    (else
     (cons (car store) (store-set (cdr store) key value)))))
 
+(define (store-clear store key)
+  (cond
+   ((null? store) '())
+   ((eq? key (car (car store)))
+    (cdr store))
+   (else
+    (cons (car store) (store-clear (cdr store) key)))))
+
 (define (store-get store key default)
   (cond
    ((null? store) default)
@@ -93,7 +101,6 @@
    (else
     (store-exists? (cdr store) key))))
 
-
 (define store '())
 
 (define (set-current! key value)
@@ -104,6 +111,28 @@
 
 (define (current-exists? key)
   (store-exists? store key))
+
+(define (remove-current key)
+  (store-clear store key))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; db abstraction
+
+;; store a ktv, replaces existing with same key
+(define (add-entity-value! key type value)
+  (set-current! 
+   "entity-values"
+   (ktv-set
+    (ktv key type value)
+    (get-current "entity-values" '()))))
+
+;; build entity from all ktvs, insert to db
+(define (record-entity-values db table type)
+  (let ((values (get-current "entity-values" '())))
+    (insert-entity
+     db table type (get-current 'user-id "no id")
+     values)
+    (remove-current "entity-values")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
@@ -216,13 +245,13 @@
   (button (make-id id) title 20 fillwrap fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 20 (layout 150 100 1 'centre) fn))
+  (button (make-id id) title 20 (layout 150 100 1 'centre 0) fn))
 
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 20 fillwrap fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre) fn))
+  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 0) fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
@@ -258,45 +287,158 @@
        (_ (append c (list (car l))) (cdr l)))))
   (_ '() l))
 
+;;;;
+
 (define (build-grid-selector name type title)
+  (build-grid-selector-hw name type title)
+  ;(build-grid-selector-sw name title)
+  )
+ 
+(define (populate-grid-selector name type items fn)
+  (prof-start "populate-grid-selector")
+  (let ((r
+         (populate-grid-selector-hw name type items fn)
+      ;   (cond
+      ;    ((equal? type "button") 
+      ;     (populate-grid-selector-sw name items fn))
+      ;    ((equal? type "toggle") 
+      ;     (populate-grid-selector-toggle-sw name items fn))
+      ;    ((equal? type "single") 
+      ;     (populate-grid-selector-single-sw name items fn)))
+         ))
+    (prof-end "populate-grid-selector")
+
+    r))
+
+;;;
+
+(define (build-grid-selector-sw name title)
+  (vert
+   (mtext "foo" title)
+   (horiz
+    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
+    (scroll-view
+     (make-id "scroller")
+     (layout 'wrap-content 'wrap-content 1 'left 0)
+     (list
+      (linear-layout
+       (make-id name) 'horizontal 
+       (layout 'wrap-content 'wrap-content 1 'centre 0) trans-col (list))))
+    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))
+
+
+
+(define (populate-grid-sw name items buildfn)
+  (update-widget
+   'linear-layout (get-id name) 'contents
+   (map
+    (lambda (items)
+      ;; todo add space for empty parts
+      (linear-layout
+       (make-id "foo") 'vertical wrap trans-col 
+       (map buildfn items)))
+    (xwise 3 items))))
+
+(define (populate-grid-selector-sw name items fn)
+  (populate-grid-sw
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left 0)
+        (lambda ()
+          (fn item)))))
+   items))
+
+(define (populate-grid-selector-toggle-sw name items fn)
+  (populate-grid-sw
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (toggle-button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left 0)
+        (lambda ()
+          (fn item)))))
+   items))
+
+(define (populate-grid-selector-single-sw name items fn)
+  (populate-grid-sw
+   name items
+   (lambda (item)
+     (let ((item-name (ktv-get item "name")))
+       (toggle-button
+        (make-id (string-append name item-name))
+        item-name 15 (layout 100 40 1 'left 0)
+        (lambda (v)
+          (append
+           ;; clear all the others except us
+           (mclear-toggles
+            (foldl
+             (lambda (item r)
+               (let ((tname (ktv-get item "name")))
+                 (if (equal? tname item-name) r
+                     (cons
+                      (string-append name tname) r))))
+             '() items))
+           (fn item))))))))
+
+;;;;
+
+
+(define (build-grid-selector-hw name type title)
   (vert
    (mtext "title" title)
    (horiz
-    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left))
+    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
     (scroll-view
      (make-id "scroller")
-     (layout 'wrap-content 'wrap-content 1 'left)
+     (layout 'wrap-content 'wrap-content 1 'left 0)
      (list
       (linear-layout
        (make-id name) 'horizontal
-       (layout 'wrap-content 'wrap-content 1 'centre) trans-col
+       (layout 'wrap-content 'wrap-content 1 'centre 1) trans-col
        (list
-        (button-grid (make-id name) type 3 20 (layout 100 40 1 'left)
+        (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 0)
                      (list) (lambda (v) '()))))))
-    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right)))))
+    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))
 
+;; assumes grid selectors on mongeese only
 (define (fast-get-name item)
   (list-ref (list-ref item 1) 2))
 
-(define (populate-grid-selector name type items fn)
-  (let ((id->items
-         (map
-          (lambda (item)
-            (let ((item-name (fast-get-name item)))
-              (list (make-id (string-append name item-name))
-                    item
-                           item-name)))
-          items)))
+(define (build-button-items name items)
+  (map
+   (lambda (item)
+     (let ((item-name (fast-get-name item)))
+       (list (make-id (string-append name item-name))
+             item
+             item-name)))
+   items))
+
+(define (populate-grid-selector-hw name type items fn)
+  (let ((id->items (build-button-items name items)))
     (update-widget
      'button-grid (get-id name) 'grid-buttons
      (list
-      type 3 20 (layout 100 40 1 'left)
+      type 3 20 (layout 100 40 1 'left 0)
       (map
        (lambda (ii)
          (list (car ii) (caddr ii)))
        id->items)
       (lambda (v)
-        (fn (cadr (findv v id->items))))))))
+        (msg "grid-selector cb")
+        (cond 
+         ((equal? type "toggle")
+          ;; update list of selected items
+          ;; call fn with list
+          (msg v)
+          (fn (cadr (findv v id->items)))
+          )
+         (else 
+          (fn (cadr (findv v id->items))))))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -368,23 +510,28 @@
      (mtext "title" "Nearest Neighbour Scan")
      (build-grid-selector "pf-scan-nearest" "single" "Closest Mongoose")
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
-     (mbutton "pf-scan-done" "Done" (lambda () (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
+     (mbutton "pf-scan-done" "Done" 
+              (lambda ()                 
+                (record-entity-values db "stream" "pup-focal-nearest")
+                (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
       (populate-grid-selector
+       "pf-scan-close" "toggle"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individuals)
+         (list)))
+      (populate-grid-selector
        "pf-scan-nearest" "single"
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
-         (list)))
-      (populate-grid-selector
-       "pf-scan-close" "toggle"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
-       (lambda (individual)
+         ;(store-entity-value! 
+         ; "nearest" "varchar" (ktv-get individual "unique_id"))         
          (list)))
       ))
    (lambda (fragment) '())
@@ -480,7 +627,7 @@
      (build-grid-selector "pf-pupaggr-partner" "single" "Aggressive mongoose")
 
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Fighting over")
@@ -519,7 +666,7 @@
      (build-grid-selector "gp-int-pack" "single" "Inter-group interaction: Other pack identity")
      (build-grid-selector "gp-int-leader" "single" "Leader")
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
       (list
        (vert
         (mtext "text" "Outcome")
@@ -588,13 +735,13 @@
      (mtitle "title" "Event: Group movement")
      (build-grid-selector "gp-mov-leader" "single" "Leader")
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
        (medit-text "gp-mov-w" "Width" "numeric" (lambda (v) '()))
        (medit-text "gp-mov-l" "Length" "numeric" (lambda (v) '()))
        (medit-text "gp-mov-l" "How many" "numeric" (lambda (v) '()))))
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Where to")
@@ -929,7 +1076,7 @@
      (linear-layout
       (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
      (view-pager
-      (make-id "obs-container") (layout 'wrap-content 700 1 'left) '())
+      (make-id "obs-container") (layout 'wrap-content 700 1 'left 0) '())
      (mbutton "obs-done" "Done" (lambda () (list (finish-activity 0))))))
 
    (lambda (activity arg)
@@ -1013,8 +1160,8 @@
       (mtitle "title" "Pup Focal")
       (mtext "pf-details" "")
       (mtoggle-button "pf-pause" "Pause" (lambda (v) '()))))
-    (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left))
-    (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left))
+    (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left 0))
+    (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left 0))
     (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0)))))
 
    (lambda (activity arg)
@@ -1038,7 +1185,7 @@
    (linear-layout
     0 'vertical wrap gp-col
     (list
-     (build-fragment "events" (make-id "pf-bot") (layout 580 450 1 'left))
+     (build-fragment "events" (make-id "pf-bot") (layout 580 450 1 'left 0))
      (horiz
       (mbutton "gpe-save" "Save" (lambda () (list)))
       (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0)))))))
@@ -1272,7 +1419,7 @@
      (mbutton "sync-pull" "Pull"
               (lambda ()
                 (cons (toast "Downloading data...") (suck-new db "sync")))))
-    (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left))
+    (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left 0))
     (horiz
      (mbutton2 "sync-prof" "Profile" (lambda () (prof-print) '()))
      (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))))

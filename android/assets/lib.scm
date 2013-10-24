@@ -334,13 +334,14 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; android ui
 
-(define (layout width height weight gravity) (list "layout" width height weight gravity))
+(define (layout width height weight gravity margin) (list "layout" width height weight gravity margin))
 (define (layout-width l) (list-ref l 1))
 (define (layout-height l) (list-ref l 2))
 (define (layout-weight l) (list-ref l 3))
 (define (layout-gravity l) (list-ref l 4))
+(define (layout-margin l) (list-ref l 5))
 
-(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre))
+(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre 0))
 
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
@@ -593,25 +594,25 @@
              (* (/ (prof-item-accum d) tot) 100) "%"))
      prof-map)))
   
-(define wrap (layout 'wrap-content 'wrap-content 1 'left))
-(define fillwrap (layout 'fill-parent 'wrap-content 1 'left))
-(define wrapfill (layout 'wrap-content 'fill-parent 1 'left))
-(define fill (layout 'fill-parent 'fill-parent 1 'left))
+(define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
+(define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
+(define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
 
-(define (spacer size) (space (layout 'fill-parent size 1 'left)))
+(define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
 
 
 (define (horiz . l)
   (linear-layout
    0 'horizontal
-   (layout 'fill-parent 'fill-parent 1 'left)
+   (layout 'fill-parent 'fill-parent 1 'left 0)
    (list 0 0 0 0)
    l))
 
 (define (vert . l)
   (linear-layout
    0 'vertical
-   (layout 'fill-parent 'fill-parent 1 'left)
+   (layout 'fill-parent 'fill-parent 1 'left 0)
    (list 0 0 0 0)
    l))
 
