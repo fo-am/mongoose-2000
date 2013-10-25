@@ -504,7 +504,7 @@ public class StarwispBuilder
                 final String buttontype = arr.getString(2);
                 horiz.setId(id);
                 horiz.setOrientation(LinearLayout.HORIZONTAL);
-                
+
                 parent.addView(horiz);
                 int height = arr.getInt(3);
                 int textsize = arr.getInt(4);
@@ -535,7 +535,7 @@ public class StarwispBuilder
                         final String fn = arr.getString(6);
                         b.setOnClickListener(new View.OnClickListener() {
                             public void onClick(View v) {
-                                CallbackArgs(ctx,ctxname,id,""+v.getId());
+                                CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
                             }
                         });
                         vert.addView(b);
@@ -894,7 +894,7 @@ public class StarwispBuilder
                             final String fn = params.getString(5);
                             b.setOnClickListener(new View.OnClickListener() {
                                 public void onClick(View v) {
-                                    CallbackArgs(ctx,ctxname,id,""+v.getId());
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
                                 }
                             });
                             vert.addView(b);
@@ -939,7 +939,7 @@ public class StarwispBuilder
                                         Log.e("starwisp", "Error parsing data " + e.toString());
                                     }
 
-                                    CallbackArgs(ctx,ctxname,id,""+v.getId());
+                                    CallbackArgs(ctx,ctxname,id,""+v.getId()+" #t");
                                 }
                             });
                             vert.addView(b);

@@ -119,6 +119,12 @@
 (define (insert-entity db table entity-type user ktvlist)
   (insert-entity-wholesale db table entity-type (get-unique user) 1 0 ktvlist))
 
+;; insert an entire entity
+(define (insert-entity/get-unique db table entity-type user ktvlist)
+  (let ((uid (get-unique user)))
+    (insert-entity-wholesale db table entity-type uid 1 0 ktvlist)
+    uid))
+
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
   (let ((id (db-insert
@@ -227,7 +233,7 @@
    ((null? ktv-list) (list ktv))
    ((equal? (ktv-key (car ktv-list)) (ktv-key ktv))
     (cons ktv (cdr ktv-list)))
-   (else (cons ktv (ktv-set (cdr ktv-list) ktv)))))
+   (else (cons (car ktv-list) (ktv-set (cdr ktv-list) ktv)))))
 
 
 (define (db-all db table type)
@@ -400,3 +406,56 @@
    db (string-append
        "select entity_id from " table "_entity where unique_id = ?")
    unique-id))
+
+(define (get-entity-name db table unique-id)
+  (ktv-get (get-entity db table (get-entity-id db table unique-id)) "name"))
+
+(define (get-entity-names db table id-list)
+  (foldl
+   (lambda (id r)
+     (if (equal? r "")
+         (get-entity-name db table id)
+         (string-append r ", " (get-entity-name db table id))))
+   ""
+   id-list))
+
+(define (csv-titles db table entity-type)
+  (foldl
+   (lambda (kt r)
+     (if (equal? r "") (string-append "\"" (ktv-key kt) "\"")
+         (string-append r ", \"" (ktv-key kt) "\"")))
+   ""
+   (get-attribute-ids/types db table entity-type)))
+
+(define (csv db table entity-type)
+  (foldl
+   (lambda (res r)
+     (let ((entity (get-entity db table (vector-ref res 0))))
+       (string-append
+        r "\n"
+        (foldl
+         (lambda (ktv r)
+           (cond
+            ((equal? (ktv-key ktv) "unique_id") r)
+            ((null? (ktv-value ktv))
+             (msg "value not found in csv for " (ktv-key ktv))
+             r)
+            ;; dereferences lists of ids
+            ((and
+              (> (string-length (ktv-key ktv)) 8)
+              (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
+             (string-append r ", \"" (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))) "\""))
+            ;; look for unique ids and dereference them
+            ((and
+              (> (string-length (ktv-key ktv)) 3)
+              (equal? (substring (ktv-key ktv) 0 3) "id-"))
+             (string-append r ", \"" (get-entity-name db "sync" (ktv-value ktv)) "\""))
+            (else
+             (string-append r ", \"" (stringify-value ktv) "\""))))
+         entity-type ;; type
+         entity))))
+   (csv-titles db table entity-type)
+   (cdr (db-select
+         db (string-append
+             "select entity_id from "
+             table "_entity where entity_type = ?") entity-type))))

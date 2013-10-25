@@ -108,6 +108,22 @@
            (else (_ (+ m 1) top))))))
   (_ 0 (- (length l) 1)))
 
+; utils funcs for using lists as sets
+(define (set-remove a l)
+  (cond
+   ((null? l) '())
+   (else
+    (if (eqv? (car l) a)
+        (set-remove a (cdr l))
+        (cons (car l) (set-remove a (cdr l)))))))
+
+(define (set-add a l)
+  (if (not (memv a l))
+      (cons a l) l))
+
+(define (set-contains a l)
+  (if (not (memq a l)) #f #t))
+
 
 (define (build-list fn n)
   (define (_ fn n l)
@@ -145,7 +161,7 @@
           (cons (car sorted-lst)
                 (insert elt fn (cdr sorted-lst))))))
 
-(define (choose l) 
+(define (choose l)
   (list-ref l (abs (random (- (length l) 1)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -286,6 +302,66 @@
     (if (> (vdot n v) 0)
         v
         (loop (hsrndvec)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (string-split str . rest)
+		; maxsplit is a positive number
+  (define (split-by-whitespace str maxsplit)
+    (define (skip-ws i yet-to-split-count)
+      (cond
+        ((>= i (string-length str)) '())
+        ((char-whitespace? (string-ref str i))
+          (skip-ws (+ 1 i) yet-to-split-count))
+        (else (scan-beg-word (+ 1 i) i yet-to-split-count))))
+    (define (scan-beg-word i from yet-to-split-count)
+      (cond
+        ((zero? yet-to-split-count)
+          (cons (substring str from (string-length str)) '()))
+        (else (scan-word i from yet-to-split-count))))
+    (define (scan-word i from yet-to-split-count)
+      (cond
+        ((>= i (string-length str))
+          (cons (substring str from i) '()))
+        ((char-whitespace? (string-ref str i))
+          (cons (substring str from i)
+            (skip-ws (+ 1 i) (- yet-to-split-count 1))))
+        (else (scan-word (+ 1 i) from yet-to-split-count))))
+    (skip-ws 0 (- maxsplit 1)))
+
+		; maxsplit is a positive number
+		; str is not empty
+  (define (split-by-charset str delimeters maxsplit)
+    (define (scan-beg-word from yet-to-split-count)
+      (cond
+        ((>= from (string-length str)) '(""))
+        ((zero? yet-to-split-count)
+          (cons (substring str from (string-length str)) '()))
+        (else (scan-word from from yet-to-split-count))))
+    (define (scan-word i from yet-to-split-count)
+      (cond
+        ((>= i (string-length str))
+          (cons (substring str from i) '()))
+        ((memv (string-ref str i) delimeters)
+          (cons (substring str from i)
+            (scan-beg-word (+ 1 i) (- yet-to-split-count 1))))
+        (else (scan-word (+ 1 i) from yet-to-split-count))))
+    (scan-beg-word 0 (- maxsplit 1)))
+
+			; resolver of overloading...
+			; if omitted, maxsplit defaults to
+			; (inc (string-length str))
+  (if (equal? str "") '()
+    (if (null? rest)
+      (split-by-whitespace str (+ 1 (string-length str)))
+      (let ((charset (car rest))
+          (maxsplit
+            (if (pair? (cdr rest)) (cadr rest) (+ 1 (string-length str)))))
+        (cond
+          ((not (positive? maxsplit)) '())
+          ((null? charset) (split-by-whitespace str maxsplit))
+          (else (split-by-charset str charset maxsplit))))))
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; convert scheme values into equivilent json strings
@@ -512,7 +588,7 @@
 
 ;(define (make-id name)
 ;  (prof-start "make-id")
-;  (prof-start "make-id sorted find")                 
+;  (prof-start "make-id sorted find")
 ;  (let ((sf (sorted-find id-map name)))
 ;    (prof-end "make-id sorted find")
 ;    (let ((r (if (not sf)
@@ -523,7 +599,7 @@
 ;                   (set! current-id (+ current-id 1))
 ;                   id)
 ;                 (cadr sf))))
-;      (prof-end "make-id") 
+;      (prof-end "make-id")
 ;      r)))
 
 (define (get-id name)
@@ -531,7 +607,7 @@
 
 (define (make-id name)
   (let ((id (id-map-get name)))
-    (cond 
+    (cond
      ((zero? id)
      ; (prof-start "make-id")
       (id-map-add name current-id)
@@ -550,50 +626,50 @@
 (define (prof-item-calls p) (list-ref p 3))
 
 (define (prof-item-restart p)
-  (list 
+  (list
    (prof-item-id p)
    (time-now)
    (prof-item-accum p)
    (prof-item-calls p)))
 
 (define (prof-item-end p)
-  (list 
+  (list
    (prof-item-id p)
    0
-   (+ (prof-item-accum p) 
+   (+ (prof-item-accum p)
       (- (time-now) (prof-item-time p)))
    (+ (prof-item-calls p) 1)))
 
 (define (prof-start id)
   (let ((dd (sorted-find prof-map id)))
     (if dd
-        (set! prof-map 
-              (sorted-add 
+        (set! prof-map
+              (sorted-add
                prof-map (prof-item-restart dd)))
-        (set! prof-map 
-              (sorted-add 
+        (set! prof-map
+              (sorted-add
                prof-map (new-prof-item id))))))
 
 (define (prof-end id)
   (let ((d (sorted-find prof-map id)))
-    (set! prof-map 
-          (sorted-add 
-           prof-map 
+    (set! prof-map
+          (sorted-add
+           prof-map
            (prof-item-end d)))))
- 
+
 (define (prof-print)
-  (let ((tot (foldl 
+  (let ((tot (foldl
               (lambda (d r)
                 (+ (prof-item-accum d) r))
               0 prof-map)))
     (for-each
      (lambda (d)
-       (msg (prof-item-id d) 
-            (prof-item-calls d) 
+       (msg (prof-item-id d)
+            (prof-item-calls d)
              (prof-item-accum d)
              (* (/ (prof-item-accum d) tot) 100) "%"))
      prof-map)))
-  
+
 (define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
 (define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
 (define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
@@ -673,6 +749,7 @@
    (else #f)))
 
 ;; walk through activity stripping callbacks
+;; version called from on-create
 (define (update-callbacks! widget-list)
   (cond
    ((null? widget-list) #f)
@@ -686,6 +763,7 @@
     (update-callbacks! (cdr widget-list)))))
 
 ;; walk through update stripping callbacks
+;; version called with update-widgets (after on-create version above)
 (define (update-callbacks-from-update! widget-list)
   (if (null? widget-list) #f
       (let ((w (car widget-list)))
@@ -698,7 +776,7 @@
           (add-callback! (callback (update-widget-id w)
                                    "button-grid"
                                    (list-ref (update-widget-value w) 5)))))
-        (update-callbacks! (cdr widget-list)))))
+        (update-callbacks-from-update! (cdr widget-list)))))
 
 (define (define-activity-list . args)
   (set! activities (activity-list args)))
@@ -770,11 +848,7 @@
       (let ((ret (cond
                   ;; todo update activity...?
                   ((eq? type 'on-create) ((activity-on-create activity) activity (car args)))
-                  ((eq? type 'on-start)
-                   (alog "running on create")
-                   (let ((r ((activity-on-start activity) activity (car args))))
-                     (alog "done on create") r))
-
+                  ((eq? type 'on-start) ((activity-on-start activity) activity (car args)))
                   ((eq? type 'on-stop) ((activity-on-stop activity) activity))
                   ((eq? type 'on-resume) ((activity-on-resume activity) activity))
                   ((eq? type 'on-pause) ((activity-on-pause activity) activity))
@@ -812,7 +886,8 @@
                 ((equal? (callback-type cb) "spinner")
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "button-grid")
-                 ((callback-fn cb) (car args)))
+                 (msg "button grid cb" args)
+                 ((callback-fn cb) (car args) (cadr args)))
                 (else
                  (msg "no callbacks for type" (callback-type cb))))))
           ;;(update-callbacks! events)

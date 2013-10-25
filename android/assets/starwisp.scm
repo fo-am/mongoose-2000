@@ -53,7 +53,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; persistent database
 
-(define db "/sdcard/test.db")
+(define db "/sdcard/mongoose/local-mongoose.db")
 (db-open db)
 (setup db "local")
 (setup db "sync")
@@ -76,14 +76,6 @@
     (cons (list key value) (cdr store)))
    (else
     (cons (car store) (store-set (cdr store) key value)))))
-
-(define (store-clear store key)
-  (cond
-   ((null? store) '())
-   ((eq? key (car (car store)))
-    (cdr store))
-   (else
-    (cons (car store) (store-clear (cdr store) key)))))
 
 (define (store-get store key default)
   (cond
@@ -112,27 +104,41 @@
 (define (current-exists? key)
   (store-exists? store key))
 
-(define (remove-current key)
-  (store-clear store key))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; db abstraction
 
 ;; store a ktv, replaces existing with same key
-(define (add-entity-value! key type value)
-  (set-current! 
-   "entity-values"
+(define (entity-add-value! key type value)
+  (set-current!
+   'entity-values
    (ktv-set
-    (ktv key type value)
-    (get-current "entity-values" '()))))
+    (get-current 'entity-values '())
+    (ktv key type value))))
 
-;; build entity from all ktvs, insert to db
-(define (record-entity-values db table type)
-  (let ((values (get-current "entity-values" '())))
-    (insert-entity
-     db table type (get-current 'user-id "no id")
-     values)
-    (remove-current "entity-values")))
+;; build entity from all ktvs, insert to db, return unique_id
+(define (entity-record-values db table type)
+  (let ((values (get-current 'entity-values '())))
+    (msg values)
+    (cond
+     ((not (null? values))
+      (let ((r (insert-entity/get-unique
+                db table type (get-current 'user-id "no id")
+                values)))
+        (msg "inserted a " type)
+        (entity-reset!) r))
+     (else
+      (msg "no values to add as entity!") #f))))
+
+(define (entity-reset!)
+  (set-current! 'entity-values '()))
+
+(define (assemble-array entities)
+  (foldl
+   (lambda (i r)
+     (if (equal? r "") (ktv-get i "unique_id")
+         (string-append r "," (ktv-get i "unique_id"))))
+   ""
+   entities))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
@@ -290,104 +296,6 @@
 ;;;;
 
 (define (build-grid-selector name type title)
-  (build-grid-selector-hw name type title)
-  ;(build-grid-selector-sw name title)
-  )
- 
-(define (populate-grid-selector name type items fn)
-  (prof-start "populate-grid-selector")
-  (let ((r
-         (populate-grid-selector-hw name type items fn)
-      ;   (cond
-      ;    ((equal? type "button") 
-      ;     (populate-grid-selector-sw name items fn))
-      ;    ((equal? type "toggle") 
-      ;     (populate-grid-selector-toggle-sw name items fn))
-      ;    ((equal? type "single") 
-      ;     (populate-grid-selector-single-sw name items fn)))
-         ))
-    (prof-end "populate-grid-selector")
-
-    r))
-
-;;;
-
-(define (build-grid-selector-sw name title)
-  (vert
-   (mtext "foo" title)
-   (horiz
-    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
-    (scroll-view
-     (make-id "scroller")
-     (layout 'wrap-content 'wrap-content 1 'left 0)
-     (list
-      (linear-layout
-       (make-id name) 'horizontal 
-       (layout 'wrap-content 'wrap-content 1 'centre 0) trans-col (list))))
-    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))
-
-
-
-(define (populate-grid-sw name items buildfn)
-  (update-widget
-   'linear-layout (get-id name) 'contents
-   (map
-    (lambda (items)
-      ;; todo add space for empty parts
-      (linear-layout
-       (make-id "foo") 'vertical wrap trans-col 
-       (map buildfn items)))
-    (xwise 3 items))))
-
-(define (populate-grid-selector-sw name items fn)
-  (populate-grid-sw
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left 0)
-        (lambda ()
-          (fn item)))))
-   items))
-
-(define (populate-grid-selector-toggle-sw name items fn)
-  (populate-grid-sw
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (toggle-button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left 0)
-        (lambda ()
-          (fn item)))))
-   items))
-
-(define (populate-grid-selector-single-sw name items fn)
-  (populate-grid-sw
-   name items
-   (lambda (item)
-     (let ((item-name (ktv-get item "name")))
-       (toggle-button
-        (make-id (string-append name item-name))
-        item-name 15 (layout 100 40 1 'left 0)
-        (lambda (v)
-          (append
-           ;; clear all the others except us
-           (mclear-toggles
-            (foldl
-             (lambda (item r)
-               (let ((tname (ktv-get item "name")))
-                 (if (equal? tname item-name) r
-                     (cons
-                      (string-append name tname) r))))
-             '() items))
-           (fn item))))))))
-
-;;;;
-
-
-(define (build-grid-selector-hw name type title)
   (vert
    (mtext "title" title)
    (horiz
@@ -417,8 +325,9 @@
              item-name)))
    items))
 
-(define (populate-grid-selector-hw name type items fn)
-  (let ((id->items (build-button-items name items)))
+(define (populate-grid-selector name type items fn)
+  (let ((id->items (build-button-items name items))
+        (selected-set '()))
     (update-widget
      'button-grid (get-id name) 'grid-buttons
      (list
@@ -427,18 +336,21 @@
        (lambda (ii)
          (list (car ii) (caddr ii)))
        id->items)
-      (lambda (v)
-        (msg "grid-selector cb")
-        (cond 
+      (lambda (v state)
+        (cond
          ((equal? type "toggle")
           ;; update list of selected items
-          ;; call fn with list
-          (msg v)
-          (fn (cadr (findv v id->items)))
-          )
-         (else 
+          (if state
+              (set! selected-set (set-add v selected-set))
+              (set! selected-set (set-remove v selected-set)))
+          ;; find all items currently selected
+          (fn (map
+               (lambda (v)
+                 (cadr (findv v id->items)))
+               selected-set)))
+         (else
+          (msg (findv v id->items))
           (fn (cadr (findv v id->items))))))))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -510,9 +422,10 @@
      (mtext "title" "Nearest Neighbour Scan")
      (build-grid-selector "pf-scan-nearest" "single" "Closest Mongoose")
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
-     (mbutton "pf-scan-done" "Done" 
-              (lambda ()                 
-                (record-entity-values db "stream" "pup-focal-nearest")
+     (mbutton "pf-scan-done" "Done"
+              (lambda ()
+                (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                (entity-record-values db "stream" "pup-focal-nearest")
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
    (lambda (fragment arg)
@@ -520,18 +433,18 @@
    (lambda (fragment arg)
      (list
       (populate-grid-selector
-       "pf-scan-close" "toggle"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
-       (lambda (individuals)
-         (list)))
-      (populate-grid-selector
        "pf-scan-nearest" "single"
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
-         ;(store-entity-value! 
-         ; "nearest" "varchar" (ktv-get individual "unique_id"))         
+         (entity-add-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
+         (list)))
+      (populate-grid-selector
+       "pf-scan-close" "toggle"
+       (db-all-where db "sync" "mongoose"
+                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (lambda (individuals)
+         (entity-add-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
       ))
    (lambda (fragment) '())
@@ -549,8 +462,14 @@
      (build-grid-selector "pf-pupfeed-who" "single" "Who fed the pup?")
      (mtext "text" "Food size")
      (horiz
-      (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-      (mbutton "pf-pupfeed-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
+      (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap
+               (lambda (v)
+                 (entity-add-value! "size" "varchar" v) '()))
+      (mbutton "pf-pupfeed-done" "Done"
+               (lambda ()
+                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values db "stream" "pup-focal-pupfeed")
+                 (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -561,6 +480,7 @@
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
+         (entity-add-value! "id_who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -576,8 +496,13 @@
      (mtitle "title" "Event: Pup found food")
      (mtext "text" "Food size")
      (horiz
-      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap (lambda (v) '()))
-      (mbutton "pf-pupfind-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
+      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
+               (lambda (v) (entity-add-value! "size" "varchar" v) '()))
+      (mbutton "pf-pupfind-done" "Done"
+               (lambda ()
+                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values db "stream" "pup-focal-pupfind")
+                 (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -599,8 +524,14 @@
      (build-grid-selector "pf-pupcare-who" "single" "Who cared for the pup?")
      (mtext "text" "Type of care")
      (horiz
-      (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap (lambda (v) '()))
-      (mbutton "pf-pupcare-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events")))))))
+      (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap
+               (lambda (v)
+                 (entity-add-value! "type" "varchar" v) '()))
+      (mbutton "pf-pupcare-done" "Done"
+               (lambda ()
+                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values db "stream" "pup-focal-pupcare")
+                 (list (replace-fragment (get-id "pf-bot") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -611,6 +542,7 @@
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
+         (entity-add-value! "id_who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -631,13 +563,25 @@
       (list
        (vert
         (mtext "" "Fighting over")
-        (spinner (make-id "pf-pupaggr-over") (list "Food" "Escort" "Nothing" "Other") fillwrap (lambda (v) '())))
+        (spinner (make-id "pf-pupaggr-over") (list "Food" "Escort" "Nothing" "Other") fillwrap
+                 (lambda (v)
+                   (entity-add-value! "over" "varchar" v) '())))
        (vert
         (mtext "" "Level")
-        (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap (lambda (v) '())))
-       (mtoggle-button "pf-pupaggr-in" "Initiate?" (lambda (v) '()))
-       (mtoggle-button "pf-pupaggr-win" "Win?" (lambda (v) '()))))
-     (mbutton "pf-pupaggr-done" "Done" (lambda () (list (replace-fragment (get-id "pf-bot") "events"))))))
+        (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap
+                 (lambda (v)
+                   (entity-add-value! "level" "varchar" v) '())))
+       (mtoggle-button "pf-pupaggr-in" "Initiate?"
+                       (lambda (v)
+                         (entity-add-value! "initiate" "varchar" v) '()))
+       (mtoggle-button "pf-pupaggr-win" "Win?"
+                       (lambda (v)
+                         (entity-add-value! "win" "varchar" v) '()))))
+     (mbutton "pf-pupaggr-done" "Done"
+              (lambda ()
+                (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                (entity-record-values db "stream" "pup-focal-pupaggr")
+                (list (replace-fragment (get-id "pf-bot") "events"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -648,6 +592,7 @@
        (db-all-where db "sync" "mongoose"
                      (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
+         (entity-add-value! "id_with" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -1129,11 +1074,15 @@
       (mtext "pf1-pack" "Pack")
       (build-grid-selector "pf1-grid" "single" "Select pup")
       (horiz
-       (medit-text "pf1-width" "Pack width" "numeric" (lambda (v) '()))
-       (medit-text "pf1-height" "Pack height" "numeric" (lambda (v) '())))
-      (medit-text "pf1-count" "How many mongooses present?" "numeric" (lambda (v) '()))
+       (medit-text "pf1-width" "Pack width" "numeric"
+                   (lambda (v) (entity-add-value! "pack-width" "int" v) '()))
+       (medit-text "pf1-height" "Pack height" "numeric"
+                   (lambda (v) (entity-add-value! "pack-height" "int" v) '())))
+      (medit-text "pf1-count" "How many mongooses present?" "numeric"
+                  (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
       (mbutton "pf1-done" "Done"
                (lambda ()
+                 (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
                  (list (start-activity-goto "pup-focal" 2 ""))))
       )))
    (lambda (activity arg)
@@ -1144,6 +1093,7 @@
        "pf1-grid" "single"
        (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
+         (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
          '()))))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1422,6 +1372,11 @@
     (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left 0))
     (horiz
      (mbutton2 "sync-prof" "Profile" (lambda () (prof-print) '()))
+     (mbutton2 "sync-prof" "CSV"
+               (lambda ()
+                 (msg (csv db "stream" "pup-focal"))
+                 (msg (csv db "stream" "pup-focal-nearest"))
+                 '()))
      (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))))
 
    (lambda (activity arg)
