@@ -424,7 +424,7 @@
    (lambda (kt r)
      (if (equal? r "") (string-append "\"" (ktv-key kt) "\"")
          (string-append r ", \"" (ktv-key kt) "\"")))
-   ""
+   "id, "
    (get-attribute-ids/types db table entity-type)))
 
 (define (csv db table entity-type)
@@ -451,11 +451,11 @@
               (equal? (substring (ktv-key ktv) 0 3) "id-"))
              (string-append r ", \"" (get-entity-name db "sync" (ktv-value ktv)) "\""))
             (else
-             (string-append r ", \"" (stringify-value ktv) "\""))))
-         entity-type ;; type
+             (string-append r ", \"" (stringify-value-url ktv) "\""))))
+         (vector-ref res 1) ;; unique_id
          entity))))
    (csv-titles db table entity-type)
    (cdr (db-select
          db (string-append
-             "select entity_id from "
+             "select entity_id, unique_id from "
              table "_entity where entity_type = ?") entity-type))))

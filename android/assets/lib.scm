@@ -886,7 +886,6 @@
                 ((equal? (callback-type cb) "spinner")
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "button-grid")
-                 (msg "button grid cb" args)
                  ((callback-fn cb) (car args) (cadr args)))
                 (else
                  (msg "no callbacks for type" (callback-type cb))))))

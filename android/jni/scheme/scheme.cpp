@@ -31,6 +31,7 @@
 #include <float.h>
 #include <ctype.h>
 #include <sys/time.h>
+#include <time.h>
 
 #ifdef ANDROID_NDK
 #include <android/log.h>
@@ -4321,10 +4322,10 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           s_return(sc,sc->F);
      case OP_SEND:
           if (is_string(car(sc->args))) {
-               if (starwisp_data!=NULL) { 
+               if (starwisp_data!=NULL) {
                     __android_log_print(ANDROID_LOG_INFO, "starwisp", "deleting starwisp data: something is wrong!");
                     free(starwisp_data);
-               }               
+               }
                starwisp_data=strdup(string_value(car(sc->args)));
           }
           s_return(sc,sc->F);
@@ -4373,6 +4374,26 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
             gettimeofday(&t,NULL);
             s_return(sc,cons(sc,mk_integer(sc,t.tv_sec),
                              cons(sc,mk_integer(sc,t.tv_usec),sc->NIL)));
+     }
+     case OP_DATETIME: {
+          timeval t;
+          // stop valgrind complaining
+          t.tv_sec=0;
+          t.tv_usec=0;
+          gettimeofday(&t,NULL);
+
+          struct tm *now = gmtime((time_t *)&t.tv_sec);
+
+          /* note: now->tm_year is the number of years SINCE 1900.  On the year 2000, this
+             will be 100 not 0.  Do a man gmtime for more information */
+
+          s_return(sc,cons(sc,mk_integer(sc,now->tm_year + 1900),
+                           cons(sc,mk_integer(sc,now->tm_mon + 1),
+                                cons(sc,mk_integer(sc,now->tm_mday),
+                                     cons(sc,mk_integer(sc,now->tm_hour),
+                                          cons(sc,mk_integer(sc,now->tm_min),
+                                               cons(sc,mk_integer(sc,now->tm_sec), sc->NIL)))))));
+
      }
      case OP_ID_MAP_ADD: {
           the_idmap.add(
