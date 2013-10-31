@@ -147,14 +147,11 @@
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
 ;; creates the value if it doesn't already exist, updates it otherwise
 (define (update-value db table entity-id ktv)
-  (msg "update-value")
-  (if (null? (dbg (select-first
-                   db (string-append
-                       "select * from " table "_value_" (ktv-type ktv) " where entity_id = ? and attribute_id = ?")
-                   entity-id (ktv-key ktv))))
-      (begin
-        (msg "could't find " (ktv-key ktv))
-        (insert-value db table entity-id ktv))
+  (if (null? (select-first
+              db (string-append
+                  "select * from " table "_value_" (ktv-type ktv) " where entity_id = ? and attribute_id = ?")
+              entity-id (ktv-key ktv)))
+      (insert-value db table entity-id ktv)
       (db-exec
        db (string-append "update " table "_value_" (ktv-type ktv)
                          " set value=?  where entity_id = ? and attribute_id = ?")
@@ -286,10 +283,8 @@
          (when (not (equal? (ktv-key ktv) "unique_id"))
                (find/add-attribute-type db table entity-type (ktv-key ktv) (ktv-type ktv))))
        ktvlist)
-
       (for-each
        (lambda (ktv)
-         (msg "updating" (ktv-key ktv) "with" (ktv-value ktv))
          (update-value db table entity-id ktv))
        ktvlist)))))
 
