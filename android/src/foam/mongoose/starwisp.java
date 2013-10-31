@@ -59,12 +59,15 @@ public class starwisp extends StarwispActivity
         ActivityManager.RegisterActivity("splash",starwisp.class);
         ActivityManager.RegisterActivity("main",MainActivity.class);
         ActivityManager.RegisterActivity("observations",ObservationsActivity.class);
-        ActivityManager.RegisterActivity("observation",ObservationActivity.class);
 
-        ActivityManager.RegisterActivity("individual-select",IndividualSelectActivity.class);
+        ActivityManager.RegisterActivity("group-composition",GroupCompositionActivity.class);
+
+        ActivityManager.RegisterActivity("pup-focal-start",PupFocalStartActivity.class);
         ActivityManager.RegisterActivity("pup-focal",PupFocalActivity.class);
+
         ActivityManager.RegisterActivity("pup-focal-event",PupFocalEventActivity.class);
-        ActivityManager.RegisterActivity("event-self",EventSelfActivity.class);
+        ActivityManager.RegisterActivity("group-events",GroupEventsActivity.class);
+
         ActivityManager.RegisterActivity("event-fed",EventFedActivity.class);
         ActivityManager.RegisterActivity("event-aggression",EventAggressionActivity.class);
 

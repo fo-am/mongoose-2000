@@ -34,13 +34,19 @@
 
 ;; colours
 
-(define pf-col (list  22  19 178  96))
-(define gp-col (list 255 236   0  96))
-(define gc-col (list 255  97   0  96))
+(define pf-col (list 255 204 51 255))
+(define gp-col (list 255 102 0 255))
+(define gc-col (list 164 82 9 255))
 
-;(define gc-col (list   0 176  96 64))
-;(define pf-col (list 226   0  72 64))
-;(define gp-col (list 255 144   0 64))
+(define pf-bgcol (list 255 204 51 127))
+(define gp-bgcol (list 255 102 0 127))
+(define gc-bgcol (list 164 82 9 127))
+
+;(define pf-col (list  22  19 178  127))
+;(define gp-col (list 255  97   0  127))
+;(define gc-col (list 255 236   0  127))
+
+
 
 (define trans-col (list 0 0 0 0))
 
@@ -134,7 +140,7 @@
    (number->string (list-ref dt 2)) "T"
    (number->string (list-ref dt 3)) ":"
    (number->string (list-ref dt 4)) ":"
-   (substring (number->string (+ 100 (list-ref dt 5))) 1 3)))
+   (substring (number->string (+ 100 (list-ref dt 5))) 1 2)))
 
 ;; build entity from all ktvs, insert to db, return unique_id
 (define (entity-record-values db table type)
@@ -324,19 +330,22 @@
 (define (build-grid-selector name type title)
   (vert
    (mtext "title" title)
-   (horiz
-    (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
-    (scroll-view
-     (make-id "scroller")
-     (layout 'wrap-content 'wrap-content 1 'left 0)
-     (list
-      (linear-layout
-       (make-id name) 'horizontal
-       (layout 'wrap-content 'wrap-content 1 'centre 1) trans-col
-       (list
-        (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 0)
-                     (list) (lambda (v) '()))))))
-    (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))
+   (linear-layout
+    0 'horizontal
+    (layout 'fill-parent 'fill-parent 1 'left 2) trans-col
+    (list
+     (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
+     (scroll-view
+      (make-id "scroller")
+      (layout 'wrap-content 'wrap-content 1 'left 20)
+      (list
+       (linear-layout
+        (make-id name) 'horizontal
+        (layout 'wrap-content 'wrap-content 1 'centre 20) trans-col
+        (list
+         (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 40)
+                      (list) (lambda (v) '()))))))
+     (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0))))))
 
 ;; assumes grid selectors on mongeese only
 (define (fast-get-name item)
@@ -381,6 +390,28 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
+(define (timer-cb)
+  (set-current!
+   'timer-seconds
+   (- (get-current 'timer-seconds 59) 1))
+  (append
+   (cond
+    ((< (get-current 'timer-seconds 59) 0)
+     (set-current! 'timer-minutes (- (get-current 'timer-minutes 20) 1))
+     (set-current! 'timer-seconds 59)
+     (list
+      (replace-fragment (get-id "pf-top") "pf-scan1")))
+    (else '()))
+   (list
+    (delayed "timer" 1000 timer-cb)
+    (update-widget
+     'text-view (get-id "pf-timer-time-minutes") 'text
+     (string-append (number->string (get-current 'timer-minutes 20))))
+    (update-widget
+     'text-view (get-id "pf-timer-time") 'text
+     (string-append (number->string (get-current 'timer-seconds 59))))
+    )))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
 
@@ -389,16 +420,18 @@
   (fragment
    "pf-timer"
    (linear-layout
-    (make-id "") 'vertical fillwrap pf-col
+    (make-id "") 'vertical fillwrap trans-col
     (list
-     (mtitle "title" "Time left: 20 mins")
-     (mtitle "title" "Next scan: 60 secs")
-     (mbutton "pft-trigger" "NN scan"
-              (lambda () (list (replace-fragment (get-id "pf-top") "pf-scan1"))))))
+     (mtitle "pf-details" "Pack: xxx Pup: xxx")))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list))
+     (list
+      (update-widget 'text-view (get-id "pf-details") 'text
+                     (string-append
+                      "Pack: " (ktv-get (get-current 'pack '()) "name") " "
+                      "Pup: " (ktv-get (get-current 'individual '()) "name"))
+                     )))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -410,21 +443,23 @@
    (linear-layout
     0 'vertical fillwrap trans-col
     (list
-     (mtitle "ev-pf-text" "Pup Focal Events")
      (linear-layout
-      (make-id "ev-pf") 'horizontal fill pf-col
+      (make-id "ev-pf") 'vertical wrapfill pf-col
       (list
-       (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
-       (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
-       (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
-       (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr"))))))
-     (mtitle "text" "Group Events")
+       (mtitle "ev-pf-text" "Pup Focal Events")
+       (horiz
+        (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
+        (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
+        (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
+        (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr")))))))
      (linear-layout
-      0 'horizontal fill gp-col
+      (make-id "ev-pf") 'vertical fill gp-col
       (list
-       (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
-       (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
-       (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov"))))))))
+       (mtitle "text" "Group Events")
+       (horiz
+        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
+        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
+        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov")))))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -1034,11 +1069,11 @@
                 (current-exists? 'observation))
            (cond
             ((eq? (get-current 'observation "none") obs-pf)
-             (list (start-activity-goto "individual-select" 2 "")))
+             (list (start-activity "pup-focal-start" 2 "")))
             ((eq? (get-current 'observation "none") obs-gp)
-             (list (start-activity-goto "event-self" 2 "")))
+             (list (start-activity "group-events" 2 "")))
             (else
-             (list (start-activity-goto "observation" 2 ""))))
+             (list (start-activity "group-composition" 2 ""))))
            (list
             (alert-dialog
              "choose-obs-finish"
@@ -1064,7 +1099,7 @@
 
 
   (activity
-   "observation" ;; group-composition
+   "group-composition"
    (linear-layout
     0 'vertical fillwrap gc-col
     (list
@@ -1078,6 +1113,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (msg (get-current 'observation-fragments '()))
      (list
       (update-widget 'linear-layout (get-id "obs-buttons-bar") 'contents
                      (let ((all-toggles
@@ -1086,6 +1122,7 @@
                              (get-current 'observation-fragments '()))))
                        (map
                         (lambda (frag)
+                          (msg "button-bar" frag)
                           (let ((id (string-append "obs-bar-" (cadr frag))))
                             (toggle-button
                              (make-id id) (car frag) 12 fillwrap
@@ -1103,9 +1140,10 @@
                      (string-append
                       (get-current 'observation "No observation")
                       " with " (ktv-get (get-current 'pack '()) "name")))
-      (update-widget 'view-pager (get-id "obs-container") 'contents
+      (update-widget 'view-pager (get-id "obs-container") 'pages
                      (map
                       (lambda (frag)
+                        (msg "container" frag)
                         (cadr frag))
                       (get-current 'observation-fragments '())))
       ))
@@ -1116,9 +1154,9 @@
    (lambda (activity requestcode resultcode) '()))
 
   (activity
-   "individual-select" ;; pup focal #1
+   "pup-focal-start"
    (linear-layout
-    0 'vertical fillwrap pf-col
+    0 'vertical fillwrap pf-bgcol
     (list
      (vert
       (mtitle "" "Pup focal setup")
@@ -1134,7 +1172,8 @@
       (mbutton "pf1-done" "Done"
                (lambda ()
                  (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
-                 (list (start-activity-goto "pup-focal" 2 ""))))
+                 (list
+                  (start-activity "pup-focal" 2 ""))))
       )))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1144,6 +1183,7 @@
        "pf1-grid" "single"
        (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
+         (set-current! 'individual individual)
          (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
          '()))))
    (lambda (activity) '())
@@ -1152,37 +1192,46 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
+
   (activity
-   "pup-focal" ;; pup focal #2
-   (vert
+   "pup-focal"
     (linear-layout
-     0 'horizontal fillwrap pf-col
+     0 'vertical fillwrap pf-bgcol
      (list
-      (mtitle "title" "Pup Focal")
-      (mtext "pf-details" "")
-      (mtoggle-button "pf-pause" "Pause" (lambda (v) '()))))
-    (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left 0))
-    (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left 0))
-    (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0)))))
+      (horiz
+       (mtitle "title" "Pup Focal")
+       (vert
+        (mtext "title" "Time left:")
+        (mtitle "pf-timer-time-minutes" "20"))
+       (vert
+        (mtext "title" "Next scan:")
+        (mtitle "pf-timer-time" "60"))
+       (mtoggle-button "pf-pause" "Pause"
+                       (lambda (v)
+                         (msg "pausing")
+                         (if v
+                             (list (delayed "timer" 1000 (lambda () '())))
+                             (list (delayed "timer" 1000 timer-cb))))))
+      (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left 0))
+      (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left 0))
+      (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0))))))
 
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg)
-     (list
-      (update-widget 'text-view (get-id "pf-details") 'text
-                     (string-append
-                      "Pack: " (ktv-get (get-current 'pack '()) "name") " "
-                      "Pup: " (ktv-get (get-current 'individual '()) "name")))
-      ))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '()))
+    (lambda (activity arg)
+      (activity-layout activity))
+    (lambda (activity arg)
+      (set-current! 'timer-minutes 20)
+      (set-current! 'timer-seconds 59)
+      (list
+       (delayed "timer" 1000 timer-cb)))
+    (lambda (activity) '())
+    (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
+    (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
+    (lambda (activity) '())
+    (lambda (activity requestcode resultcode) '()))
 
 
   (activity
-   "event-self" ;; group-event
+   "group-events"
    (linear-layout
     0 'vertical wrap gp-col
     (list

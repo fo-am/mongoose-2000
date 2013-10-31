@@ -19,12 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class EventAggressionActivity extends StarwispActivity
+public class GroupCompositionActivity extends StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "event-aggression";
+        m_Name = "group-composition";
         super.onCreate(savedInstanceState);
     }
 }

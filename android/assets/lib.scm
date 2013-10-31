@@ -532,6 +532,7 @@
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
+(define (delayed name delay fn) (list "delayed" 0 "delayed" name fn delay))
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
@@ -795,11 +796,22 @@
    ((equal? (dialog-name (car dl)) name) (car dl))
    (else (dialog-find (cdr dl) name))))
 
+(define (dialog-replace dl name d)
+  (cond
+   ((null? dl) (list d))
+   ((equal? (dialog-name (car dl)) name)
+    (cons d (cdr dl)))
+   (else (cons (car dl) (dialog-replace (cdr dl) name d)))))
+
+
 (define (add-new-dialog! d)
+  (set! dialogs (dialog-replace dialogs (dialog-name d) d))
   ;; todo - when to clear out?
-  (when (not (dialog-find dialogs (dialog-name d)))
+  ;;(when (not (dialog-find dialogs (dialog-name d)))
         ;;(display "adding dialog ")(display d)(newline)
-        (set! dialogs (cons d dialogs))))
+  ;;      (set! dialogs (cons d dialogs)))
+  )
+
 
 (define (update-dialogs! events)
   (when (list? events)
@@ -811,7 +823,8 @@
                   (equal? (list-ref event 0) "alert-dialog")
                   (equal? (list-ref event 0) "list-files")
                   (equal? (list-ref event 0) "http-request")
-                  (equal? (list-ref event 0) "network-connect"))
+                  (equal? (list-ref event 0) "network-connect")
+                  (equal? (list-ref event 0) "delayed"))
                  (add-new-dialog! event)))
          events)))
 
@@ -842,7 +855,7 @@
     r))
 
 (define (top-callback type activity-name activity args)
-  ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
+  (display "activity-callback ")(display type)(display " ")(display args)(newline)
   (if (not activity)
       (begin (display "no activity/fragment called ")(display activity-name)(newline))
       (let ((ret (cond
@@ -857,10 +870,15 @@
                   (else
                    (display "no callback called ")(display type)(newline)
                    '()))))
-        (if (eq? type 'on-create)
-            (update-callbacks! (list ret))
-            ;; todo: fixme - callbacks from update only working for first list element???
-            (update-callbacks-from-update! ret))
+        (cond
+         ((eq? type 'on-create)
+          (update-callbacks! (list ret)))
+         (else
+          (msg "updating dialogs")
+          (update-dialogs! ret)
+          (msg "updating callbacks" ret)
+          (update-callbacks-from-update! ret)
+          (msg "done")))
         (send (scheme->json ret)))))
 
 (define (find-activity-or-fragment name)

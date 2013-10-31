@@ -84,6 +84,7 @@ import java.util.List;
 import android.content.DialogInterface;
 import android.text.InputType;
 import android.util.TypedValue;
+import android.os.Handler;
 
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog;
@@ -101,10 +102,12 @@ public class StarwispBuilder
 {
     Scheme m_Scheme;
     NetworkManager m_NetworkManager;
+    Handler m_Handler;
 
     public StarwispBuilder(Scheme scm) {
         m_Scheme = scm;
         m_NetworkManager = new NetworkManager();
+        m_Handler = new Handler();
     }
 
     public int BuildOrientation(String p) {
@@ -361,7 +364,7 @@ public class StarwispBuilder
                 if (inputtype.equals("text")) {
                     //v.setInputType(InputType.TYPE_CLASS_TEXT);
                 } else if (inputtype.equals("numeric")) {
-                    v.setInputType(InputType.TYPE_CLASS_NUMBER);
+                    v.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 } else if (inputtype.equals("email")) {
                     v.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
                 }
@@ -504,7 +507,6 @@ public class StarwispBuilder
                 final String buttontype = arr.getString(2);
                 horiz.setId(id);
                 horiz.setOrientation(LinearLayout.HORIZONTAL);
-
                 parent.addView(horiz);
                 int height = arr.getInt(3);
                 int textsize = arr.getInt(4);
@@ -587,7 +589,7 @@ public class StarwispBuilder
             final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
-//            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
+            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
 
             // non widget commands
             if (token.equals("toast")) {
@@ -700,6 +702,19 @@ public class StarwispBuilder
                         DialogCallback(ctx, ctxname, name, code);
                     }
                 }
+                return;
+            }
+
+            if (token.equals("delayed")) {
+                final String name = arr.getString(3);
+                final int d = arr.getInt(5);
+                Runnable timerThread = new Runnable() {
+                    public void run() {
+                        DialogCallback(ctx, ctxname, name, "");
+                    }
+                };
+                m_Handler.removeCallbacksAndMessages(null);
+                m_Handler.postDelayed(timerThread, d);
                 return;
             }
 
@@ -821,7 +836,7 @@ public class StarwispBuilder
             View vv=ctx.findViewById(id);
             if (vv==null)
             {
-//                Log.i("starwisp", "Can't find widget : "+id);
+                Log.i("starwisp", "Can't find widget : "+id);
                 return;
             }
 
@@ -884,7 +899,6 @@ public class StarwispBuilder
                         vertcount=(vertcount+1)%height;
 
                         if (buttontype.equals("button")) {
-
                             Button b = new Button(ctx);
                             b.setId(button.getInt(0));
                             b.setText(button.getString(1));
@@ -971,7 +985,7 @@ public class StarwispBuilder
                 if (token.equals("switch")) {
                     v.setCurrentItem(arr.getInt(3));
                 }
-                if (token.equals("contents")) {
+                if (token.equals("pages")) {
                     final JSONArray items = arr.getJSONArray(3);
                     v.setAdapter(new FragmentPagerAdapter(ctx.getSupportFragmentManager()) {
                         @Override
@@ -1008,6 +1022,7 @@ public class StarwispBuilder
             }
 
             if (type.equals("text-view")) {
+                Log.i("starwisp","text-view...");
                 TextView v = (TextView)vv;
                 if (token.equals("text")) {
                     v.setText(arr.getString(3));

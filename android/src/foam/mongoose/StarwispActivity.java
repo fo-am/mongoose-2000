@@ -140,4 +140,9 @@ public class StarwispActivity extends FragmentActivity
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
 	}
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        //No call for super(). Bug on API Level > 11.
+    }
 }

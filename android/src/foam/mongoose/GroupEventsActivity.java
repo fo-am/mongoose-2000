@@ -19,12 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class FieldHistoryActivity extends StarwispActivity
+public class GroupEventsActivity extends StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "fieldhistory";
+        m_Name = "group-events";
         super.onCreate(savedInstanceState);
     }
 }

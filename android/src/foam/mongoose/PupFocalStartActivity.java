@@ -19,12 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class ObservationActivity extends StarwispActivity
+public class PupFocalStartActivity extends StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "observation";
+        m_Name = "pup-focal-start";
         super.onCreate(savedInstanceState);
     }
 }

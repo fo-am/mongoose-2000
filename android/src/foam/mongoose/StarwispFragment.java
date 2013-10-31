@@ -131,4 +131,10 @@ public class StarwispFragment extends Fragment
             Log.e("starwisp", "Error parsing ["+ret+"] " + e.toString());
         }
     }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        //No call for super(). Bug on API Level > 11.
+    }
+
 }

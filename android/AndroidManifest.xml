@@ -17,10 +17,11 @@
             </intent-filter>
         </activity>
         <activity android:name="ObservationsActivity"></activity>
-        <activity android:name="ObservationActivity" android:noHistory="true"></activity>
-        <activity android:name="IndividualSelectActivity" android:noHistory="true"></activity>
+
+        <activity android:name="GroupCompositionActivity" android:noHistory="true"></activity>
+        <activity android:name="PupFocalStartActivity" android:noHistory="true"></activity>
         <activity android:name="PupFocalActivity" android:noHistory="true"></activity>
-        <activity android:name="EventSelfActivity" android:noHistory="true"></activity>
+        <activity android:name="GroupEventsActivity" android:noHistory="true"></activity>
 
         <activity android:name="ManagePacksActivity"></activity>
         <activity android:name="NewPackActivity"></activity>
