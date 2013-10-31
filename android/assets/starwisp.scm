@@ -448,28 +448,28 @@
       (list
        (mtitle "ev-pf-text" "Pup Focal Events")
        (horiz
-        (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfeed"))))
-        (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupfind"))))
-        (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupcare"))))
-        (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-pupaggr")))))))
+        (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfeed"))))
+        (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfind"))))
+        (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupcare"))))
+        (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupaggr")))))))
      (linear-layout
       (make-id "ev-pf") 'vertical fill gp-col
       (list
        (mtitle "text" "Group Events")
        (horiz
-        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpint"))))
-        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpalarm"))))
-        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "pf-bot") "ev-grpmov")))))))))
+        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpint"))))
+        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpalarm"))))
+        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov")))))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (if (equal? (get-current 'observation "none") obs-gp)
-         (list
-          (update-widget 'text-view (get-id "ev-pf-text") 'hide 0)
-          (update-widget 'linear-layout (get-id "ev-pf") 'hide 0))
+     (if (equal? (get-current 'observation "none") obs-pf)
          (list
           (update-widget 'text-view (get-id "ev-pf-text") 'show 0)
-          (update-widget 'linear-layout (get-id "ev-pf") 'show 0))))
+          (update-widget 'linear-layout (get-id "ev-pf") 'show 0))
+         (list
+          (update-widget 'text-view (get-id "ev-pf-text") 'hide 0)
+          (update-widget 'linear-layout (get-id "ev-pf") 'hide 0))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -530,7 +530,7 @@
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupfeed")
-                 (list (replace-fragment (get-id "pf-bot") "events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -563,7 +563,7 @@
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupfind")
-                 (list (replace-fragment (get-id "pf-bot") "events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -592,7 +592,7 @@
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupcare")
-                 (list (replace-fragment (get-id "pf-bot") "events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -642,7 +642,7 @@
               (lambda ()
                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                 (entity-record-values db "stream" "pup-focal-pupaggr")
-                (list (replace-fragment (get-id "pf-bot") "events"))))))
+                (list (replace-fragment (get-id "event-holder") "events"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -686,7 +686,7 @@
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
                   (entity-record-values db "stream" "group-interaction")
-                  (list (replace-fragment (get-id "pf-bot") "events"))))))))
+                  (list (replace-fragment (get-id "event-holder") "events"))))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -731,7 +731,7 @@
      (mbutton "pf-grpalarm-done" "Done"
               (lambda ()
                 (entity-record-values db "stream" "group-alarm")
-                (list (replace-fragment (get-id "pf-bot") "events"))))))
+                (list (replace-fragment (get-id "event-holder") "events"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -776,7 +776,7 @@
        (mbutton "pf-grpmov-done" "Done"
                 (lambda ()
                   (entity-record-values db "stream" "group-move")
-                  (list (replace-fragment (get-id "pf-bot") "events"))))))))
+                  (list (replace-fragment (get-id "event-holder") "events"))))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1100,16 +1100,15 @@
 
   (activity
    "group-composition"
-   (linear-layout
-    0 'vertical fillwrap gc-col
-    (list
-     (text-view (make-id "obs-title") "" 40 fillwrap)
-     (linear-layout
-      (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
-     (view-pager
-      (make-id "obs-container") (layout 'wrap-content 700 1 'left 0) '())
-     (mbutton "obs-done" "Done" (lambda () (list (finish-activity 0))))))
-
+    (linear-layout
+     0 'vertical fillwrap gc-bgcol
+     (list
+      (text-view (make-id "obs-title") "" 40 fillwrap)
+      (linear-layout
+       (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
+      (build-fragment "gc-start" (make-id "gc-top") (layout 595 400 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 595 450 1 'left 0))
+      (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1130,22 +1129,12 @@
                                (append
                                 (mclear-toggles-not-me id all-toggles)
                                 (list
-                                 (update-widget
-                                  'view-pager (get-id "obs-container") 'switch
-                                  (get-fragment-index
-                                   (cadr frag)
-                                   (get-current 'observation-fragments '())))))))))
+                                 (replace-fragment (get-id "gc-top") (cadr frag))))))))
                         (get-current 'observation-fragments '()))))
       (update-widget 'text-view (get-id "obs-title") 'text
                      (string-append
                       (get-current 'observation "No observation")
                       " with " (ktv-get (get-current 'pack '()) "name")))
-      (update-widget 'view-pager (get-id "obs-container") 'pages
-                     (map
-                      (lambda (frag)
-                        (msg "container" frag)
-                        (cadr frag))
-                      (get-current 'observation-fragments '())))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1213,7 +1202,7 @@
                              (list (delayed "timer" 1000 (lambda () '())))
                              (list (delayed "timer" 1000 timer-cb))))))
       (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left 0))
-      (build-fragment "events" (make-id "pf-bot") (layout 595 450 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 595 450 1 'left 0))
       (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0))))))
 
     (lambda (activity arg)
@@ -1235,7 +1224,7 @@
    (linear-layout
     0 'vertical wrap gp-col
     (list
-     (build-fragment "events" (make-id "pf-bot") (layout 580 450 1 'left 0))
+     (build-fragment "events" (make-id "event-holder") (layout 580 450 1 'left 0))
      (horiz
       (mbutton "gpe-save" "Save" (lambda () (list)))
       (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0)))))))
