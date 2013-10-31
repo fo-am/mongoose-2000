@@ -133,6 +133,9 @@
     (get-current 'entity-values '())
     (ktv key type value))))
 
+(define (entity-set! ktv-list)
+  (set-current! 'entity-values ktv-list))
+
 (define (dt->string dt)
   (string-append
    (number->string (list-ref dt 0)) "-"
@@ -160,6 +163,18 @@
         (entity-reset!) r))
      (else
       (msg "no values to add as entity!") #f))))
+
+(define (entity-update-values db table)
+  ;; standard bits
+  (let ((values (get-current 'entity-values '()))
+        (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
+    (cond
+     ((and unique-id (not (null? values)))
+      (update-entity db table (entity-id-from-unique db table unique-id) values)
+      (msg "updated " unique-id)
+      (entity-reset!))
+     (else
+      (msg "no values or no id to update as entity:" unique-id "values:" values)))))
 
 (define (entity-reset!)
   (set-current! 'entity-values '()))
@@ -1270,16 +1285,14 @@
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 "text" fillwrap
-               (lambda (v) (set-current! 'pack-name v) '()))
+               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (spacer 10)
     (horiz
-     (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap
+             (lambda () (entity-reset!) (list (finish-activity 2))))
      (button (make-id "new-pack-done") "Done" 20 fillwrap
              (lambda ()
-               (insert-entity
-                db "sync" "pack" (get-current 'user-id "no id")
-                (list
-                 (ktv "name" "varchar" (get-current 'pack-name "no name"))))
+               (entity-record-values db "sync" "pack")
                (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -1307,7 +1320,8 @@
        "manage-individuals-list" "button"
        (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
        (lambda (individual)
-         (list (start-activity "manage-individual" 2 ""))))
+         (set-current! 'individual individual)
+         (list (start-activity "update-individual" 2 ""))))
       (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
       ))
@@ -1324,33 +1338,27 @@
     (text-view (make-id "new-individual-pack-name") "Pack:" 20 fillwrap)
     (text-view (make-id "new-individual-name-text") "Name" 20 fillwrap)
     (edit-text (make-id "new-individual-name") "" 30 "text" fillwrap
-               (lambda (v) (set-current! 'individual-name v) '()))
+               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (text-view (make-id "new-individual-name-text") "Gender" 20 fillwrap)
     (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap
-             (lambda (v) (set-current! 'individual-gender v) '()))
+             (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
     (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
-               (lambda (v) (set-current! 'individual-litter-code v) '()))
+               (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
     (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
-               (lambda (v) (set-current! 'individual-chip-code v) '()))
+               (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (horiz
-     (button (make-id "new-individual-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "new-individual-cancel") "Cancel" 20 fillwrap
+             (lambda () (entity-reset!) (list (finish-activity 2))))
      (button (make-id "new-individual-done") "Done" 20 fillwrap
              (lambda ()
-               (insert-entity
-                db "sync" "mongoose" (get-current 'user-id "no id")
-                (list
-                 (ktv "name" "varchar" (get-current 'individual-name "no name"))
-                 (ktv "gender" "varchar" (get-current 'individual-gender "Female"))
-                 (ktv "litter-code" "varchar" (get-current 'individual-litter-code ""))
-                 (ktv "chip-code" "varchar" (get-current 'individual-chip-code ""))
-                 (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-                 ))
+               (entity-add-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+               (entity-record-values db "sync" "mongoose")
                (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -1371,28 +1379,49 @@
     (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
     (spacer 10)
     (text-view (make-id "update-individual-name-text") "Name" 20 fillwrap)
-    (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
+               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (text-view (make-id "update-individual-name-text") "Gender" 20 fillwrap)
-    (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap (lambda (v) '()))
+    (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap
+             (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
      (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
     (text-view (make-id "update-individual-litter-text") "Litter code" 20 fillwrap)
-    (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
+               (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
     (text-view (make-id "update-individual-chip-text") "Chip code" 20 fillwrap)
-    (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap (lambda (v) '()))
+    (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
+               (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (spacer 10)
     (horiz
      (button (make-id "update-individual-delete") "Delete" 20 fillwrap (lambda () (list (finish-activity 2))))
      (button (make-id "update-individual-died") "Died" 20 fillwrap (lambda () (list (finish-activity 2)))))
     (horiz
-     (button (make-id "update-individual-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "update-individual-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2)))))
+     (button (make-id "update-individual-cancel") "Cancel" 20 fillwrap
+             (lambda () (entity-reset!) (list (finish-activity 2))))
+     (button (make-id "update-individual-done") "Done" 20 fillwrap
+             (lambda ()
+               (entity-update-values db "sync")
+               (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (entity-set! (get-current 'individual '()))
+     (let ((individual (get-current 'individual '())))
+       (list
+        (update-widget 'edit-text (get-id "update-individual-name") 'text
+                       (ktv-get individual "name"))
+        (update-widget 'spinner (get-id "update-individual-gender") 'selection
+                       (if (equal? (ktv-get individual "gender") "Female") 0 1))
+        (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
+                       (ktv-get individual "litter-code"))
+        (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
+                       (ktv-get individual "chip-code")))
+
+       ))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1440,7 +1469,7 @@
     (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
     (mtext "sync-dirty" "...")
     (horiz
-     (mbutton "sync-connect" "Connect"
+     (mbutton2 "sync-connect" "Connect"
               (lambda ()
                 (list
                  (network-connect
@@ -1449,7 +1478,7 @@
                   (lambda (state)
                       (list
                        (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
-     (mbutton "sync-sync" "Push"
+     (mbutton2 "sync-sync" "Push"
               (lambda ()
                 (let ((r (append
                           (spit-dirty db "sync")
@@ -1457,7 +1486,7 @@
                   (cons (if (> (length r) 0)
                             (toast "Uploading data...")
                             (toast "No data changed to upload")) r))))
-     (mbutton "sync-pull" "Pull"
+     (mbutton2 "sync-pull" "Pull"
               (lambda ()
                 (cons (toast "Downloading data...") (suck-new db "sync")))))
     (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left 0))
@@ -1471,7 +1500,10 @@
                     (msg (csv db "stream" e)))
                   entity-types)
                  '()))
-     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))))
+     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2)))))
+
+
+    )
 
    (lambda (activity arg)
      (activity-layout activity))

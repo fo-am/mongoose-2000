@@ -344,6 +344,34 @@ public class StarwispBuilder
                 parent.addView(v);
             }
 
+            if (type.equals("debug-text-view")) {
+                TextView v = new TextView(ctx);
+//                v.setBackgroundResource(R.color.black);
+                v.setId(arr.getInt(1));
+                v.setText(Html.fromHtml(arr.getString(2)));
+//                v.setTextColor(R.color.white);
+                v.setTextSize(arr.getInt(3));
+                v.setMovementMethod(LinkMovementMethod.getInstance());
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+
+                if (arr.length()>5) {
+                    if (arr.getString(5).equals("left")) {
+                        v.setGravity(Gravity.LEFT);
+                    } else {
+                        if (arr.getString(5).equals("fill")) {
+                            v.setGravity(Gravity.FILL);
+                        } else {
+                            v.setGravity(Gravity.CENTER);
+                        }
+                    }
+                } else {
+                    v.setGravity(Gravity.LEFT);
+                }
+                v.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                parent.addView(v);
+            }
+
+
             if (type.equals("web-view")) {
                 WebView v = new WebView(ctx);
                 v.setId(arr.getInt(1));
@@ -1021,7 +1049,7 @@ public class StarwispBuilder
                 return;
             }
 
-            if (type.equals("text-view")) {
+            if (type.equals("text-view") || type.equals("debug-text-view")) {
                 Log.i("starwisp","text-view...");
                 TextView v = (TextView)vv;
                 if (token.equals("text")) {

@@ -422,111 +422,44 @@
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
 
+;; all the widgets!
 (define (linear-layout id orientation layout colour children)
   (list "linear-layout" id orientation layout colour children))
-(define (linear-layout-id t) (list-ref t 1))
-(define (linear-layout-orientation t) (list-ref t 2))
-(define (linear-layout-layout t) (list-ref t 3))
-(define (linear-layout-colour t) (list-ref t 4))
 (define (linear-layout-children t) (list-ref t 5))
-
-;;(define (grid-layout id cols orientation layout children)
- ;; (list "grid-layout" id cols orientation layout children))
-;;(define (grid-layout-id t) (list-ref t 1))
-;;(define (grid-layout-cols t) (list-ref t 2))
-;;(define (grid-layout-orientation t) (list-ref t 3))
-;;(define (grid-layout-layout t) (list-ref t 4))
-;;(define (grid-layout-children t) (list-ref t 5))
-
 (define (frame-layout id layout children)
   (list "frame-layout" id layout children))
-(define (frame-layout-id t) (list-ref t 1))
-(define (frame-layout-layout t) (list-ref t 2))
 (define (frame-layout-children t) (list-ref t 3))
-
 (define (scroll-view id layout children)
   (list "scroll-view" id layout children))
-(define (scroll-view-id t) (list-ref t 1))
-(define (scroll-view-layout t) (list-ref t 2))
 (define (scroll-view-children t) (list-ref t 3))
-
 (define (view-pager id layout fragment-list)
   (list "view-pager" id layout fragment-list))
-
 (define (space layout) (list "space" "999" layout))
 (define (space-view-layout t) (list-ref t 2))
-
 (define (image-view id image layout) (list "image-view" id image layout))
-(define (image-view-id t) (list-ref t 1))
-(define (image-view-image t) (list-ref t 2))
-(define (image-view-layout t) (list-ref t 3))
-
 (define (camera-preview id layout) (list "camera-preview" id layout))
-(define (camera-preview-id t) (list-ref t 1))
-(define (camera-preview-layout t) (list-ref t 2))
-
 (define (text-view id text size layout) (list "text-view" id text size layout))
-(define (text-view-left id text size layout) (list "text-view" id text size layout "left"))
-(define (text-view-id t) (list-ref t 1))
-(define (text-view-text t) (list-ref t 2))
-(define (text-view-modify-text t v) (list-replace t 2 v))
-(define (text-view-size t) (list-ref t 3))
-(define (text-view-layout t) (list-ref t 4))
-
+(define (debug-text-view id text size layout) (list "debug-text-view" id text size layout))
 (define (web-view id data layout) (list "web-view" id data layout))
-(define (web-view-id t) (list-ref t 1))
-(define (web-view-text t) (list-ref t 2))
-(define (web-view-modify-text t v) (list-replace t 2 v))
-(define (web-view-layout t) (list-ref t 3))
-
 (define (edit-text id text size type layout listener) (list "edit-text" id text size type layout listener))
-(define (edit-text-id t) (list-ref t 1))
-(define (edit-text-text t) (list-ref t 2))
-(define (edit-text-modify-text t v) (list-replace t 2 v))
-(define (edit-text-size t) (list-ref t 3))
-(define (edit-text-type t) (list-ref t 4))
-(define (edit-text-layout t) (list-ref t 5))
 (define (edit-text-listener t) (list-ref t 6))
-
 (define (button id text text-size layout listener) (list "button" id text text-size layout listener))
-(define (button-id t) (list-ref t 1))
-(define (button-text t) (list-ref t 2))
-(define (button-modify-text t v) (list-replace t 2 v))
-(define (button-text-size t) (list-ref t 3))
-(define (button-layout t) (list-ref t 4))
 (define (button-listener t) (list-ref t 5))
-
 (define (toggle-button id text text-size layout listener) (list "toggle-button" id text text-size layout listener))
-(define (toggle-button-id t) (list-ref t 1))
-(define (toggle-button-text t) (list-ref t 2))
-(define (toggle-button-modify-text t v) (list-replace t 2 v))
-(define (toggle-button-text-size t) (list-ref t 3))
-(define (toggle-button-layout t) (list-ref t 4))
 (define (toggle-button-listener t) (list-ref t 5))
-
 (define (seek-bar id max layout listener) (list "seek-bar" id max layout listener))
-(define (seek-bar-id t) (list-ref t 1))
-(define (seek-bar-max t) (list-ref t 2))
-(define (seek-bar-layout t) (list-ref t 3))
 (define (seek-bar-listener t) (list-ref t 4))
-
 (define (spinner id items layout listener) (list "spinner" id items layout listener))
-(define (spinner-id t) (list-ref t 1))
-(define (spinner-items t) (list-ref t 2))
-(define (spinner-layout t) (list-ref t 3))
 (define (spinner-listener t) (list-ref t 4))
-
 (define (canvas id layout drawlist) (list "canvas" id layout drawlist))
-(define (canvas-id t) (list-ref t 1))
-(define (canvas-layout t) (list-ref t 2))
 (define (canvas-drawlist t) (list-ref t 3))
-
 (define (button-grid id type height textsize layout buttons listener)
   (list "button-grid" id type height textsize layout buttons listener))
 (define (button-grid-listener b) (list-ref b 7))
-
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
+
+
 
 (define (toast msg) (list "toast" 0 "toast" msg))
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
@@ -760,7 +693,7 @@
       (if (not (null? c))
           (update-callbacks! c)
           (let ((cb (widget-get-callback w)))
-            (when cb (add-callback! (callback (edit-text-id w) (widget-type w) cb))))))
+            (when cb (add-callback! (callback (widget-id w) (widget-type w) cb))))))
     (update-callbacks! (cdr widget-list)))))
 
 ;; walk through update stripping callbacks
