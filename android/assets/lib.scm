@@ -788,7 +788,7 @@
     r))
 
 (define (top-callback type activity-name activity args)
-  (display "activity-callback ")(display type)(display " ")(display args)(newline)
+  ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
   (if (not activity)
       (begin (display "no activity/fragment called ")(display activity-name)(newline))
       (let ((ret (cond
@@ -807,11 +807,8 @@
          ((eq? type 'on-create)
           (update-callbacks! (list ret)))
          (else
-          (msg "updating dialogs")
           (update-dialogs! ret)
-          (msg "updating callbacks" ret)
-          (update-callbacks-from-update! ret)
-          (msg "done")))
+          (update-callbacks-from-update! ret)))
         (send (scheme->json ret)))))
 
 (define (find-activity-or-fragment name)

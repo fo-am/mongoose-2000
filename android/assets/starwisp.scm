@@ -1344,8 +1344,18 @@
              (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
-     (text-view (make-id "new-individual-dob") "00/00/00" 25 fillwrap)
-     (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
+     (text-view (make-id "new-individual-dob") (date->string (list date-day date-month date-year)) 25 fillwrap)
+     (button (make-id "date") "Set date" 20 fillwrap
+             (lambda ()
+               (list (date-picker-dialog
+                      "new-individual-date"
+                      (lambda (day month year)
+                        (let ((datestring (date->string (list day (+ month 1) year))))
+                          (entity-add-value! "dob" "varchar" datestring)
+                          (list
+                           (update-widget
+                            'text-view
+                            (get-id "new-individual-dob") 'text datestring)))))))))
     (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
@@ -1364,6 +1374,12 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     ;; make sure all fields exist
+     (entity-add-value! "name" "varchar" "noname")
+     (entity-add-value! "gender" "varchar" "Female")
+     (entity-add-value! "dob" "varchar" "00/00/00")
+     (entity-add-value! "litter-code" "varchar" "123")
+     (entity-add-value! "chip-code" "varchar" "123")
      (list
       (update-widget 'text-view (get-id "new-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))))
@@ -1387,7 +1403,18 @@
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 20 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
-     (button (make-id "date") "Set date" 20 fillwrap (lambda () '())))
+     (button (make-id "date") "Set date" 20 fillwrap
+             (lambda ()
+               (list (date-picker-dialog
+                      "update-individual-date"
+                      (lambda (day month year)
+                        (let ((datestring (date->string (list day (+ month 1) year))))
+                          (entity-add-value! "dob" "varchar" datestring)
+                          (list
+                           (update-widget
+                            'text-view
+                            (get-id "update-individual-dob") 'text datestring)))))))))
+
     (text-view (make-id "update-individual-litter-text") "Litter code" 20 fillwrap)
     (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
@@ -1396,15 +1423,15 @@
                (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (spacer 10)
     (horiz
-     (button (make-id "update-individual-delete") "Delete" 20 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "update-individual-died") "Died" 20 fillwrap (lambda () (list (finish-activity 2)))))
+     (mbutton2 "update-individual-delete" "Delete" (lambda () (list (finish-activity 2))))
+     (mbutton2 "update-individual-died" "Died" (lambda () (list (finish-activity 2)))))
     (horiz
-     (button (make-id "update-individual-cancel") "Cancel" 20 fillwrap
-             (lambda () (entity-reset!) (list (finish-activity 2))))
-     (button (make-id "update-individual-done") "Done" 20 fillwrap
-             (lambda ()
-               (entity-update-values db "sync")
-               (list (finish-activity 2)))))
+     (mbutton2 "update-individual-cancel" "Cancel"
+               (lambda () (entity-reset!) (list (finish-activity 2))))
+     (mbutton2 "update-individual-done" "Done"
+               (lambda ()
+                 (entity-update-values db "sync")
+                 (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1414,6 +1441,8 @@
        (list
         (update-widget 'edit-text (get-id "update-individual-name") 'text
                        (ktv-get individual "name"))
+        (update-widget 'text-view (get-id "update-individual-dob") 'text
+                       (ktv-get individual "dob"))
         (update-widget 'spinner (get-id "update-individual-gender") 'selection
                        (if (equal? (ktv-get individual "gender") "Female") 0 1))
         (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
