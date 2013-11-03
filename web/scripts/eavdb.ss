@@ -446,7 +446,7 @@
    (lambda (kt r)
      (if (equal? r "") (string-append "\"" (ktv-key kt) "\"")
          (string-append r ", \"" (ktv-key kt) "\"")))
-   "id, "
+   "\"id\""
    (get-attribute-ids/types db table entity-type)))
 
 (define (csv db table entity-type)
@@ -474,7 +474,7 @@
              (string-append r ", \"" (get-entity-name db "sync" (ktv-value ktv)) "\""))
             (else
              (string-append r ", \"" (stringify-value-url ktv) "\""))))
-         (vector-ref res 1) ;; unique_id
+         (string-append "\"" (vector-ref res 1) "\"") ;; unique_id
          entity))))
    (csv-titles db table entity-type)
    (cdr (db-select
@@ -614,6 +614,7 @@
 
 (asserteq "cleaning" (length (dirty-entities db table)) 0)
 
+(msg (csv db table "thing"))
 
 (msg (db-status db))
 )

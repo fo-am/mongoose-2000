@@ -75,6 +75,18 @@
        (scheme->txt
         (send-entity db table unique-id)))))
 
+   (register
+    (req 'entity-types '(table))
+    (lambda (table)
+      (pluto-response
+       (scheme->txt
+        (get-all-entity-types db table)))))
+
+   (register
+    (req 'entity-csv '(table type))
+    (lambda (table type)
+      (pluto-response
+        (csv db table type))))
 
    ))
 
