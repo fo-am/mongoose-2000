@@ -172,6 +172,9 @@
        "select entity_type from " table "_entity where entity_id = ?")
        entity-id))
 
+(define (get-all-entity-types db table)
+  (cdr (db-select db (string-append "select distinct entity_type from " table "_entity;"))))
+
 ;; get all the (current) attributes for an entity type
 (define (get-attribute-ids/types db table entity-type)
   (let ((s (db-select

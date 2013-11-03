@@ -125,6 +125,12 @@
   (msg "insert-entity")
   (insert-entity-wholesale db table entity-type (get-unique user) 1 0 ktvlist))
 
+;; insert an entire entity
+(define (insert-entity/get-unique db table entity-type user ktvlist)
+  (let ((uid (get-unique user)))
+    (insert-entity-wholesale db table entity-type uid 1 0 ktvlist)
+    uid))
+
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
   (msg "insert-entity-w")
@@ -147,26 +153,35 @@
     id))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
+;; creates the value if it doesn't already exist, updates it otherwise
 (define (update-value db table entity-id ktv)
-  (msg "update-value" table entity-id ktv)
-  (db-exec
-   db (string-append "update " table "_value_" (ktv-type ktv)
-                     " set value=?  where entity_id = ? and attribute_id = ?")
-   (ktv-value ktv) entity-id (ktv-key ktv))
-  (msg (db-status db)))
-
+  (if (null? (select-first
+              db (string-append
+                  "select * from " table "_value_" (ktv-type ktv) " where entity_id = ? and attribute_id = ?")
+              entity-id (ktv-key ktv)))
+      (insert-value db table entity-id ktv)
+      (db-exec
+       db (string-append "update " table "_value_" (ktv-type ktv)
+                         " set value=?  where entity_id = ? and attribute_id = ?")
+       (ktv-value ktv) entity-id (ktv-key ktv))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; getting data out
 
 (define (entity-exists? db table unique-id)
-  (not (null? (select-first db (string-append "select * from " table "_entity where unique_id = '" unique-id "';")))))
+  (not (null? (select-first
+               db (string-append
+                   "select * from " table "_entity where unique_id = ?")
+               unique-id))))
 
 (define (get-entity-type db table entity-id)
   (select-first
    db (string-append
        "select entity_type from " table "_entity where entity_id = ?")
        entity-id))
+
+(define (get-all-entity-types db table)
+  (cdr (db-select db (string-append "select distinct entity_type from " table "_entity;"))))
 
 ;; get all the (current) attributes for an entity type
 (define (get-attribute-ids/types db table entity-type)
@@ -231,6 +246,13 @@
     (ktv-value (car ktv-list)))
    (else (ktv-get (cdr ktv-list) key))))
 
+(define (ktv-set ktv-list ktv)
+  (cond
+   ((null? ktv-list) (list ktv))
+   ((equal? (ktv-key (car ktv-list)) (ktv-key ktv))
+    (cons ktv (cdr ktv-list)))
+   (else (cons (car ktv-list) (ktv-set (cdr ktv-list) ktv)))))
+
 (define (db-all db table type)
   (map
    (lambda (i)
@@ -265,7 +287,12 @@
     (cond
      ((null? entity-type) (msg "entity" entity-id "not found!") '())
      (else
-      ;; todo - do we want to create new attributes here???
+      ;; update main entity type
+      (for-each
+       (lambda (ktv)
+         (when (not (equal? (ktv-key ktv) "unique_id"))
+               (find/add-attribute-type db table entity-type (ktv-key ktv) (ktv-type ktv))))
+       ktvlist)
       (for-each
        (lambda (ktv)
          (update-value db table entity-id ktv))
@@ -292,12 +319,14 @@
 ;; versioning
 
 (define (get-entity-version db table entity-id)
-  (select-first db (string-append "select version from " table "_entity where entity_id = ?")
-                entity-id))
+  (select-first
+   db (string-append "select version from " table "_entity where entity_id = ?")
+   entity-id))
 
 (define (get-entity-dirty db table entity-id)
-  (select-first db (string-append "select dirty from " table "_entity where entity_id = ?")
-                entity-id))
+  (select-first
+   db (string-append "select dirty from " table "_entity where entity_id = ?")
+   entity-id))
 
 (define (update-entity-changed db table entity-id)
   (db-exec
@@ -309,7 +338,7 @@
   (db-exec
    db (string-append
        "update " table "_entity set dirty=?, version=? where entity_id = ?")
-   1 entity-id version))
+   1 version entity-id))
 
 (define (update-entity-clean db table unique-id)
   (db-exec
@@ -336,7 +365,7 @@
             (cdr (vector->list i))
             ;; data entries (todo - only dirty values!)
             (get-entity-plain db table (vector-ref i 0))))
-         de))))
+         (cdr de)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing
@@ -359,7 +388,7 @@
    (lambda (i r)
      (string-append
       r "\n" (vector-ref i 0) " " (vector-ref i 1) " "
-      (stringify-ktvlist (get-entity db table (string->number (vector-ref i 0))))))
+      (stringify-ktvlist (get-entity db table (vector-ref i 0)))))
    ""
    (cdr (db-select
          db (string-append "select * from " table "_entity where dirty=1;")))))
@@ -370,7 +399,7 @@
    (lambda (i)
      (list
       (vector->list i)
-      (get-entity db table (string->number (vector-ref i 0)))))
+      (get-entity db table (vector-ref i 0))))
    (cdr (db-select
          db (string-append "select * from " table "_entity where dirty=1;")))))
 
@@ -400,6 +429,58 @@
        "select entity_id from " table "_entity where unique_id = ?")
    unique-id))
 
+(define (get-entity-name db table unique-id)
+  (ktv-get (get-entity db table (get-entity-id db table unique-id)) "name"))
+
+(define (get-entity-names db table id-list)
+  (foldl
+   (lambda (id r)
+     (if (equal? r "")
+         (get-entity-name db table id)
+         (string-append r ", " (get-entity-name db table id))))
+   ""
+   id-list))
+
+(define (csv-titles db table entity-type)
+  (foldl
+   (lambda (kt r)
+     (if (equal? r "") (string-append "\"" (ktv-key kt) "\"")
+         (string-append r ", \"" (ktv-key kt) "\"")))
+   "id, "
+   (get-attribute-ids/types db table entity-type)))
+
+(define (csv db table entity-type)
+  (foldl
+   (lambda (res r)
+     (let ((entity (get-entity db table (vector-ref res 0))))
+       (string-append
+        r "\n"
+        (foldl
+         (lambda (ktv r)
+           (cond
+            ((equal? (ktv-key ktv) "unique_id") r)
+            ((null? (ktv-value ktv))
+             (msg "value not found in csv for " (ktv-key ktv))
+             r)
+            ;; dereferences lists of ids
+            ((and
+              (> (string-length (ktv-key ktv)) 8)
+              (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
+             (string-append r ", \"" (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))) "\""))
+            ;; look for unique ids and dereference them
+            ((and
+              (> (string-length (ktv-key ktv)) 3)
+              (equal? (substring (ktv-key ktv) 0 3) "id-"))
+             (string-append r ", \"" (get-entity-name db "sync" (ktv-value ktv)) "\""))
+            (else
+             (string-append r ", \"" (stringify-value-url ktv) "\""))))
+         (vector-ref res 1) ;; unique_id
+         entity))))
+   (csv-titles db table entity-type)
+   (cdr (db-select
+         db (string-append
+             "select entity_id, unique_id from "
+             table "_entity where entity_type = ?") entity-type))))
 
 
 (define (db-open db-name)
@@ -414,6 +495,9 @@
        (setup db "sync")
        (setup db "stream")
        db))))
+
+
+
 
 
 (define (unit-tests)
