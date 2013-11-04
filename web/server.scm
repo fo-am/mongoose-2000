@@ -85,8 +85,10 @@
    (register
     (req 'entity-csv '(table type))
     (lambda (table type)
-      (pluto-response
-        (csv db table type))))
+      (let ((r (csv db table type)))
+	(msg "--------------------------------------- csv request for" type "[" r "]")
+	(pluto-response
+	 r))))
 
    ))
 
@@ -95,14 +97,15 @@
     (msg "got a request" request)
     (if (not (null? values))   ; do we have some parameters?
         (let ((name (assq 'fn values)))
-          (when name           ; is this a well formed request?
-                (request-dispatch
-                 registered-requests
-                 (req (string->symbol (cdr name))
-                      (filter
-                       (lambda (v)
-                         (not (eq? (car v) 'fn)))
-                       values)))))
+          (if name           ; is this a well formed request?
+	      (request-dispatch
+	       registered-requests
+	       (req (string->symbol (cdr name))
+		    (filter
+		     (lambda (v)
+		       (not (eq? (car v) 'fn)))
+		     values)))
+	      (pluto-response "could't find a function name")))
         (pluto-response "malformed thingy"))))
 
 (printf "server is running...~n")

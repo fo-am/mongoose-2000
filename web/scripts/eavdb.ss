@@ -26,7 +26,7 @@
 (define db-exec exec/ignore)
 (define db-select select)
 (define db-insert insert)
-(define (db-status a) "")
+(define (db-status db) (errmsg db))
 (define (time) (list (random) (random))) ; ahem
 
 
@@ -79,7 +79,6 @@
 
 ;; get the type from the attribute table with an entity/key
 (define (get-attribute-type db table entity-type key)
-  (msg "get-attribute-type")
   (let ((sql (string-append
               "select attribute_type from " table
               "_attribute where entity_type = ? and attribute_id = ?")))
@@ -87,7 +86,6 @@
 
 ;; search for a type and add it if it doesn't exist
 (define (find/add-attribute-type db table entity-type key type)
-  (msg "find/add-attribute")
   (let ((t (get-attribute-type db table entity-type key)))
     ;; add and return passed in type if not exist
     (cond
@@ -109,7 +107,6 @@
 
 ;; low level insert of a ktv
 (define (insert-value db table entity-id ktv)
-  (msg "insert-value")
   ;; use type to dispatch insert to correct value table
   (db-insert db (string-append "insert into " table "_value_" (ktv-type ktv)
                                " values (null, ?, ?, ?, 0)")
@@ -122,7 +119,6 @@
 
 ;; insert an entire entity
 (define (insert-entity db table entity-type user ktvlist)
-  (msg "insert-entity")
   (insert-entity-wholesale db table entity-type (get-unique user) 1 0 ktvlist))
 
 ;; insert an entire entity
@@ -133,23 +129,32 @@
 
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
-  (msg "insert-entity-w")
-  (msg table entity-type ktvlist)
+  (msg "1" (db-status db))
   (let ((id (db-insert
              db (string-append
                  "insert into " table "_entity values (null, ?, ?, ?, ?)")
              entity-type unique-id dirty version)))
     ;; create the attributes if they are new, and validate them if they exist
+    (msg "2" (db-status db))
+
+;    (db-exec db "begin transaction")
+    (msg "3" (db-status db))
+
     (for-each
      (lambda (ktv)
        (find/add-attribute-type db table entity-type (ktv-key ktv) (ktv-type ktv)))
      ktvlist)
+    (msg "4" (db-status db))
+
     ;; add all the keys
     (for-each
      (lambda (ktv)
-       (msg (ktv-key ktv))
        (insert-value db table id ktv))
      ktvlist)
+    (msg "5" (db-status db))
+
+;   (db-exec db "end transaction")
+    (msg "6" (db-status db))
     id))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
@@ -430,7 +435,14 @@
    unique-id))
 
 (define (get-entity-name db table unique-id)
-  (ktv-get (get-entity db table (get-entity-id db table unique-id)) "name"))
+  (let ((e (get-entity-id db table unique-id)))
+    (if (null? e)
+	unique-id
+	(let ((r (ktv-get (get-entity db table e) "name")))
+	  (if (null? r) 
+	      (begin ;(msg "no name for" unique-id "found")
+		unique-id)
+	      r)))))
 
 (define (get-entity-names db table id-list)
   (foldl
@@ -460,14 +472,14 @@
            (cond
             ((equal? (ktv-key ktv) "unique_id") r)
             ((null? (ktv-value ktv))
-             (msg "value not found in csv for " (ktv-key ktv))
+             ;;(msg "value not found in csv for " (ktv-key ktv))
              r)
             ;; dereferences lists of ids
             ((and
               (> (string-length (ktv-key ktv)) 8)
               (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
              (string-append r ", \"" (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))) "\""))
-            ;; look for unique ids and dereference them
+	    ;; look for unique ids and dereference them
             ((and
               (> (string-length (ktv-key ktv)) 3)
               (equal? (substring (ktv-key ktv) 0 3) "id-"))
@@ -477,10 +489,11 @@
          (string-append "\"" (vector-ref res 1) "\"") ;; unique_id
          entity))))
    (csv-titles db table entity-type)
-   (cdr (db-select
-         db (string-append
-             "select entity_id, unique_id from "
-             table "_entity where entity_type = ?") entity-type))))
+   (let ((r (db-select
+	     db (string-append
+		 "select entity_id, unique_id from "
+		 table "_entity where entity_type = ?") entity-type)))
+     (if (null? r) r (cdr r)))))
 
 
 (define (db-open db-name)
@@ -619,4 +632,4 @@
 (msg (db-status db))
 )
 
-(unit-tests)
+;(unit-tests)
