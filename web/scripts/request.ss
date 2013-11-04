@@ -24,6 +24,7 @@
 (require web-server/http/response-structs "filter-string.ss" "list.ss" "utils.ss")
 
 (define (pluto-response txt)
+  ;;txt
   (response/full
    200                ; code
    #"Okay"            ; message
