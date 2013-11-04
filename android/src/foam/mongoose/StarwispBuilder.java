@@ -184,6 +184,37 @@ public class StarwispBuilder
         }
     }
 
+
+    public static void email(Context context, String emailTo, String emailCC,
+                             String subject, String emailText, List<String> filePaths)
+    {
+        //need to "send multiple" to get more than one attachment
+        final Intent emailIntent = new Intent(android.content.Intent.ACTION_SEND_MULTIPLE);
+        emailIntent.setType("text/plain");
+        emailIntent.putExtra(android.content.Intent.EXTRA_EMAIL,
+        new String[]{emailTo});
+        emailIntent.putExtra(android.content.Intent.EXTRA_CC,
+                             new String[]{emailCC});
+        emailIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
+
+        ArrayList<String> extra_text = new ArrayList<String>();
+        extra_text.add(emailText);
+        emailIntent.putStringArrayListExtra(Intent.EXTRA_TEXT, extra_text);
+        //emailIntent.putExtra(Intent.EXTRA_TEXT, emailText);
+
+        //has to be an ArrayList
+        ArrayList<Uri> uris = new ArrayList<Uri>();
+        //convert from paths to Android friendly Parcelable Uri's
+        for (String file : filePaths)
+        {
+            File fileIn = new File(file);
+            Uri u = Uri.fromFile(fileIn);
+            uris.add(u);
+        }
+        emailIntent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+        context.startActivity(Intent.createChooser(emailIntent, "Send mail..."));
+    }
+
     public void Build(final StarwispActivity ctx, final String ctxname, JSONArray arr, ViewGroup parent) {
 
         try {
@@ -760,7 +791,17 @@ public class StarwispBuilder
                     Log.i("starwisp","attempting http request");
                     final String name = arr.getString(3);
                     final String url = arr.getString(5);
-                    m_NetworkManager.StartRequestThread(url,name);
+                    m_NetworkManager.StartRequestThread(url,"normal",name);
+                }
+                return;
+            }
+
+            if (token.equals("http-download")) {
+                if (m_NetworkManager.state==NetworkManager.State.CONNECTED) {
+                    Log.i("starwisp","attempting http dl request");
+                    final String filename = arr.getString(4);
+                    final String url = arr.getString(5);
+                    m_NetworkManager.StartRequestThread(url,"download",filename);
                 }
                 return;
             }
@@ -772,31 +813,15 @@ public class StarwispBuilder
                 final String subject = arr.getString(4);
                 final String body = arr.getString(5);
 
-                Intent i = new Intent(Intent.ACTION_SEND);
-                i.setType("plain/text");
-                i.putExtra(Intent.EXTRA_EMAIL, to);
-                i.putExtra(Intent.EXTRA_SUBJECT, subject);
-                i.putExtra(Intent.EXTRA_TEXT, body);
-
                 JSONArray attach = arr.getJSONArray(6);
-
-/*                ArrayList<Uri> uris = new ArrayList<Uri>();
-                //convert from paths to Android friendly Parcelable Uri's
+                ArrayList<String> paths = new ArrayList<String>();
                 for (int a=0; a<attach.length(); a++)
                 {
                     Log.i("starwisp",attach.getString(a));
-                    File fileIn = new File(attach.getString(a));
-                    Uri u = Uri.fromFile(fileIn);
-                    uris.add(u);
+                    paths.add(attach.getString(a));
                 }
-*/
-                //i.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
-                i.putExtra(Intent.EXTRA_STREAM, Uri.parse("file://"+attach.getString(0)));
-                try {
-                    ctx.startActivity(Intent.createChooser(i, "Send mail..."));
-                } catch (android.content.ActivityNotFoundException ex) {
-                    Toast.makeText(ctx, "There are no email clients installed.", Toast.LENGTH_SHORT).show();
-                }
+
+                email(ctx, to[0], "", subject, body, paths);
             }
 
             if (token.equals("date-picker-dialog")) {

@@ -360,6 +360,22 @@
             (get-entity-plain db table (vector-ref i 0))))
          (cdr de)))))
 
+(define (dirty-and-all-entities db table)
+  (let ((de (db-select
+             db (string-append
+                 "select entity_id, entity_type, unique_id, dirty, version from " table "_entity"))))
+    (if (null? de)
+        '()
+        (map
+         (lambda (i)
+           (list
+            ;; build according to url ([table] entity-type unique-id dirty version)
+            (cdr (vector->list i))
+            ;; data entries (todo - only dirty values!)
+            (get-entity-plain db table (vector-ref i 0))))
+         (cdr de)))))
+
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing
 

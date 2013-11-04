@@ -100,10 +100,10 @@ public class NetworkManager {
 
     }
 
-    public void StartRequestThread(final String url, final String callbackname) {
+    public void StartRequestThread(final String url, final String t, final String callbackname) {
         Runnable runnable = new Runnable() {
 	        public void run() {
-                Request(url, callbackname);
+                Request(url, t, callbackname);
 	        }
         };
         Thread mythread = new Thread(runnable);
@@ -111,15 +111,17 @@ public class NetworkManager {
     }
 
     private class ReqMsg {
-        ReqMsg(InputStream is, String c) {
+        ReqMsg(InputStream is, String t, String c) {
             m_Stream=is;
+            m_Type=t;
             m_CallbackName=c;
         }
         public InputStream m_Stream;
+        public String m_Type;
         public String m_CallbackName;
     }
 
-    private void Request(String u, String CallbackName) {
+    private void Request(String u, String type, String CallbackName) {
         try {
             Log.i("starwisp","pinging: "+u);
             URL url = new URL(u);
@@ -135,7 +137,7 @@ public class NetworkManager {
             con.connect();
             m_RequestHandler.sendMessage(
                 Message.obtain(m_RequestHandler, 0,
-                               new ReqMsg(con.getInputStream(),CallbackName)));
+                               new ReqMsg(con.getInputStream(),type,CallbackName)));
 
         } catch (Exception e) {
             Log.i("starwisp",e.toString());
@@ -161,8 +163,14 @@ public class NetworkManager {
             while ((line = reader.readLine()) != null) {
                 all+=line+"\n";
             }
-            Log.i("starwisp","got data: "+all);
-            m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
+            Log.i("starwisp","got data for "+m.m_CallbackName+"["+all+"]");
+
+            if (m.m_Type.equals("download")) {
+                m_Builder.SaveData(m.m_CallbackName, all.getBytes());
+            } else {
+                // results in evaluating data read from via http - fix if used from net
+                m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
@@ -175,6 +183,9 @@ public class NetworkManager {
             }
         }
     }
+
+
+
 
     private class WiFiScanReceiver extends BroadcastReceiver {
         private static final String TAG = "WiFiScanReceiver";

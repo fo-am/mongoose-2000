@@ -220,13 +220,31 @@
       (string-append "req-" (list-ref (car e) 1))
       (build-url-from-entity table e)
       (lambda (v)
-        (display v)(newline)
+        (msg "spat" e v)
         (if (equal? (car v) "inserted")
             (begin
               (update-entity-clean db table (cadr v))
-              (toast "Uploaded " (ktv-get (cadr e) "name")))
-            (toast "Problem uploading " (ktv-get (cadr e) "name"))))))
+              (toast (string-append "Uploaded " (car (car e)))))
+            (toast (string-append "Problem uploading " (car (car e))))))))
    (dirty-entities db table)))
+
+;; spit all dirty entities to server
+(define (spit-all db table)
+  (map
+   (lambda (e)
+     (msg "spit all" e)
+     (http-request
+      (string-append "req-" (list-ref (car e) 1))
+      (build-url-from-entity table e)
+      (lambda (v)
+        (msg "spat" e v)
+        (if (equal? (car v) "inserted")
+            (begin
+              (update-entity-clean db table (cadr v))
+              (toast (string-append "Uploaded " (car (car e)))))
+            (toast (string-append "Problem uploading " (car (car e))))))))
+   (dirty-and-all-entities db table)))
+
 
 (define (suck-entity-from-server db table unique-id exists)
   ;; ask for the current version
@@ -1507,7 +1525,13 @@
                   (lambda (state)
                       (list
                        (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
-     (mbutton2 "sync-sync" "Push"
+     (mbutton2 "sync-syncall" "Push all"
+              (lambda ()
+                (let ((r (append
+                          (spit-all db "sync")
+                          (spit-all db "stream"))))
+                  (cons (toast "Uploading data...") r))))
+     (mbutton2 "sync-sync" "Push changes"
               (lambda ()
                 (let ((r (append
                           (spit-dirty db "sync")
@@ -1520,16 +1544,27 @@
                 (cons (toast "Downloading data...") (suck-new db "sync")))))
     (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left 0))
     (horiz
-     (mbutton2 "sync-prof" "Profile" (lambda () (prof-print) '()))
-     (mbutton2 "sync-prof" "CSV"
+     (mbutton2 "sync-download" "Download"
                (lambda ()
-                 (for-each
+                 (map
                   (lambda (e)
-                    (msg e)
-                    (msg (csv db "stream" e)))
-                  entity-types)
-                 '()))
-     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2)))))
+                    (http-download
+                     (string-append "getting-" e)
+                     (string-append url "fn=entity-csv&table=stream&type=" e)
+                     (string-append "/sdcard/mongoose/" e ".csv")))
+                  entity-types)))
+     (mbutton2 "sync-export" "Export"
+               (lambda ()
+                 (list
+                  (send-mail
+                   ""
+                   "From Mongoose2000" "Please find attached your mongoose data"
+                   (map
+                    (lambda (e)
+                      (string-append "/sdcard/mongoose/" e ".csv"))
+                    entity-types))))))
+
+    (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))
 
 
     )

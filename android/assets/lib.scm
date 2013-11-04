@@ -468,6 +468,7 @@
 (define (delayed name delay fn) (list "delayed" 0 "delayed" name fn delay))
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
+(define (http-download name url filename) (list "http-download" 0 "http-download" name filename url))
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
 
 (define (dialog-fragment id layout fragment-name fn)

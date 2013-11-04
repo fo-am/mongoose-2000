@@ -139,6 +139,9 @@
              db (string-append
                  "insert into " table "_entity values (null, ?, ?, ?, ?)")
              entity-type unique-id dirty version)))
+
+    (db-exec db "begin transaction")
+
     ;; create the attributes if they are new, and validate them if they exist
     (for-each
      (lambda (ktv)
@@ -150,6 +153,8 @@
        (msg (ktv-key ktv))
        (insert-value db table id ktv))
      ktvlist)
+
+    (db-exec db "end transaction")
     id))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
