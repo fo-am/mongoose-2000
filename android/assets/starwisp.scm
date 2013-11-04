@@ -221,11 +221,14 @@
       (build-url-from-entity table e)
       (lambda (v)
         (msg "spat" e v)
-        (if (equal? (car v) "inserted")
+        (if (or
+             (equal? (car v) "inserted")
+             (equal? (car v) "match"))
             (begin
+              (msg "cleaning...")
               (update-entity-clean db table (cadr v))
-              (toast (string-append "Uploaded " (car (car e)))))
-            (toast (string-append "Problem uploading " (car (car e))))))))
+              (list (toast (string-append "Uploaded " (car (car e))))))
+            (list (toast (string-append "Problem uploading " (car (car e)))))))))
    (dirty-entities db table)))
 
 ;; spit all dirty entities to server
@@ -477,7 +480,7 @@
     0 'vertical fillwrap trans-col
     (list
      (linear-layout
-      (make-id "ev-pf") 'vertical wrapfill pf-col
+      (make-id "ev-pf") 'vertical fill pf-col
       (list
        (mtitle "ev-pf-text" "Pup Focal Events")
        (horiz
@@ -1194,6 +1197,8 @@
       (mbutton "pf1-done" "Done"
                (lambda ()
                  (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
+                 (set-current! 'timer-minutes 20)
+                 (set-current! 'timer-seconds 59)
                  (list
                   (start-activity "pup-focal" 2 ""))))
       )))
@@ -1222,28 +1227,36 @@
      (list
       (horiz
        (mtitle "title" "Pup Focal")
-       (vert
-        (mtext "title" "Time left:")
-        (mtitle "pf-timer-time-minutes" "20"))
-       (vert
-        (mtext "title" "Next scan:")
-        (mtitle "pf-timer-time" "60"))
+       (linear-layout
+        0 'vertical fillwrap trans-col
+        (list
+         (mtext "title" "Time left:")
+         (mtitle "pf-timer-time-minutes"
+                 (number->string (get-current 'timer-minutes 20)))))
+       (linear-layout
+        0 'vertical fillwrap trans-col
+        (list
+         (mtext "title" "Next scan:")
+         (mtitle "pf-timer-time"
+                 (number->string (get-current 'timer-seconds 60)))))
        (mtoggle-button "pf-pause" "Pause"
                        (lambda (v)
                          (msg "pausing")
                          (if v
                              (list (delayed "timer" 1000 (lambda () '())))
                              (list (delayed "timer" 1000 timer-cb))))))
-      (build-fragment "pf-timer" (make-id "pf-top") (layout 595 400 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 595 450 1 'left 0))
+      (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 400 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 450 1 'left 0))
       (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0))))))
 
     (lambda (activity arg)
       (activity-layout activity))
     (lambda (activity arg)
-      (set-current! 'timer-minutes 20)
-      (set-current! 'timer-seconds 59)
       (list
+       (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
+                      (number->string (get-current 'timer-minutes 20)))
+       (update-widget 'text-view (get-id "pf-timer-time") 'text
+                      (number->string (get-current 'timer-seconds 60)))
        (delayed "timer" 1000 timer-cb)))
     (lambda (activity) '())
     (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))

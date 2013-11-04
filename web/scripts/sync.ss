@@ -57,6 +57,10 @@
          ((and (eq? dirty 0) (eq? version current-version))
           (list "no change" unique-id))
 
+         ;; dirty but matches, should be ok (timeout causes this)
+         ((and (eq? dirty 1) (eq? version current-version))
+          (list "match" unique-id))
+
          ;; need to update existing data, newer version from android
          ((and (eq? dirty 1) (> version current-version) )
           (sync-update db table entity-type unique-id dirty version data))

@@ -129,8 +129,8 @@ public class NetworkManager {
                 .openConnection();
 
             con.setUseCaches(false);
-            con.setReadTimeout(10000 /* milliseconds */);
-            con.setConnectTimeout(15000 /* milliseconds */);
+            con.setReadTimeout(100000 /* milliseconds */);
+            con.setConnectTimeout(150000 /* milliseconds */);
             con.setRequestMethod("GET");
             con.setDoInput(true);
             // Starts the query
