@@ -431,6 +431,8 @@
 (define (frame-layout-children t) (list-ref t 3))
 (define (scroll-view id layout children)
   (list "scroll-view" id layout children))
+(define (scroll-view-vert id layout children)
+  (list "scroll-view-vert" id layout children))
 (define (scroll-view-children t) (list-ref t 3))
 (define (view-pager id layout fragment-list)
   (list "view-pager" id layout fragment-list))

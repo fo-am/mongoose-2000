@@ -69,6 +69,7 @@ import android.text.TextWatcher;
 import android.text.Html;
 import android.text.Editable;
 import android.text.method.LinkMovementMethod;
+import android.text.method.ScrollingMovementMethod;
 import android.widget.DatePicker;
 import android.hardware.Camera.PictureCallback;
 import android.hardware.Camera.Size;
@@ -296,6 +297,19 @@ public class StarwispBuilder
                 return;
             }
 
+            if (type.equals("scroll-view-vert")) {
+                ScrollView v = new ScrollView(ctx);
+                v.setId(arr.getInt(1));
+                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(2)));
+                parent.addView(v);
+                JSONArray children = arr.getJSONArray(3);
+                for (int i=0; i<children.length(); i++) {
+                    Build(ctx,ctxname,new JSONArray(children.getString(i)), v);
+                }
+                return;
+            }
+
+
             if (type.equals("view-pager")) {
                 ViewPager v = new ViewPager(ctx);
                 v.setId(arr.getInt(1));
@@ -376,15 +390,19 @@ public class StarwispBuilder
             }
 
             if (type.equals("debug-text-view")) {
-                TextView v = new TextView(ctx);
+                TextView v = (TextView)ctx.getLayoutInflater().inflate(R.layout.debug_text, null);
 //                v.setBackgroundResource(R.color.black);
                 v.setId(arr.getInt(1));
-                v.setText(Html.fromHtml(arr.getString(2)));
+//                v.setText(Html.fromHtml(arr.getString(2)));
 //                v.setTextColor(R.color.white);
-                v.setTextSize(arr.getInt(3));
-                v.setMovementMethod(LinkMovementMethod.getInstance());
-                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+//                v.setTextSize(arr.getInt(3));
+//                v.setMovementMethod(LinkMovementMethod.getInstance());
+//                v.setMaxLines(10);
+//                v.setVerticalScrollBarEnabled(true);
+//                v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
+                //v.setMovementMethod(new ScrollingMovementMethod());
 
+                /*
                 if (arr.length()>5) {
                     if (arr.getString(5).equals("left")) {
                         v.setGravity(Gravity.LEFT);
@@ -398,7 +416,7 @@ public class StarwispBuilder
                 } else {
                     v.setGravity(Gravity.LEFT);
                 }
-                v.setTypeface(((StarwispActivity)ctx).m_Typeface);
+                v.setTypeface(((StarwispActivity)ctx).m_Typeface);*/
                 parent.addView(v);
             }
 
@@ -1078,6 +1096,9 @@ public class StarwispBuilder
                 Log.i("starwisp","text-view...");
                 TextView v = (TextView)vv;
                 if (token.equals("text")) {
+                    if (type.equals("debug-text-view")) {
+                        //v.setMovementMethod(new ScrollingMovementMethod());
+                    }
                     v.setText(arr.getString(3));
                 }
                 return;

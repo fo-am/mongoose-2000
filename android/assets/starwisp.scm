@@ -213,41 +213,37 @@
    (build-url-from-ktvlist (cadr e))))
 
 ;; spit all dirty entities to server
-(define (spit-dirty db table)
-  (map
-   (lambda (e)
-     (http-request
-      (string-append "req-" (list-ref (car e) 1))
-      (build-url-from-entity table e)
-      (lambda (v)
-        (msg "spat" e v)
-        (if (or
-             (equal? (car v) "inserted")
-             (equal? (car v) "match"))
-            (begin
-              (msg "cleaning...")
-              (update-entity-clean db table (cadr v))
-              (list (toast (string-append "Uploaded " (car (car e))))))
-            (list (toast (string-append "Problem uploading " (car (car e)))))))))
-   (dirty-entities db table)))
-
-;; spit all dirty entities to server
-(define (spit-all db table)
-  (map
-   (lambda (e)
-     (msg "spit all" e)
-     (http-request
-      (string-append "req-" (list-ref (car e) 1))
-      (build-url-from-entity table e)
-      (lambda (v)
-        (msg "spat" e v)
-        (if (equal? (car v) "inserted")
-            (begin
-              (update-entity-clean db table (cadr v))
-              (toast (string-append "Uploaded " (car (car e)))))
-            (toast (string-append "Problem uploading " (car (car e))))))))
-   (dirty-and-all-entities db table)))
-
+(define (spit db table entities)
+  (foldl
+   (lambda (e r)
+     (append
+      (list
+       (debug (string-append "Sending a " (car (car e)) " to Raspberry Pi"))
+       (http-request
+        (string-append "req-" (list-ref (car e) 1))
+        (build-url-from-entity table e)
+        (lambda (v)
+          (msg "spat" e v)
+          (cond
+           ((or (equal? (car v) "inserted") (equal? (car v) "match"))
+            (update-entity-clean db table (cadr v))
+            (list
+             (debug (string-append "Uploaded " (car (car e))))))
+           ((equal? (car v) "no change")
+            (list (debug (string-append "No change for " (car (car e))))))
+           ((equal? (car v) "updated")
+            (update-entity-clean db table (cadr v))
+            (list (debug (string-append "Updated changed " (car (car e))))))
+           (else
+            (list (toast (string-append
+                          "Problem uploading "
+                          (car (car e)) " : " (car v)))
+                  (debug (string-append
+                          "Problem uploading "
+                          (car (car e)) " : " (car v)))))))))
+      r))
+   '()
+   entities))
 
 (define (suck-entity-from-server db table unique-id exists)
   ;; ask for the current version
@@ -260,24 +256,25 @@
      (let ((entity (list-ref data 0))
            (ktvlist (list-ref data 1)))
        (if (not exists)
-           (begin
-             (insert-entity-wholesale
-              db table
-              (list-ref entity 0) ;; entity-type
-              (list-ref entity 1) ;; unique-id
-              0 ;; dirty
-              (list-ref entity 2) ;; version
-              ktvlist))
+           (insert-entity-wholesale
+            db table
+            (list-ref entity 0) ;; entity-type
+            (list-ref entity 1) ;; unique-id
+            0 ;; dirty
+            (list-ref entity 2) ;; version
+            ktvlist)
            (update-to-version
             db table (get-entity-id db table unique-id)
-            (list-ref entity 4) ktvlist))
+            (list-ref entity 2) ktvlist))
        (list
         (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+        (debug (string-append (if exists "Got new: " "Updated: ") (ktv-get ktvlist "name")))
         (toast (string-append "Downloaded " (ktv-get ktvlist "name"))))))))
 
 ;; repeatedly read version and request updates
 (define (suck-new db table)
   (list
+   (debug "Requesting new entities")
    (http-request
     "new-entities-req"
     (string-append url "fn=entity-versions&table=" table)
@@ -300,8 +297,14 @@
                 '()
                 data)))
         (if (null? r)
-            (cons (toast "All files up to date") r)
-            (cons (toast "Requesting " (length r) " entities") r)))))))
+            (append
+             (list
+              (debug "All files up to date")
+              (toast "All files up to date")) r)
+            (append
+             (list
+              (debug (string-append "Requesting " (number->string (length r)) " entities"))
+              (toast (string-append "Requesting " (number->string (length r)) " entities"))) r)))))))
 
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
@@ -425,6 +428,12 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
+
+(define (debug txt)
+  (set-current! 'debug-text (string-append txt "\n" (get-current 'debug-text "")))
+  (update-widget 'debug-text-view (get-id "sync-debug") 'text
+                 (get-current 'debug-text "")))
+
 
 (define (timer-cb)
   (set-current!
@@ -1536,22 +1545,27 @@
                   "network"
                   "mongoose-web"
                   (lambda (state)
-                      (list
-                       (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
+                    (list
+                     (debug (string-append "Raspberry Pi connection state now: " state))
+                     (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
      (mbutton2 "sync-syncall" "Push all"
               (lambda ()
                 (let ((r (append
-                          (spit-all db "sync")
-                          (spit-all db "stream"))))
+                          (spit db "sync" (dirty-and-all-entities db "sync"))
+                          (spit db "stream" (dirty-and-all-entities db "stream")))))
                   (cons (toast "Uploading data...") r))))
      (mbutton2 "sync-sync" "Push changes"
               (lambda ()
                 (let ((r (append
-                          (spit-dirty db "sync")
-                          (spit-dirty db "stream"))))
-                  (cons (if (> (length r) 0)
-                            (toast "Uploading data...")
-                            (toast "No data changed to upload")) r))))
+                          (spit db "sync" (dirty-entities db "sync"))
+                          (spit db "stream" (dirty-entities db "stream")))))
+                  (append (if (> (length r) 0)
+                              (list
+                               (debug (string-append "Uploading " (number->string (/ (length r) 2)) " items..."))
+                               (toast "Uploading data..."))
+                              (list
+                               (debug "No data changed to upload")
+                               (toast "No data changed to upload"))) r))))
      (mbutton2 "sync-pull" "Pull"
               (lambda ()
                 (cons (toast "Downloading data...") (suck-new db "sync")))))
@@ -1559,16 +1573,22 @@
     (horiz
      (mbutton2 "sync-download" "Download"
                (lambda ()
-                 (map
-                  (lambda (e)
-                    (http-download
-                     (string-append "getting-" e)
-                     (string-append url "fn=entity-csv&table=stream&type=" e)
-                     (string-append "/sdcard/mongoose/" e ".csv")))
+                 (foldl
+                  (lambda (e r)
+                    (append
+                     (list
+                      (debug (string-append "Downloading /sdcard/mongoose/" e ".csv"))
+                      (http-download
+                       (string-append "getting-" e)
+                       (string-append url "fn=entity-csv&table=stream&type=" e)
+                       (string-append "/sdcard/mongoose/" e ".csv")))
+                     r))
+                  '()
                   entity-types)))
      (mbutton2 "sync-export" "Export"
                (lambda ()
                  (list
+                  (debug "Sending mail")
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
@@ -1576,7 +1596,14 @@
                     (lambda (e)
                       (string-append "/sdcard/mongoose/" e ".csv"))
                     entity-types))))))
-
+    (spacer 10)
+    (mtitle "" "Debug")
+    (scroll-view-vert
+     0 (layout 'fill-parent 200 1 'left 0)
+     (list
+      (vert
+       (debug-text-view (make-id "sync-debug") "..." 15 (layout 'fill-parent 400 1 'left 0)))))
+    (spacer 10)
     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))
 
 
@@ -1586,8 +1613,8 @@
      (activity-layout activity))
    (lambda (activity arg)
      (list
+      (update-widget 'debug-text-view (get-id "sync-debug") 'text (get-current 'debug-text ""))
       (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
-      ;;(update-widget 'text-view (get-id "sync-console") 'text (build-sync-debug db "sync"))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
