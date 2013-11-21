@@ -137,7 +137,7 @@
 
     ;; create the attributes if they are new, and validate them if they exist
 
-;    (db-exec db "begin transaction")
+ ;   (db-exec db "begin transaction")
 
     (for-each
      (lambda (ktv)

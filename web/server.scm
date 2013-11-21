@@ -27,7 +27,8 @@
          "scripts/sync.ss"
          "scripts/utils.ss"
          "scripts/eavdb.ss"
-         "scripts/txt.ss")
+         "scripts/txt.ss"
+         "scripts/input.ss")
 
 ; a utility to change the process owner,
 ; assuming mzscheme is called by root.
@@ -37,6 +38,8 @@
 (define db-name "mongoose.db")
 (define db (db-open db-name))
 (open-log "log.txt")
+
+(write-db db "sync" "/home/dave/code/mongoose-web/web/input.csv")
 
 (define registered-requests
   (list

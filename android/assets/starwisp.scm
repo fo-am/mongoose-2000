@@ -400,9 +400,12 @@
    items))
 
 (define (populate-grid-selector name type items fn)
+  (prof-start "popgrid")
+  (prof-start "popgrid setup")
   (let ((id->items (build-button-items name items))
         (selected-set '()))
-    (update-widget
+    (prof-end "popgrid setup")
+    (let ((r (update-widget
      'button-grid (get-id name) 'grid-buttons
      (list
       type 3 20 (layout 100 40 1 'left 0)
@@ -425,6 +428,13 @@
          (else
           (msg (findv v id->items))
           (fn (cadr (findv v id->items))))))))))
+      (prof-end "popgrid")
+      r)))
+
+(define (db-mongooses-by-pack)
+  (db-all-where2
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -540,15 +550,13 @@
      (list
       (populate-grid-selector
        "pf-scan-nearest" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individuals)
          (entity-add-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
@@ -583,8 +591,7 @@
      (list
       (populate-grid-selector
        "pf-pupfeed-who" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -645,8 +652,7 @@
      (list
       (populate-grid-selector
        "pf-pupcare-who" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -695,8 +701,7 @@
      (list
       (populate-grid-selector
        "pf-pupaggr-partner" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-with" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -745,8 +750,7 @@
          (list)))
       (populate-grid-selector
        "gp-int-leader" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -784,8 +788,7 @@
      (list
       (populate-grid-selector
        "gp-alarm-caller" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -829,8 +832,7 @@
      (list
       (populate-grid-selector
        "gp-mov-leader" "single"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -864,8 +866,7 @@
      (list
       (populate-grid-selector
        "gc-start-present" "toggle"
-       (db-all-where db "sync" "mongoose"
-                     (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (list)))
       ))
@@ -890,9 +891,7 @@
      (list
       (populate-grid-selector
        "gc-weigh-choose" "toggle"
-       (db-all-where
-        db "sync" "mongoose"
-        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (list)))
       ))
@@ -915,9 +914,7 @@
      (list
       (populate-grid-selector
        "gc-preg-choose" "toggle"
-       (db-all-where
-        db "sync" "mongoose"
-        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (list)))
       ))
@@ -942,16 +939,12 @@
      (list
       (populate-grid-selector
        "gc-pup-choose" "toggle"
-       (db-all-where
-        db "sync" "mongoose"
-        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (list)))
       (populate-grid-selector
        "gc-pup-escort" "toggle"
-       (db-all-where
-        db "sync" "mongoose"
-        (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (list)))
       ))
@@ -1217,7 +1210,7 @@
      (list
       (populate-grid-selector
        "pf1-grid" "single"
-       (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (set-current! 'individual individual)
          (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
@@ -1358,7 +1351,7 @@
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
-       (db-all-where db "sync" "mongoose" (list "pack-id" (ktv-get (get-current 'pack '()) "unique_id")))
+       (db-mongooses-by-pack)
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
@@ -1605,8 +1598,7 @@
        (debug-text-view (make-id "sync-debug") "..." 15 (layout 'fill-parent 400 1 'left 0)))))
     (spacer 10)
     (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))
-
-
+    (mbutton2 "sync-send" "Prof" (lambda () (prof-print) (list)))
     )
 
    (lambda (activity arg)
