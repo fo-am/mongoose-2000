@@ -963,10 +963,8 @@ public class StarwispBuilder
             }
 
             if (type.equals("button-grid")) {
-                Log.i("starwisp","button-grid update");
                 LinearLayout horiz = (LinearLayout)vv;
                 if (token.equals("grid-buttons")) {
-                    Log.i("starwisp","button-grid contents");
                     horiz.removeAllViews();
 
                     JSONArray params = arr.getJSONArray(3);

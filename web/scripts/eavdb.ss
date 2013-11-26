@@ -127,33 +127,31 @@
     (insert-entity-wholesale db table entity-type uid 1 0 ktvlist)
     uid))
 
+(define sema (make-semaphore 1))
+
 ;; all the parameters - for syncing purposes
 (define (insert-entity-wholesale db table entity-type unique-id dirty version ktvlist)
-  (msg "1" (db-status db))
+  (semaphore-wait sema)
+  (db-exec db "begin transaction")
   (let ((id (db-insert
              db (string-append
                  "insert into " table "_entity values (null, ?, ?, ?, ?)")
              entity-type unique-id dirty version)))
 
     ;; create the attributes if they are new, and validate them if they exist
-
- ;   (db-exec db "begin transaction")
-
     (for-each
      (lambda (ktv)
        (find/add-attribute-type db table entity-type (ktv-key ktv) (ktv-type ktv)))
      ktvlist)
-    (msg "4" (db-status db))
 
     ;; add all the keys
     (for-each
      (lambda (ktv)
        (insert-value db table id ktv))
      ktvlist)
-    (msg "5" (db-status db))
 
-;   (db-exec db "end transaction")
-    (msg "6" (db-status db))
+    (db-exec db "end transaction")
+    (semaphore-post sema)
 
     id))
 

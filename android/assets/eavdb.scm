@@ -273,7 +273,8 @@
                 " as a on a.entity_id = e.entity_id "
                 "join " table "_value_" (ktv-type ktv2)
                 " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value > DateTime(?) ")
+                "where e.entity_type = ? and a.attribute_id = ? "
+                "and b.attribute_id = ? and a.value = ? and b.value > DateTime(?) ")
             type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
     (msg (db-status db))
     (if (null? s)
