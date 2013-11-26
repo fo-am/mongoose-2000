@@ -808,11 +808,11 @@
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
-       (medit-text "gp-mov-w" "Width" "numeric"
+       (medit-text "gp-mov-w" "Pack width" "numeric"
                    (lambda (v) (entity-add-value! "pack-width" "int" (string->number v)) '()))
-       (medit-text "gp-mov-l" "Length" "numeric"
-                   (lambda (v) (entity-add-value! "pack-height" "int" (string->number v)) '()))
-       (medit-text "gp-mov-l" "How many" "numeric"
+       (medit-text "gp-mov-l" "Pack depth" "numeric"
+                   (lambda (v) (entity-add-value! "pack-depth" "int" (string->number v)) '()))
+       (medit-text "gp-mov-c" "How many mongooses?" "numeric"
                    (lambda (v) (entity-add-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
@@ -1045,8 +1045,7 @@
                  (update-entity
                   db "local" 1 (list (ktv "user-id" "varchar" v)))))
     (mtext "foo" "Database")
-    (horiz
-     (mbutton2 "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 ""))))))
+    (mbutton2 "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 "")))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
