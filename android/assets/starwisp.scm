@@ -1240,7 +1240,7 @@
          (mtext "title" "Next scan:")
          (mtitle "pf-timer-time"
                  (number->string (get-current 'timer-seconds 60)))))
-       (mtoggle-button "pf-pause" "Pause" "plain"
+       (mtoggle-button "pf-pause" "Pause"
                        (lambda (v)
                          (msg "pausing")
                          (if v
