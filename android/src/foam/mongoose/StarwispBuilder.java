@@ -479,13 +479,19 @@ public class StarwispBuilder
             }
 
             if (type.equals("toggle-button")) {
-                ToggleButton v = new ToggleButton(ctx);
+                ToggleButton v;
+                if (arr.getString(5).equals("plain")) {
+                    v = new ToggleButton(ctx);
+                } else {
+                    v = (ToggleButton)ctx.getLayoutInflater().inflate(R.layout.toggle_button_fancy, null);
+                }
+
                 v.setId(arr.getInt(1));
                 v.setText(arr.getString(2));
                 v.setTextSize(arr.getInt(3));
                 v.setLayoutParams(BuildLayoutParams(arr.getJSONArray(4)));
                 v.setTypeface(((StarwispActivity)ctx).m_Typeface);
-                final String fn = arr.getString(5);
+                final String fn = arr.getString(6);
                 v.setOnClickListener(new View.OnClickListener() {
                     public void onClick(View v) {
                         String arg="#f";
@@ -537,6 +543,8 @@ public class StarwispBuilder
                         return v;
                     }
                 };
+
+                spinnerArrayAdapter.setDropDownViewResource(R.layout.spinner_layout);
 
                 v.setAdapter(spinnerArrayAdapter);
                 v.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

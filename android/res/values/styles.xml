@@ -12,6 +12,15 @@
     <item name="android:layout_marginBottom">5dp</item>
   </style>
 
+  <style name="StarwispFancyToggleButton" parent="android:style/Widget.Button">
+    <item name="android:textColor">@color/text</item>
+    <item name="android:textSize">50sp</item>
+    <item name="android:layout_margin">10dip</item>
+    <item name="android:drawableTop">@drawable/swarmtoggledrawable</item>
+    <item name="android:background">@drawable/swarmtoggle</item>
+    <item name="android:layout_marginBottom">5dp</item>
+  </style>
+
   <style name="StarwispSpinnerItem" parent="android:Widget.TextView.SpinnerItem">
 <!--    <item name="android:textAppearance">@style/StarwispTextAppearanceSpinnerItem</item> -->
     <item name="android:background">@drawable/swarmspinner</item>

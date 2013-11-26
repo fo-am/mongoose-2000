@@ -54,8 +54,9 @@ public class StarwispActivity extends FragmentActivity
         String json = m_Scheme.eval("(activity-callback 'on-create \""+m_Name+"\" (list \""+arg+"\"))");
         View root = findViewById(R.id.main);
 
-        m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
+        //m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/Pfennig.ttf");
         //m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/grstylus.ttf");
+        m_Typeface = Typeface.createFromAsset(getAssets(), "fonts/RobotoCondensed-Regular.ttf");
 
         try {
             m_Builder.Build(this, m_Name, new JSONArray(json), (ViewGroup) root);

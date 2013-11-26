@@ -325,10 +325,10 @@
   (button (make-id id) title 20 (layout 150 100 1 'centre 0) fn))
 
 (define (mtoggle-button id title fn)
-  (toggle-button (make-id id) title 20 fillwrap fn))
+  (toggle-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 0) fn))
+  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 0) "plain" fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
@@ -1046,7 +1046,6 @@
                   db "local" 1 (list (ktv "user-id" "varchar" v)))))
     (mtext "foo" "Database")
     (horiz
-     (mbutton2 "main-send" "Email" (lambda () (list)))
      (mbutton2 "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 ""))))))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1090,7 +1089,7 @@
                            (set-current! 'observation obs-gp)
                            (mclear-toggles (list "choose-obs-pf" "choose-obs-gc"))))))))
     (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
-    (mbutton
+    (mbutton2
      "choose-obs-start" "Start"
      (lambda ()
        ;; set up the observation fragments
@@ -1162,7 +1161,7 @@
                           (msg "button-bar" frag)
                           (let ((id (string-append "obs-bar-" (cadr frag))))
                             (toggle-button
-                             (make-id id) (car frag) 12 fillwrap
+                             (make-id id) (car frag) 12 fillwrap "plain"
                              (lambda (v)
                                (append
                                 (mclear-toggles-not-me id all-toggles)
@@ -1190,13 +1189,13 @@
       (mtext "pf1-pack" "Pack")
       (build-grid-selector "pf1-grid" "single" "Select pup")
       (horiz
-       (medit-text "pf1-width" "Pack width" "numeric"
+       (medit-text "pf1-width" "Pack width - left to right" "numeric"
                    (lambda (v) (entity-add-value! "pack-width" "int" v) '()))
-       (medit-text "pf1-height" "Pack height" "numeric"
-                   (lambda (v) (entity-add-value! "pack-height" "int" v) '())))
-      (medit-text "pf1-count" "How many mongooses present?" "numeric"
+       (medit-text "pf1-height" "Pack depth - front to back" "numeric"
+                   (lambda (v) (entity-add-value! "pack-depth" "int" v) '())))
+      (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
                   (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
-      (mbutton "pf1-done" "Done"
+      (mbutton2 "pf1-done" "Done"
                (lambda ()
                  (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
                  (set-current! 'timer-minutes 20)
@@ -1241,7 +1240,7 @@
          (mtext "title" "Next scan:")
          (mtitle "pf-timer-time"
                  (number->string (get-current 'timer-seconds 60)))))
-       (mtoggle-button "pf-pause" "Pause"
+       (mtoggle-button "pf-pause" "Pause" "plain"
                        (lambda (v)
                          (msg "pausing")
                          (if v
@@ -1293,7 +1292,7 @@
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
     (build-grid-selector "manage-packs-list" "button" "Choose pack")
-    (button (make-id "manage-packs-new") "New pack" 20 fillwrap (lambda () (list (start-activity "new-pack" 2 ""))))
+    (mbutton2 "manage-packs-new" "New pack" (lambda () (list (start-activity "new-pack" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1321,12 +1320,12 @@
                (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (spacer 10)
     (horiz
-     (button (make-id "new-pack-cancel") "Cancel" 20 fillwrap
-             (lambda () (entity-reset!) (list (finish-activity 2))))
-     (button (make-id "new-pack-done") "Done" 20 fillwrap
-             (lambda ()
-               (entity-record-values db "sync" "pack")
-               (list (finish-activity 2)))))
+     (mbutton2 "new-pack-cancel" "Cancel"
+               (lambda () (entity-reset!) (list (finish-activity 2))))
+     (mbutton2 "new-pack-done" "Done"
+               (lambda ()
+                 (entity-record-values db "sync" "pack")
+                 (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1343,7 +1342,7 @@
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
     (build-grid-selector "manage-individuals-list" "button" "Choose individual")
-    (button (make-id "manage-individuals-new") "New individual" 20 fillwrap (lambda () (list (start-activity "new-individual" 2 ""))))
+    (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1396,13 +1395,13 @@
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (horiz
-     (button (make-id "new-individual-cancel") "Cancel" 20 fillwrap
-             (lambda () (entity-reset!) (list (finish-activity 2))))
-     (button (make-id "new-individual-done") "Done" 20 fillwrap
-             (lambda ()
-               (entity-add-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-               (entity-record-values db "sync" "mongoose")
-               (list (finish-activity 2)))))
+     (mbutton2 "new-individual-cancel" "Cancel"
+               (lambda () (entity-reset!) (list (finish-activity 2))))
+     (mbutton2 "new-individual-done" "Done"
+               (lambda ()
+                 (entity-add-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+                 (entity-record-values db "sync" "mongoose")
+                 (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
