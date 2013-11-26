@@ -149,7 +149,7 @@
 (define (entity-record-values db table type)
   ;; standard bits
   (entity-add-value! "user" "varchar" (get-current 'user-id "none"))
-  (entity-add-value! "time" "varchar" (dt->string (date-time)))
+  (entity-add-value! "time" "varchar" (date->string (date-time)))
   (entity-add-value! "lat" "real" 0)
   (entity-add-value! "lon" "real" 0)
   (let ((values (get-current 'entity-values '())))
@@ -367,24 +367,28 @@
 ;;;;
 
 (define (build-grid-selector name type title)
-  (vert
-   (mtext "title" title)
-   (linear-layout
-    0 'horizontal
-    (layout 'fill-parent 'fill-parent 1 'left 2) trans-col
-    (list
-     (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
-     (scroll-view
-      (make-id "scroller")
-      (layout 'wrap-content 'wrap-content 1 'left 20)
-      (list
-       (linear-layout
-        (make-id name) 'horizontal
-        (layout 'wrap-content 'wrap-content 1 'centre 20) trans-col
-        (list
-         (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 40)
-                      (list) (lambda (v) '()))))))
-     (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0))))))
+  (linear-layout
+   0 'vertical
+   (layout 'fill-parent 'wrap-content 1 'left 0)
+   (list 0 0 0 0)
+   (list
+    (mtext "title" title)
+    (linear-layout
+     0 'horizontal
+     (layout 'fill-parent 'wrap-content 1 'left 2) trans-col
+     (list
+      (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
+      (scroll-view
+       (make-id "scroller")
+       (layout 'wrap-content 'wrap-content 1 'left 20)
+       (list
+        (linear-layout
+         (make-id name) 'horizontal
+         (layout 'wrap-content 'wrap-content 1 'centre 20) trans-col
+         (list
+          (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 40)
+                       (list) (lambda (v) '()))))))
+      (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))))
 
 ;; assumes grid selectors on mongeese only
 (define (fast-get-name item)
@@ -432,9 +436,41 @@
       r)))
 
 (define (db-mongooses-by-pack)
-  (db-all-where2
+  (db-all-where
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
+
+(define (db-mongooses-by-pack-male)
+  (db-all-where2
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+   (ktv "gender" "varchar" "Male")))
+
+(define (db-mongooses-by-pack-female)
+  (db-all-where2
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+   (ktv "gender" "varchar" "Female")))
+
+
+;; (y m d h m s)
+(define (date-minus-months d ms)
+  (let ((year (list-ref d 0))
+        (month (- (list-ref d 1) 1)))
+    (let ((new-month (- month ms)))
+      (list
+       (if (< new-month 0) (- year 1) year)
+       (+ (if (< new-month 0) (+ new-month 12) new-month) 1)
+       (list-ref d 2)
+       (list-ref d 3)
+       (list-ref d 4)
+       (list-ref d 5)))))
+
+(define (db-mongooses-by-pack-pups)
+  (all-entities-where-newer
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+   (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -514,7 +550,8 @@
        (horiz
         (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpint"))))
         (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpalarm"))))
-        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov")))))))))
+        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov"))))
+        (mbutton2 "evb-grpnote" "Note" (lambda () (list (replace-fragment (get-id "event-holder") "note")))))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -548,6 +585,8 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
+      (play-sound "ping")
+      (vibrate 300)
       (populate-grid-selector
        "pf-scan-nearest" "single"
        (db-mongooses-by-pack)
@@ -718,7 +757,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap gp-col
     (list
-     (mtitle "title" "Event: Group Interaction")
+     (mtext "title" "Event: Group Interaction")
      (build-grid-selector "gp-int-pack" "single" "Inter-group interaction: Other pack identity")
      (build-grid-selector "gp-int-leader" "single" "Leader")
      (linear-layout
@@ -842,6 +881,33 @@
    (lambda (fragment) '())
    (lambda (fragment) '()))
 
+  (fragment
+   "note"
+   (linear-layout
+    (make-id "") 'vertical fillwrap gp-col
+    (list
+     (mtitle "title" "Make a note")
+     (edit-text (make-id "note-text") "" 20 "text" fillwrap
+                (lambda (v)
+                  (entity-add-value! "text" "varchar" v)
+                  '()))
+     (horiz
+      (mbutton "note-done" "Done"
+               (lambda ()
+                 (entity-record-values db "stream" "note")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "note-cancel" "Cancel"
+               (lambda ()
+                 (entity-reset!)
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
+
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg) (list))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '()))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -852,7 +918,7 @@
   (fragment
    "gc-start"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Start")
      (mtoggle-button "gc-start-main-obs" "Main observer" (lambda (v) '()))
@@ -878,7 +944,7 @@
   (fragment
    "gc-weights"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Weights")
      (build-grid-selector "gc-weigh-choose" "toggle" "Choose mongoose")
@@ -903,7 +969,7 @@
   (fragment
    "gc-preg"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Pregnant females")
      (build-grid-selector "gc-preg-choose" "toggle" "Choose")))
@@ -914,7 +980,7 @@
      (list
       (populate-grid-selector
        "gc-preg-choose" "toggle"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-female)
        (lambda (individual)
          (list)))
       ))
@@ -927,7 +993,7 @@
   (fragment
    "gc-pup-assoc"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Pup Associations")
      (build-grid-selector "gc-pup-choose" "toggle" "Choose pup")
@@ -956,7 +1022,7 @@
   (fragment
    "gc-oestrus"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtext "" "Oestrus...")))
    (lambda (fragment arg)
@@ -971,7 +1037,7 @@
   (fragment
    "gc-babysitting"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtext "" "Babysittings...")))
    (lambda (fragment arg)
@@ -986,7 +1052,7 @@
   (fragment
    "gc-end"
    (linear-layout
-    (make-id "") 'vertical fillwrap gc-col
+    (make-id "") 'vertical fill gc-col
     (list
      (mtext "" "end!...")))
    (lambda (fragment arg)
@@ -1142,8 +1208,8 @@
       (text-view (make-id "obs-title") "" 40 fillwrap)
       (linear-layout
        (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
-      (build-fragment "gc-start" (make-id "gc-top") (layout 595 400 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 595 450 1 'left 0))
+      (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 400 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 450 1 'left 0))
       (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
    (lambda (activity arg)
      (activity-layout activity))

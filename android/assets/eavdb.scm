@@ -215,8 +215,12 @@
 
 (define (all-entities db table type)
   (let ((s (db-select
-            db (string-append "select entity_id from " table "_entity where entity_type = ?")
-            type)))
+            db (string-append "select e.entity_id from " table "_entity as e "
+                              "join " table "_value_varchar "
+                              " as n on n.entity_id = e.entity_id "
+                              "where entity_type = ? and n.attribute_id = ? order by n.value")
+            type "name")))
+    (msg (db-status db))
     (if (null? s)
         '()
         (map
@@ -230,8 +234,11 @@
                 "select e.entity_id from " table "_entity as e "
                 "join " table "_value_" (ktv-type ktv)
                 " as a on a.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and a.value = ?")
-            type (ktv-key ktv) (ktv-value ktv))))
+                "join " table "_value_varchar "
+                " as n on n.entity_id = e.entity_id "
+                "where e.entity_type = ? and a.attribute_id = ? "
+                "and a.value = ? and n.attribute_id = ? order by n.value")
+            type (ktv-key ktv) (ktv-value ktv) "name")))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -240,6 +247,41 @@
            (vector-ref i 0))
          (cdr s)))))
 
+(define (all-entities-where2 db table type ktv ktv2)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv)
+                " as a on a.entity_id = e.entity_id "
+                "join " table "_value_" (ktv-type ktv2)
+                " as b on b.entity_id = e.entity_id "
+                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ? ")
+            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+(define (all-entities-where-newer db table type ktv ktv2)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv)
+                " as a on a.entity_id = e.entity_id "
+                "join " table "_value_" (ktv-type ktv2)
+                " as b on b.entity_id = e.entity_id "
+                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value > DateTime(?) ")
+            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
 
 (define (validate db)
   ;; check attribute for duplicate entity-id/attribute-ids
@@ -272,26 +314,45 @@
     (prof-end "db-all")
     r))
 
-(define (db-all-where db table type clause)
-  (prof-start "db-all-where")
-  (let ((r (foldl
-            (lambda (i r)
-              (let ((e (get-entity db table i)))
-                (if (equal? (ktv-get e (car clause)) (cadr clause))
-                    (cons e r) r)))
-            '()
-            (all-entities db table type))))
-    (prof-end "db-all-where")
-    r))
+;(define (db-all-where db table type clause)
+;  (prof-start "db-all-where")
+;  (let ((r (foldl
+;            (lambda (i r)
+;              (let ((e (get-entity db table i)))
+;                (if (equal? (ktv-get e (car clause)) (cadr clause))
+;                    (cons e r) r)))
+;            '()
+;            (all-entities db table type))))
+;    (prof-end "db-all-where")
+;    r))
 
-(define (db-all-where2 db table type ktv)
-  (prof-start "db-all-where2")
+(define (db-all-where db table type ktv)
+  (prof-start "db-all-where")
   (let ((r (map
             (lambda (i)
               (get-entity db table i))
             (all-entities-where db table type ktv))))
+    (prof-end "db-all-where")
+    r))
+
+(define (db-all-where2 db table type ktv ktv2)
+  (prof-start "db-all-where2")
+  (let ((r (map
+            (lambda (i)
+              (get-entity db table i))
+            (all-entities-where2 db table type ktv ktv2))))
     (prof-end "db-all-where2")
     r))
+
+(define (db-all-where2 db table type ktv ktv2)
+  (prof-start "db-all-where2")
+  (let ((r (map
+            (lambda (i)
+              (get-entity db table i))
+            (all-entities-where2 db table type ktv ktv2))))
+    (prof-end "db-all-where2")
+    r))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data

@@ -46,11 +46,11 @@ public class Scheme
     }
 
     public String eval(String code) {
-        Log.i("starwisp","eval on");
+        //Log.i("starwisp","eval on");
         synchronized (mLock)
         {
             String ret=nativeEval(code);
-            Log.i("starwisp","eval done: "+ret.length());
+            //Log.i("starwisp","eval done: "+ret.length());
             //Log.i("starwisp",ret);
             return ret;
         }

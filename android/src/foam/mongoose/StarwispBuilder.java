@@ -24,6 +24,8 @@ import android.support.v4.app.FragmentTransaction;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
+import android.media.MediaPlayer;
+import android.os.Vibrator;
 
 // removed due to various aggravating factors
 //import android.support.v7.widget.GridLayout;
@@ -674,7 +676,7 @@ public class StarwispBuilder
             final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
-            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
+            //Log.i("starwisp", "Update: "+type+" "+id+" "+token);
 
             // non widget commands
             if (token.equals("toast")) {
@@ -682,6 +684,17 @@ public class StarwispBuilder
                 msg.show();
                 return;
             }
+
+            if (token.equals("play-sound")) {
+                MediaPlayer mp = MediaPlayer.create(ctx, R.raw.ping);
+                mp.start();
+            }
+
+            if (token.equals("vibrate")) {
+                Vibrator v = (Vibrator) ctx.getSystemService(Context.VIBRATOR_SERVICE);
+                v.vibrate(arr.getInt(3));
+            }
+
 
             if (type.equals("replace-fragment")) {
                 int ID = arr.getInt(1);
@@ -1101,7 +1114,6 @@ public class StarwispBuilder
             }
 
             if (type.equals("text-view") || type.equals("debug-text-view")) {
-                Log.i("starwisp","text-view...");
                 TextView v = (TextView)vv;
                 if (token.equals("text")) {
                     if (type.equals("debug-text-view")) {

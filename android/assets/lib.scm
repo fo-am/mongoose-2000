@@ -461,9 +461,9 @@
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
-
-
 (define (toast msg) (list "toast" 0 "toast" msg))
+(define (play-sound wav) (list "play-sound" 0 "play-sound" wav))
+(define (vibrate time) (list "vibrate" 0 "vibrate" time))
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
@@ -618,14 +618,14 @@
 (define (horiz . l)
   (linear-layout
    0 'horizontal
-   (layout 'fill-parent 'fill-parent 1 'left 0)
+   (layout 'fill-parent 'wrap-content 1 'left 0)
    (list 0 0 0 0)
    l))
 
 (define (vert . l)
   (linear-layout
    0 'vertical
-   (layout 'fill-parent 'fill-parent 1 'left 0)
+   (layout 'fill-parent 'wrap-content 1 'left 0)
    (list 0 0 0 0)
    l))
 
