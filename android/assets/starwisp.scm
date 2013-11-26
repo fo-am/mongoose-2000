@@ -819,7 +819,7 @@
       (list
        (vert
         (mtext "" "Where to")
-        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Unknown") fillwrap
+        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
                  (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))
        (mbutton "pf-grpmov-done" "Done"
                 (lambda ()
