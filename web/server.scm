@@ -39,7 +39,7 @@
 (define db (db-open db-name))
 (open-log "log.txt")
 
-(write-db db "sync" "/home/dave/code/mongoose-web/web/input.csv")
+;(write-db db "sync" "/home/dave/code/mongoose-web/web/input.csv")
 
 (define registered-requests
   (list
