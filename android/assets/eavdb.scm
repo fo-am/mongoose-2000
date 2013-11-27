@@ -286,6 +286,28 @@
            (vector-ref i 0))
          (cdr s)))))
 
+(define (all-entities-where-older db table type ktv ktv2)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv)
+                " as a on a.entity_id = e.entity_id "
+                "join " table "_value_" (ktv-type ktv2)
+                " as b on b.entity_id = e.entity_id "
+                "where e.entity_type = ? "
+                "and a.attribute_id = ? and a.value = ? "
+                "and b.attribute_id = ? and b.value < DateTime(?)"
+                )
+            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2))))
+    (msg "date select" (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+
 (define (validate db)
   ;; check attribute for duplicate entity-id/attribute-ids
   0)
@@ -363,6 +385,15 @@
               (get-entity db table i))
             (all-entities-where-newer db table type ktv ktv2))))
     (prof-end "db-all-where newer")
+    r))
+
+(define (db-all-older db table type ktv ktv2)
+  (prof-start "db-all-where older")
+  (let ((r (map
+            (lambda (i)
+              (get-entity db table i))
+            (all-entities-where-older db table type ktv ktv2))))
+    (prof-end "db-all-where older")
     r))
 
 
