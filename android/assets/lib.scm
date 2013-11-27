@@ -199,10 +199,10 @@
 (define (date->string d)
   (string-append
    (number->string (list-ref d 0))
-   "/"
-   (number->string (list-ref d 1))
-   "/"
-   (number->string (list-ref d 2))))
+   "-"
+   (substring (number->string (+ (list-ref d 1) 100)) 1 3)
+   "-"
+   (substring (number->string (+ (list-ref d 2) 100)) 1 3)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; random

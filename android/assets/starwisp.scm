@@ -467,7 +467,7 @@
        (list-ref d 5)))))
 
 (define (db-mongooses-by-pack-pups)
-  (all-entities-where-newer
+  (db-all-newer
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
    (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
@@ -1274,7 +1274,7 @@
      (list
       (populate-grid-selector
        "pf1-grid" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-pups)
        (lambda (individual)
          (set-current! 'individual individual)
          (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
