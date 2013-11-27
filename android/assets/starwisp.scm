@@ -1493,7 +1493,7 @@
                (list (date-picker-dialog
                       "new-individual-date"
                       (lambda (day month year)
-                        (let ((datestring (date->string (list day (+ month 1) year))))
+                        (let ((datestring (date->string (list year (+ month 1) day))))
                           (entity-add-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
@@ -1552,7 +1552,7 @@
                (list (date-picker-dialog
                       "update-individual-date"
                       (lambda (day month year)
-                        (let ((datestring (date->string (list day (+ month 1) year))))
+                        (let ((datestring (date->string (list year (+ month 1) day))))
                           (entity-add-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
