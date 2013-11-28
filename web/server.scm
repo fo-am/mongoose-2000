@@ -28,14 +28,15 @@
          "scripts/utils.ss"
          "scripts/eavdb.ss"
          "scripts/txt.ss"
-         "scripts/input.ss")
+;         "scripts/input.ss"
+	 )
 
 ; a utility to change the process owner,
 ; assuming mzscheme is called by root.
 ;;(unsafe!)
 ;;(define setuid (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 
-(define db-name "mongoose.db")
+(define db-name "client/htdocs/mongoose.db")
 (define db (db-open db-name))
 (open-log "log.txt")
 
