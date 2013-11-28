@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
 
 import java.net.URL;
 import java.net.HttpURLConnection;
@@ -157,18 +158,32 @@ public class NetworkManager {
         InputStream in = m.m_Stream;
         BufferedReader reader = null;
         try {
-            reader = new BufferedReader(new InputStreamReader(in));
-            String line = "";
-            String all = "";
-            while ((line = reader.readLine()) != null) {
-                all+=line+"\n";
-            }
-            Log.i("starwisp","got data for "+m.m_CallbackName+"["+all+"]");
 
             if (m.m_Type.equals("download")) {
-                m_Builder.SaveData(m.m_CallbackName, all.getBytes());
+                ByteArrayOutputStream byteBuffer = new ByteArrayOutputStream();
+
+                // this is storage overwritten on each iteration with bytes
+                int bufferSize = 1024;
+                byte[] buffer = new byte[bufferSize];
+
+                // we need to know how may bytes were read to write them to the byteBuffer
+                int len = 0;
+                while ((len = in.read(buffer)) != -1) {
+                    byteBuffer.write(buffer, 0, len);
+                }
+
+                m_Builder.SaveData(m.m_CallbackName, byteBuffer.toByteArray());
             } else {
                 // results in evaluating data read from via http - fix if used from net
+
+                reader = new BufferedReader(new InputStreamReader(in));
+                String line = "";
+                String all = "";
+                while ((line = reader.readLine()) != null) {
+                    all+=line+"\n";
+                }
+                Log.i("starwisp","got data for "+m.m_CallbackName+"["+all+"]");
+
                 m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
             }
         } catch (IOException e) {

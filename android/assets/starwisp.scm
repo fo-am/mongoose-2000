@@ -136,11 +136,11 @@
 (define (entity-set! ktv-list)
   (set-current! 'entity-values ktv-list))
 
-(define (dt->string dt)
+(define (date-time->string dt)
   (string-append
    (number->string (list-ref dt 0)) "-"
    (number->string (list-ref dt 1)) "-"
-   (number->string (list-ref dt 2)) "T"
+   (number->string (list-ref dt 2)) " "
    (number->string (list-ref dt 3)) ":"
    (number->string (list-ref dt 4)) ":"
    (substring (number->string (+ 100 (list-ref dt 5))) 1 2)))
@@ -149,7 +149,7 @@
 (define (entity-record-values db table type)
   ;; standard bits
   (entity-add-value! "user" "varchar" (get-current 'user-id "none"))
-  (entity-add-value! "time" "varchar" (date->string (date-time)))
+  (entity-add-value! "time" "varchar" (date-time->string (date-time)))
   (entity-add-value! "lat" "real" 0)
   (entity-add-value! "lon" "real" 0)
   (let ((values (get-current 'entity-values '())))
@@ -467,7 +467,13 @@
        (list-ref d 5)))))
 
 (define (db-mongooses-by-pack-pups)
-  (all-entities-where-newer
+  (db-all-newer
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+   (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
+
+(define (db-mongooses-by-pack-adults)
+  (db-all-older
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
    (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
@@ -584,18 +590,20 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
+     (entity-add-value! "scan-time" "varchar" (date-time->string (date-time)))
      (list
       (play-sound "ping")
       (vibrate 300)
       (populate-grid-selector
        "pf-scan-nearest" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-adults)
        (lambda (individual)
          (entity-add-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-adults)
        (lambda (individuals)
          (entity-add-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
@@ -622,15 +630,19 @@
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupfeed")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-pupfeed-cancel" "Cancel"
+               (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "pf-pupfeed-who" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-adults)
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -647,18 +659,22 @@
     (list
      (mtitle "title" "Event: Pup found food")
      (mtext "text" "Food size")
+     (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
+              (lambda (v) (entity-add-value! "size" "varchar" v) '()))
      (horiz
-      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
-               (lambda (v) (entity-add-value! "size" "varchar" v) '()))
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupfind")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-pupfind-cancel" "Cancel"
+               (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       ))
    (lambda (fragment) '())
@@ -683,15 +699,19 @@
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values db "stream" "pup-focal-pupcare")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-pupcare-cancel" "Cancel"
+               (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "pf-pupcare-who" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-adults)
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -728,15 +748,21 @@
        (mtoggle-button "pf-pupaggr-win" "Win?"
                        (lambda (v)
                          (entity-add-value! "win" "varchar" (if v "yes" "no")) '()))))
-     (mbutton "pf-pupaggr-done" "Done"
-              (lambda ()
-                (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                (entity-record-values db "stream" "pup-focal-pupaggr")
-                (list (replace-fragment (get-id "event-holder") "events"))))))
+     (horiz
+      (mbutton "pf-pupaggr-done" "Done"
+               (lambda ()
+                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values db "stream" "pup-focal-pupaggr")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-pupaggr-cancel" "Cancel"
+               (lambda ()
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
+
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "pf-pupaggr-partner" "single"
@@ -775,11 +801,16 @@
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
                   (entity-record-values db "stream" "group-interaction")
+                  (list (replace-fragment (get-id "event-holder") "events"))))
+       (mbutton "pf-grpint-cancel" "Cancel"
+                (lambda ()
                   (list (replace-fragment (get-id "event-holder") "events"))))))))
+
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "gp-int-pack" "single"
@@ -816,14 +847,19 @@
                       (lambda (v)
                         (entity-add-value! "others-join" "varchar"
                                            (if v "yes" "no")) '())))
-     (mbutton "pf-grpalarm-done" "Done"
-              (lambda ()
-                (entity-record-values db "stream" "group-alarm")
-                (list (replace-fragment (get-id "event-holder") "events"))))))
+     (horiz
+      (mbutton "pf-grpalarm-done" "Done"
+               (lambda ()
+                 (entity-record-values db "stream" "group-alarm")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-grpalarm-cancel" "Cancel"
+               (lambda ()
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "gp-alarm-caller" "single"
@@ -854,20 +890,25 @@
        (medit-text "gp-mov-c" "How many mongooses?" "numeric"
                    (lambda (v) (entity-add-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Where to")
         (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
                  (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))
-       (mbutton "pf-grpmov-done" "Done"
-                (lambda ()
-                  (entity-record-values db "stream" "group-move")
-                  (list (replace-fragment (get-id "event-holder") "events"))))))))
+       (horiz
+        (mbutton "pf-grpmov-done" "Done"
+                 (lambda ()
+                   (entity-record-values db "stream" "group-move")
+                   (list (replace-fragment (get-id "event-holder") "events"))))
+        (mbutton "pf-grpalarm-cancel" "Cancel"
+                 (lambda ()
+                   (list (replace-fragment (get-id "event-holder") "events")))))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "gp-mov-leader" "single"
@@ -903,7 +944,9 @@
 
    (lambda (fragment arg)
      (activity-layout fragment))
-   (lambda (fragment arg) (list))
+   (lambda (fragment arg)
+     (entity-reset!)
+     (list))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1005,12 +1048,12 @@
      (list
       (populate-grid-selector
        "gc-pup-choose" "toggle"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-pups)
        (lambda (individual)
          (list)))
       (populate-grid-selector
        "gc-pup-escort" "toggle"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-adults)
        (lambda (individual)
          (list)))
       ))
@@ -1271,10 +1314,11 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
        "pf1-grid" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack-pups)
        (lambda (individual)
          (set-current! 'individual individual)
          (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
@@ -1394,7 +1438,9 @@
     )
    (lambda (activity arg)
      (activity-layout activity))
-   (lambda (activity arg) (list))
+   (lambda (activity arg)
+     (entity-reset!)
+     (list))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1447,7 +1493,7 @@
                (list (date-picker-dialog
                       "new-individual-date"
                       (lambda (day month year)
-                        (let ((datestring (date->string (list day (+ month 1) year))))
+                        (let ((datestring (date->string (list year (+ month 1) day))))
                           (entity-add-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
@@ -1471,6 +1517,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (entity-reset!)
      ;; make sure all fields exist
      (entity-add-value! "name" "varchar" "noname")
      (entity-add-value! "gender" "varchar" "Female")
@@ -1505,7 +1552,7 @@
                (list (date-picker-dialog
                       "update-individual-date"
                       (lambda (day month year)
-                        (let ((datestring (date->string (list day (+ month 1) year))))
+                        (let ((datestring (date->string (list year (+ month 1) day))))
                           (entity-add-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
@@ -1533,6 +1580,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (entity-reset!)
      (entity-set! (get-current 'individual '()))
      (let ((individual (get-current 'individual '())))
        (list
@@ -1640,7 +1688,12 @@
                        (string-append url "fn=entity-csv&table=stream&type=" e)
                        (string-append "/sdcard/mongoose/" e ".csv")))
                      r))
-                  '()
+                  (list
+                   (debug (string-append "Downloading whole db"))
+                   (http-download
+                    "getting-db"
+                    "http://192.168.2.1:8888/mongoose.db"
+                    (string-append "/sdcard/mongoose/mongoose.db")))
                   entity-types)))
      (mbutton2 "sync-export" "Export"
                (lambda ()
@@ -1649,10 +1702,12 @@
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
-                   (map
-                    (lambda (e)
-                      (string-append "/sdcard/mongoose/" e ".csv"))
-                    entity-types))))))
+                   (cons
+                    "/sdcard/mongoose/mongoose.db"
+                    (map
+                     (lambda (e)
+                       (string-append "/sdcard/mongoose/" e ".csv"))
+                     entity-types)))))))
     (spacer 10)
     (mtitle "" "Debug")
     (scroll-view-vert

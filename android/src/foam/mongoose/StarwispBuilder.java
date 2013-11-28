@@ -443,7 +443,7 @@ public class StarwispBuilder
                 if (inputtype.equals("text")) {
                     //v.setInputType(InputType.TYPE_CLASS_TEXT);
                 } else if (inputtype.equals("numeric")) {
-                    v.setInputType(InputType.TYPE_NUMBER_FLAG_DECIMAL|InputType.TYPE_NUMBER_FLAG_DECIMAL);
+                    v.setInputType(InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_FLAG_DECIMAL);
                 } else if (inputtype.equals("email")) {
                     v.setInputType(InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS);
                 }
