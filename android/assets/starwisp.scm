@@ -1688,7 +1688,12 @@
                        (string-append url "fn=entity-csv&table=stream&type=" e)
                        (string-append "/sdcard/mongoose/" e ".csv")))
                      r))
-                  '()
+                  (list
+                   (debug (string-append "Downloading whole db"))
+                   (http-download
+                    "getting-db"
+                    "http://192.168.2.1:8888/mongoose.db"
+                    (string-append "/sdcard/mongoose/mongoose.db")))
                   entity-types)))
      (mbutton2 "sync-export" "Export"
                (lambda ()
@@ -1697,10 +1702,12 @@
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
-                   (map
-                    (lambda (e)
-                      (string-append "/sdcard/mongoose/" e ".csv"))
-                    entity-types))))))
+                   (cons
+                    "/sdcard/mongoose/mongoose.db"
+                    (map
+                     (lambda (e)
+                       (string-append "/sdcard/mongoose/" e ".csv"))
+                     entity-types)))))))
     (spacer 10)
     (mtitle "" "Debug")
     (scroll-view-vert
