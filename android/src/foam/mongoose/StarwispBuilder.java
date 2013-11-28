@@ -676,7 +676,7 @@ public class StarwispBuilder
             final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
-            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
+            //Log.i("starwisp", "Update: "+type+" "+id+" "+token);
 
             // non widget commands
             if (token.equals("toast")) {

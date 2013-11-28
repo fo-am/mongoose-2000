@@ -294,13 +294,13 @@
                 data)))
         (cond
          ((null? r)
-          (debug! "All files up to date")
+          (debug! "No new data to download")
           (set-current! 'download 1)
           (append
            (if (eqv? (get-current 'upload 0) 1)
                (list (play-sound "ping")) '())
            (list
-            (toast "All files up to date")) r))
+            (toast "No new data to download")) r))
          (else
           (debug! (string-append
                    "Requesting "
@@ -321,7 +321,7 @@
             (spit db "stream" (dirty-entities db "stream")))))
     (append (cond
              ((> (length r) 0)
-              (debug! (string-append "Uploading " (number->string (/ (length r) 2)) " items..."))
+              (debug! (string-append "Uploading " (number->string (length r)) " items..."))
               (list
                (toast "Uploading data...")))
              (else
@@ -331,7 +331,7 @@
                (if (eqv? (get-current 'download 0) 1)
                    (list (play-sound "ping")) '())
                (list
-                (toast "No data changed to upload")))) r))))
+                (toast "No data changed to upload"))))) r)))
 
 (define (connect-to-net fn)
   (list

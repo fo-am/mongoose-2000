@@ -51,11 +51,11 @@ public class NetworkManager {
     }
 
     void Start(String ssid, StarwispActivity c, String name, StarwispBuilder b) {
+        m_CallbackName=name;
+        m_Context=c;
+        m_Builder=b;
 
         if (state==NetworkManager.State.IDLE) {
-            m_CallbackName=name;
-            m_Context=c;
-            m_Builder=b;
             wifi = (WifiManager) c.getSystemService(Context.WIFI_SERVICE);
             state = State.SCANNING;
             SSID = ssid;
