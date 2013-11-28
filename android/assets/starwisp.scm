@@ -295,7 +295,10 @@
         (cond
          ((null? r)
           (debug! "All files up to date")
+          (set-current! 'download 1)
           (append
+           (if (eqv? (get-current 'upload 0) 1)
+               (list (play-sound "ping")) '())
            (list
             (toast "All files up to date")) r))
          (else
@@ -323,8 +326,12 @@
                (toast "Uploading data...")))
              (else
               (debug! "No data changed to upload")
-              (list
-               (toast "No data changed to upload")))) r)))
+              (set-current! 'upload 1)
+              (append
+               (if (eqv? (get-current 'download 0) 1)
+                   (list (play-sound "ping")) '())
+               (list
+                (toast "No data changed to upload")))) r))))
 
 (define (connect-to-net fn)
   (list
@@ -1676,6 +1683,8 @@
     (horiz
      (mbutton2 "sync-all" "Sync me"
                (lambda ()
+                 (set-current! 'upload 0)
+                 (set-current! 'download 0)
                  (connect-to-net
                   (lambda ()
                     (append
