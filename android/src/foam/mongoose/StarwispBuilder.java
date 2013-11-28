@@ -676,7 +676,7 @@ public class StarwispBuilder
             final Integer id = arr.getInt(1);
             String token = arr.getString(2);
 
-            //Log.i("starwisp", "Update: "+type+" "+id+" "+token);
+            Log.i("starwisp", "Update: "+type+" "+id+" "+token);
 
             // non widget commands
             if (token.equals("toast")) {
@@ -817,11 +817,9 @@ public class StarwispBuilder
             }
 
             if (token.equals("network-connect")) {
-                if (m_NetworkManager.state==NetworkManager.State.IDLE) {
-                    final String name = arr.getString(3);
-                    final String ssid = arr.getString(5);
-                    m_NetworkManager.Start(ssid,(StarwispActivity)ctx,name,this);
-                }
+                final String name = arr.getString(3);
+                final String ssid = arr.getString(5);
+                m_NetworkManager.Start(ssid,(StarwispActivity)ctx,name,this);
                 return;
             }
 

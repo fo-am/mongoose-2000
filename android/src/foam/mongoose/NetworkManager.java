@@ -39,6 +39,8 @@ public class NetworkManager {
 	BroadcastReceiver receiver;
     public State state;
     String SSID;
+    static class Lock extends Object {}
+    static public Lock mLock = new Lock();
 
     String m_CallbackName;
     StarwispActivity m_Context;
@@ -49,19 +51,24 @@ public class NetworkManager {
     }
 
     void Start(String ssid, StarwispActivity c, String name, StarwispBuilder b) {
-        m_CallbackName=name;
-        m_Context=c;
-        m_Builder=b;
-		wifi = (WifiManager) c.getSystemService(Context.WIFI_SERVICE);
-        state = State.SCANNING;
-        SSID = ssid;
-        wifi.startScan();
-		receiver = new WiFiScanReceiver(SSID, this);
-		c.registerReceiver(receiver, new IntentFilter(
-                               WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
 
-        // todo - won't work from inside fragments
-        m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Scanning\"");
+        if (state==NetworkManager.State.IDLE) {
+            m_CallbackName=name;
+            m_Context=c;
+            m_Builder=b;
+            wifi = (WifiManager) c.getSystemService(Context.WIFI_SERVICE);
+            state = State.SCANNING;
+            SSID = ssid;
+            wifi.startScan();
+            receiver = new WiFiScanReceiver(SSID, this);
+            c.registerReceiver(receiver, new IntentFilter(
+                                   WifiManager.SCAN_RESULTS_AVAILABLE_ACTION));
+
+            // todo - won't work from inside fragments
+            m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Scanning\"");
+        } else {
+            m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Connected\"");
+        }
     }
 
     void Connect() {
@@ -80,6 +87,13 @@ public class NetworkManager {
                 wifi.enableNetwork(i.networkId, true);
                 wifi.reconnect();
                 Log.i("starwisp", "Connected");
+                try {
+                    Thread.sleep(2000);
+                } catch (Exception e) {
+                    Log.i("starwisp",e.toString());
+                    e.printStackTrace();
+                }
+
                 m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"\"Connected\"");
                 break;
             }
@@ -171,11 +185,9 @@ public class NetworkManager {
                 while ((len = in.read(buffer)) != -1) {
                     byteBuffer.write(buffer, 0, len);
                 }
-
                 m_Builder.SaveData(m.m_CallbackName, byteBuffer.toByteArray());
             } else {
                 // results in evaluating data read from via http - fix if used from net
-
                 reader = new BufferedReader(new InputStreamReader(in));
                 String line = "";
                 String all = "";
@@ -184,7 +196,10 @@ public class NetworkManager {
                 }
                 Log.i("starwisp","got data for "+m.m_CallbackName+"["+all+"]");
 
-                m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
+                synchronized (mLock)
+                {
+                    m_Builder.DialogCallback(m_Context,m_Context.m_Name,m.m_CallbackName,all);
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();

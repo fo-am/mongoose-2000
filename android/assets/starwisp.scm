@@ -216,9 +216,9 @@
 (define (spit db table entities)
   (foldl
    (lambda (e r)
+     (debug! (string-append "Sending a " (car (car e)) " to Raspberry Pi"))
      (append
       (list
-       (debug (string-append "Sending a " (car (car e)) " to Raspberry Pi"))
        (http-request
         (string-append "req-" (list-ref (car e) 1))
         (build-url-from-entity table e)
@@ -227,20 +227,17 @@
           (cond
            ((or (equal? (car v) "inserted") (equal? (car v) "match"))
             (update-entity-clean db table (cadr v))
-            (list
-             (debug (string-append "Uploaded " (car (car e))))))
+            (debug! (string-append "Uploaded " (car (car e)))))
            ((equal? (car v) "no change")
-            (list (debug (string-append "No change for " (car (car e))))))
+            (debug! (string-append "No change for " (car (car e)))))
            ((equal? (car v) "updated")
             (update-entity-clean db table (cadr v))
-            (list (debug (string-append "Updated changed " (car (car e))))))
+            (debug! (string-append "Updated changed " (car (car e)))))
            (else
-            (list (toast (string-append
-                          "Problem uploading "
-                          (car (car e)) " : " (car v)))
-                  (debug (string-append
-                          "Problem uploading "
-                          (car (car e)) " : " (car v)))))))))
+            (debug! (string-append
+                     "Problem uploading "
+                     (car (car e)) " : " (car v)))))
+          (list))))
       r))
    '()
    entities))
@@ -266,15 +263,14 @@
            (update-to-version
             db table (get-entity-id db table unique-id)
             (list-ref entity 2) ktvlist))
+       (debug! (string-append (if exists "Got new: " "Updated: ") (ktv-get ktvlist "name")))
        (list
-        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
-        (debug (string-append (if exists "Got new: " "Updated: ") (ktv-get ktvlist "name")))
-        (toast (string-append "Downloaded " (ktv-get ktvlist "name"))))))))
+        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty)))))))
 
 ;; repeatedly read version and request updates
 (define (suck-new db table)
+  (debug! "Requesting new entities")
   (list
-   (debug "Requesting new entities")
    (http-request
     "new-entities-req"
     (string-append url "fn=entity-versions&table=" table)
@@ -296,15 +292,17 @@
                         r)))
                 '()
                 data)))
-        (if (null? r)
-            (append
-             (list
-              (debug "All files up to date")
-              (toast "All files up to date")) r)
-            (append
-             (list
-              (debug (string-append "Requesting " (number->string (length r)) " entities"))
-              (toast (string-append "Requesting " (number->string (length r)) " entities"))) r)))))))
+        (cond
+         ((null? r)
+          (debug! "All files up to date")
+          (append
+           (list
+            (toast "All files up to date")) r))
+         (else
+          (debug! (string-append
+                   "Requesting "
+                   (number->string (length r)) " entities"))
+          r)))))))
 
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
@@ -314,6 +312,32 @@
      "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
      "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
 
+(define (upload-dirty db)
+  (let ((r (append
+            (spit db "sync" (dirty-entities db "sync"))
+            (spit db "stream" (dirty-entities db "stream")))))
+    (append (cond
+             ((> (length r) 0)
+              (debug! (string-append "Uploading " (number->string (/ (length r) 2)) " items..."))
+              (list
+               (toast "Uploading data...")))
+             (else
+              (debug! "No data changed to upload")
+              (list
+               (toast "No data changed to upload")))) r)))
+
+(define (connect-to-net fn)
+  (list
+   (network-connect
+    "network"
+    "mongoose-web"
+    (lambda (state)
+      (debug! (string-append "Raspberry Pi connection state now: " state))
+      (append
+       (if (equal? state "Connected") (fn) '())
+       (list
+        ;;(update-widget 'text-view (get-id "sync-connect") 'text state)
+        ))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user interface abstraction
@@ -481,10 +505,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
 
-(define (debug txt)
-  (set-current! 'debug-text (string-append txt "\n" (get-current 'debug-text "")))
+(define (debug! txt)
+  (set-current! 'debug-text (string-append txt "\n" (get-current 'debug-text ""))))
+
+(define (update-debug)
   (update-widget 'debug-text-view (get-id "sync-debug") 'text
                  (get-current 'debug-text "")))
+
+(define (debug-timer-cb)
+  (list
+   (delayed "debug-timer" 1000 debug-timer-cb)
+   (update-debug)))
 
 
 (define (timer-cb)
@@ -791,7 +822,7 @@
       (list
        (vert
         (mtext "text" "Outcome")
-        (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight & retreat" "Fight & win") fillwrap
+        (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight retreat" "Fight win") fillwrap
                  (lambda (v)
                    (entity-add-value! "outcome" "varchar" v) '())))
        (vert
@@ -1643,62 +1674,47 @@
     (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
     (mtext "sync-dirty" "...")
     (horiz
-     (mbutton2 "sync-connect" "Connect"
-              (lambda ()
-                (list
-                 (network-connect
-                  "network"
-                  "mongoose-web"
-                  (lambda (state)
-                    (list
-                     (debug (string-append "Raspberry Pi connection state now: " state))
-                     (update-widget 'text-view (get-id "sync-connect") 'text state)))))))
+     (mbutton2 "sync-all" "Sync me"
+               (lambda ()
+                 (connect-to-net
+                  (lambda ()
+                    (append
+                     (upload-dirty db)
+                     (suck-new db "sync"))))))
+
      (mbutton2 "sync-syncall" "Push all"
-              (lambda ()
-                (let ((r (append
-                          (spit db "sync" (dirty-and-all-entities db "sync"))
-                          (spit db "stream" (dirty-and-all-entities db "stream")))))
-                  (cons (toast "Uploading data...") r))))
-     (mbutton2 "sync-sync" "Push changes"
-              (lambda ()
-                (let ((r (append
-                          (spit db "sync" (dirty-entities db "sync"))
-                          (spit db "stream" (dirty-entities db "stream")))))
-                  (append (if (> (length r) 0)
-                              (list
-                               (debug (string-append "Uploading " (number->string (/ (length r) 2)) " items..."))
-                               (toast "Uploading data..."))
-                              (list
-                               (debug "No data changed to upload")
-                               (toast "No data changed to upload"))) r))))
-     (mbutton2 "sync-pull" "Pull"
-              (lambda ()
-                (cons (toast "Downloading data...") (suck-new db "sync")))))
-    (text-view (make-id "sync-console") "..." 15 (layout 300 'wrap-content 1 'left 0))
+               (lambda ()
+                 (let ((r (append
+                           (spit db "sync" (dirty-and-all-entities db "sync"))
+                           (spit db "stream" (dirty-and-all-entities db "stream")))))
+                   (cons (toast "Uploading data...") r)))))
+    (mtitle "" "Export data")
     (horiz
      (mbutton2 "sync-download" "Download"
                (lambda ()
+                 (debug! (string-append "Downloading whole db"))
+                 (append
                  (foldl
                   (lambda (e r)
-                    (append
-                     (list
-                      (debug (string-append "Downloading /sdcard/mongoose/" e ".csv"))
-                      (http-download
-                       (string-append "getting-" e)
-                       (string-append url "fn=entity-csv&table=stream&type=" e)
-                       (string-append "/sdcard/mongoose/" e ".csv")))
+                    (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
+                    (cons
+                     (http-download
+                      (string-append "getting-" e)
+                      (string-append url "fn=entity-csv&table=stream&type=" e)
+                      (string-append "/sdcard/mongoose/" e ".csv"))
                      r))
                   (list
-                   (debug (string-append "Downloading whole db"))
                    (http-download
                     "getting-db"
                     "http://192.168.2.1:8888/mongoose.db"
-                    (string-append "/sdcard/mongoose/mongoose.db")))
-                  entity-types)))
-     (mbutton2 "sync-export" "Export"
+                    (string-append "/sdcard/mongoose/mongoose.db"))
+                   )
+                  entity-types)
+                 (list))))
+     (mbutton2 "sync-export" "Email"
                (lambda ()
+                 (debug! "Sending mail")
                  (list
-                  (debug "Sending mail")
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
@@ -1723,13 +1739,15 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (list
-      (update-widget 'debug-text-view (get-id "sync-debug") 'text (get-current 'debug-text ""))
-      (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
-      ))
+     (append
+      (debug-timer-cb)
+      (list
+       (update-widget 'debug-text-view (get-id "sync-debug") 'text (get-current 'debug-text ""))
+       (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+       )))
    (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
+   (lambda (activity) (list (delayed "debug-timer" 1000 (lambda () '()))))
+   (lambda (activity) (list (delayed "debug-timer" 1000 (lambda () '()))))
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
