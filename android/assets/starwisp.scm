@@ -237,7 +237,8 @@
             (debug! (string-append
                      "Problem uploading "
                      (car (car e)) " : " (car v)))))
-          (list))))
+          (list
+           (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))))))
       r))
    '()
    entities))
