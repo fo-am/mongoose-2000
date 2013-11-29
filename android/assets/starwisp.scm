@@ -153,7 +153,6 @@
   (entity-add-value! "lat" "real" 0)
   (entity-add-value! "lon" "real" 0)
   (let ((values (get-current 'entity-values '())))
-    (msg values)
     (cond
      ((not (null? values))
       (let ((r (insert-entity/get-unique
@@ -223,7 +222,6 @@
         (string-append "req-" (list-ref (car e) 1))
         (build-url-from-entity table e)
         (lambda (v)
-          (msg "spat" e v)
           (cond
            ((or (equal? (car v) "inserted") (equal? (car v) "match"))
             (update-entity-clean db table (cadr v))
@@ -249,7 +247,6 @@
    (string-append unique-id "-update-new")
    (string-append url "fn=entity&table=" table "&unique-id=" unique-id)
    (lambda (data)
-     (msg "data from server request" data)
      ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
      (let ((entity (list-ref data 0))
            (ktvlist (list-ref data 1)))
@@ -311,7 +308,6 @@
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
         (stream (get-dirty-stats db "stream")))
-    (msg sync stream)
     (string-append
      "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
      "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
@@ -462,7 +458,7 @@
                  (cadr (findv v id->items)))
                selected-set)))
          (else
-          (msg (findv v id->items))
+          ;;(msg (findv v id->items))
           (fn (cadr (findv v id->items))))))))))
       (prof-end "popgrid")
       r)))
@@ -547,6 +543,22 @@
      'text-view (get-id "pf-timer-time") 'text
      (string-append (number->string (get-current 'timer-seconds 59))))
     )))
+
+(define (next-button id dialog-msg next-frag fn)
+     (mbutton (string-append id "-nextb") "Next"
+              (lambda ()
+                (list
+                 (alert-dialog
+                  (string-append id "-d")
+                  dialog-msg
+                  (lambda (v)
+                    (cond
+                     ((eqv? v 1)
+                      (append
+                       (fn) (list (replace-fragment
+                                   (get-id "gc-top") next-frag))))
+                     (else '()))))))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
@@ -995,7 +1007,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 
-
+  ;;(replace-fragment (get-id "gc-top") (cadr frag))))))))
 
   (fragment
    "gc-start"
@@ -1003,19 +1015,30 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Start")
-     (mtoggle-button "gc-start-main-obs" "Main observer" (lambda (v) '()))
+     (mtoggle-button "gc-start-main-obs" "Main observer"
+                     (lambda (v) (entity-add-value! "main-observer" "varchar" v) '()))
      (mtext "" "Code")
-     (edit-text (make-id "gc-start-code") "" 20 "numeric" fillwrap (lambda (v) '()))
-     (build-grid-selector "gc-start-present" "toggle" "Who's present?")))
+     (edit-text (make-id "gc-start-code") "" 20 "numeric" fillwrap
+                (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
+     (build-grid-selector "gc-start-present" "toggle" "Who's present?")
+     (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-weights"
+                  (lambda () '()))
+     ))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
+
+     (entity-add-value!
+
      (list
       (populate-grid-selector
        "gc-start-present" "toggle"
        (db-mongooses-by-pack)
        (lambda (individual)
+         (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
+
          (list)))
       ))
    (lambda (fragment) '())
@@ -1029,19 +1052,51 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Weights")
-     (build-grid-selector "gc-weigh-choose" "toggle" "Choose mongoose")
-     (edit-text (make-id "gc-weigh-weight") "" 20 "numeric" fillwrap (lambda (v) '()))
-     (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))))
+     (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
+     (horiz
+      (edit-text (make-id "gc-weigh-weight") "" 20 "numeric" fillwrap
+                 (lambda (v)
+                   (entity-add-value! "weight" "varchar" v)
+                   '()))
+      (mbutton "gc-weigh-save" "Save"
+               (lambda ()
+                 (msg "saving")
+                 (entity-add-value! "parent" "varchar" (get-current 'group-composition-id 0))
+                 (msg "saving to " (get-current 'entity-id "0"))
+                 (if (get-current 'updating #f)
+                     (entity-update-values db "stream")
+                     (entity-record-values db "stream" "weight")
+                 (entity-reset!)
+                 '()))))
+
+     (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))
+     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-preg"
+                  (lambda () '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     (entity-reset!)
      (list
       (populate-grid-selector
-       "gc-weigh-choose" "toggle"
+       "gc-weigh-choose" "single"
        (db-mongooses-by-pack)
        (lambda (individual)
-         (list)))
+         (msg "loading")
+         (entity-add-value! "id-mongoose" "varchar" (ktv-get individual "unique_id"))
+         (set-current! 'updating #f)
+         (let ((s (db-all-where2
+                   db "stream" "weight"
+                   (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                   (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id")))))
+           (when (not (null? s))
+                 (msg "found previous")
+                 (entity-add-value! "unique_id" "varchar" (ktv-get (car s) "unique_id"))
+                 (set-current! 'updating #t))
+           (msg "-->" s)
+           (list
+            (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
+                           (if (null? s) "" (ktv-get (car s) "weight")))))))
       ))
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1054,7 +1109,9 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Pregnant females")
-     (build-grid-selector "gc-preg-choose" "toggle" "Choose")))
+     (build-grid-selector "gc-preg-choose" "toggle" "Choose")
+     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-pup-assoc"
+                  (lambda () '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1077,21 +1134,30 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtitle "title" "Pup Associations")
+     (mtext "title" "Pup Associations")
      (build-grid-selector "gc-pup-choose" "toggle" "Choose pup")
-     (build-grid-selector "gc-pup-escort" "toggle" "Escort")))
+     (horiz
+      (vert
+       (mtext "" "Strength")
+       (spinner (make-id "gc-pup-strength") (list "Weak" "Medium" "Strong") fillwrap
+                (lambda (v) '())))
+      (vert
+       (mtext "" "Accuracy")
+       (spinner (make-id "gc-pup-accuracy") (list "Weak" "Medium" "Strong") fillwrap
+                (lambda (v) '()))))
+     (build-grid-selector "gc-pup-escort" "toggle" "Escort")
+     (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-oestrus"
+                  (lambda () '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (list
-      (populate-grid-selector
-       "gc-pup-choose" "toggle"
+      (populate-grid-selector "gc-pup-choose" "toggle"
        (db-mongooses-by-pack-pups)
        (lambda (individual)
          (list)))
-      (populate-grid-selector
-       "gc-pup-escort" "toggle"
+      (populate-grid-selector "gc-pup-escort" "toggle"
        (db-mongooses-by-pack-adults)
        (lambda (individual)
          (list)))
@@ -1106,11 +1172,34 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtext "" "Oestrus...")))
+     (mtext "" "Oestrus")
+     (build-grid-selector "gc-oestrus-female" "single" "Choose female")
+     (horiz
+      (vert
+       (mtext "" "Strength")
+       (spinner (make-id "gc-oestrus-strength") (list "Weak" "Medium" "Strong") fillwrap
+                (lambda (v) '())))
+      (vert
+       (mtext "" "Accuracy")
+       (spinner (make-id "gc-oestrus-accuracy") (list "Weak" "Medium" "Strong") fillwrap
+                (lambda (v) '()))))
+     (build-grid-selector "gc-oestrus-guard" "single" "Choose mate guard")
+     (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-babysitting"
+                  (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list))
+     (list
+      (populate-grid-selector
+       "gc-oestrus-female" "single"
+       (db-mongooses-by-pack-female)
+       (lambda (individual)
+         (list)))
+      (populate-grid-selector
+       "gc-oestrus-guard" "single"
+       (db-mongooses-by-pack-male)
+       (lambda (individual)
+       ))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1121,7 +1210,9 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtext "" "Babysittings...")))
+     (mtitle "" "Babysitters")
+     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-end"
+                  (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -1136,7 +1227,9 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtext "" "end!...")))
+     (mtitle "" "Finish group composition")
+     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-end"
+                  (lambda () (list (finish-activity 0))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -1257,7 +1350,11 @@
             ((eq? (get-current 'observation "none") obs-gp)
              (list (start-activity "group-events" 2 "")))
             (else
-             (list (start-activity "group-composition" 2 ""))))
+             (entity-reset!)
+             (entity-add-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
+             (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
+             (list
+              (start-activity "group-composition" 2 ""))))
            (list
             (alert-dialog
              "choose-obs-finish"
@@ -1288,37 +1385,17 @@
      0 'vertical fillwrap gc-bgcol
      (list
       (text-view (make-id "obs-title") "" 40 fillwrap)
-      (linear-layout
-       (make-id "obs-buttons-bar") 'horizontal fillwrap trans-col '())
       (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 400 1 'left 0))
       (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 450 1 'left 0))
       (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (msg (get-current 'observation-fragments '()))
      (list
-      (update-widget 'linear-layout (get-id "obs-buttons-bar") 'contents
-                     (let ((all-toggles
-                            (map
-                             (lambda (i) (string-append "obs-bar-" (cadr i)))
-                             (get-current 'observation-fragments '()))))
-                       (map
-                        (lambda (frag)
-                          (msg "button-bar" frag)
-                          (let ((id (string-append "obs-bar-" (cadr frag))))
-                            (toggle-button
-                             (make-id id) (car frag) 12 fillwrap "plain"
-                             (lambda (v)
-                               (append
-                                (mclear-toggles-not-me id all-toggles)
-                                (list
-                                 (replace-fragment (get-id "gc-top") (cadr frag))))))))
-                        (get-current 'observation-fragments '()))))
       (update-widget 'text-view (get-id "obs-title") 'text
                      (string-append
                       (get-current 'observation "No observation")
-                      " with " (ktv-get (get-current 'pack '()) "name")))
+                      " with pack " (ktv-get (get-current 'pack '()) "name")))
       ))
    (lambda (activity) '())
    (lambda (activity) '())

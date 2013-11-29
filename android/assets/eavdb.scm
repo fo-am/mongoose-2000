@@ -308,6 +308,26 @@
          (cdr s)))))
 
 
+(define (update-entities-where2 db table type ktv ktv2)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv)
+                " as a on a.entity_id = e.entity_id "
+                "join " table "_value_" (ktv-type ktv2)
+                " as b on b.entity_id = e.entity_id "
+                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ? ")
+            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+
+
 (define (validate db)
   ;; check attribute for duplicate entity-id/attribute-ids
   0)
