@@ -150,8 +150,8 @@
   ;; standard bits
   (entity-add-value! "user" "varchar" (get-current 'user-id "none"))
   (entity-add-value! "time" "varchar" (date-time->string (date-time)))
-  (entity-add-value! "lat" "real" 0)
-  (entity-add-value! "lon" "real" 0)
+  (entity-add-value! "lat" "real" (car (get-current 'location '(0 0))))
+  (entity-add-value! "lon" "real" (cadr (get-current 'location '(0 0))))
   (let ((values (get-current 'entity-values '())))
     (cond
      ((not (null? values))
@@ -1333,8 +1333,10 @@
        (set-current! 'user-id user-id)
        (list
         (gps-start "gps" (lambda (loc)
-                           (list (toast (number->string (car loc))
-                                        (number->string (cadr loc))))))
+                           (set-current! 'location loc)
+                           (list (toast (string-append
+                                         (number->string (car loc)) ", "
+                                         (number->string (cadr loc)))))))
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())

@@ -761,7 +761,8 @@
                   (equal? (list-ref event 0) "list-files")
                   (equal? (list-ref event 0) "http-request")
                   (equal? (list-ref event 0) "network-connect")
-                  (equal? (list-ref event 0) "delayed"))
+                  (equal? (list-ref event 0) "delayed")
+                  (equal? (list-ref event 0) "gps-start"))
                  (add-new-dialog! event)))
          events)))
 

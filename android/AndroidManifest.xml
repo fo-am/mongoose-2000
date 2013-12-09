@@ -10,26 +10,27 @@
                  >
 
         <activity android:name="starwisp"
+                  android:configChanges="orientation"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="ObservationsActivity"></activity>
+        <activity android:name="ObservationsActivity" android:configChanges="orientation"></activity>
 
-        <activity android:name="GroupCompositionActivity" android:noHistory="true"></activity>
-        <activity android:name="PupFocalStartActivity" android:noHistory="true"></activity>
-        <activity android:name="PupFocalActivity" android:noHistory="true"></activity>
-        <activity android:name="GroupEventsActivity" android:noHistory="true"></activity>
+        <activity android:name="GroupCompositionActivity" android:configChanges="orientation"></activity>
+        <activity android:name="PupFocalStartActivity" android:configChanges="orientation"></activity>
+        <activity android:name="PupFocalActivity" android:configChanges="orientation"></activity>
+        <activity android:name="GroupEventsActivity" android:configChanges="orientation"></activity>
 
-        <activity android:name="ManagePacksActivity"></activity>
-        <activity android:name="NewPackActivity"></activity>
-        <activity android:name="ManageIndividualActivity"></activity>
-        <activity android:name="NewIndividualActivity"></activity>
-        <activity android:name="UpdateIndividualActivity"></activity>
-        <activity android:name="TagLocationActivity"></activity>
-        <activity android:name="SyncActivity"></activity>
+        <activity android:name="ManagePacksActivity" android:configChanges="orientation"></activity>
+        <activity android:name="NewPackActivity" android:configChanges="orientation"></activity>
+        <activity android:name="ManageIndividualActivity" android:configChanges="orientation"></activity>
+        <activity android:name="NewIndividualActivity" android:configChanges="orientation"></activity>
+        <activity android:name="UpdateIndividualActivity" android:configChanges="orientation"></activity>
+        <activity android:name="TagLocationActivity" android:configChanges="orientation"></activity>
+        <activity android:name="SyncActivity" android:configChanges="orientation"></activity>
     </application>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />

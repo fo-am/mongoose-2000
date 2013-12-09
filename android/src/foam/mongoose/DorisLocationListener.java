@@ -53,7 +53,7 @@ public class DorisLocationListener implements LocationListener {
     }
 
 	protected void locationChanged(double latitude, double longitude) {
-        m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,String.valueOf(latitude)+" "+String.valueOf(longitude));
+        m_Builder.DialogCallback(m_Context,m_Context.m_Name,m_CallbackName,"("+String.valueOf(latitude)+" "+String.valueOf(longitude)+")");
 	}
 
 	protected void setDeviceLocation() {
@@ -104,11 +104,11 @@ public class DorisLocationListener implements LocationListener {
 				|| (new Date()).getTime() - currrentLocation.getTime() > ONE_MINUTE) {
 			if (netAvailable) {
 				locationManager.requestLocationUpdates(
-						LocationManager.NETWORK_PROVIDER, 0, 0, this);
+						LocationManager.NETWORK_PROVIDER, 3*60*1000, 5, this);
 			}
 			if (gpsAvailable) {
 				locationManager.requestLocationUpdates(
-						LocationManager.GPS_PROVIDER, 0, 0, this);
+						LocationManager.GPS_PROVIDER, 3*60*1000, 5, this);
 			}
 		}
 	}
