@@ -88,6 +88,8 @@ import android.content.DialogInterface;
 import android.text.InputType;
 import android.util.TypedValue;
 import android.os.Handler;
+import android.location.LocationListener;
+import android.location.LocationManager;
 
 import android.app.TimePickerDialog;
 import android.app.DatePickerDialog;
@@ -105,6 +107,8 @@ public class StarwispBuilder
 {
     Scheme m_Scheme;
     NetworkManager m_NetworkManager;
+	LocationManager m_LocationManager;
+    DorisLocationListener m_GPS;
     Handler m_Handler;
 
     public StarwispBuilder(Scheme scm) {
@@ -800,6 +804,18 @@ public class StarwispBuilder
                         DialogCallback(ctx, ctxname, name, code);
                     }
                 }
+                return;
+            }
+
+            if (token.equals("gps-start")) {
+                final String name = arr.getString(3);
+
+                if (m_LocationManager == null) {
+                    m_LocationManager = (LocationManager) ctx.getSystemService(Context.LOCATION_SERVICE);
+                    m_GPS = new DorisLocationListener(m_LocationManager);
+                }
+
+                m_GPS.Start((StarwispActivity)ctx,name,this);
                 return;
             }
 

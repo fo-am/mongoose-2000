@@ -467,6 +467,7 @@
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
+(define (gps-start name fn) (list "gps-start" 0 "gps-start" name fn))
 (define (delayed name delay fn) (list "delayed" 0 "delayed" name fn delay))
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))

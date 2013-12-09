@@ -647,7 +647,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap pf-col
     (list
-     (build-grid-selector "pf-scan-nearest" "single" "Nearest Neighbour Scan: Closest Mongoose")
+     (build-grid-selector "pf-scan-nearest" "single" "<b>Nearest Neighbour Scan</b>: Closest Mongoose")
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done"
               (lambda ()
@@ -689,11 +689,14 @@
     (list
      (mtitle "title" "Event: Pup is fed")
      (build-grid-selector "pf-pupfeed-who" "single" "Who fed the pup?")
-     (mtext "text" "Food size")
+     (spacer 20)
      (horiz
+      (mtext "text" "Food size")
       (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap
                (lambda (v)
-                 (entity-add-value! "size" "varchar" v) '()))
+                 (entity-add-value! "size" "varchar" v) '())))
+     (spacer 20)
+     (horiz
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
@@ -726,9 +729,11 @@
     (make-id "") 'vertical fillwrap pf-col
     (list
      (mtitle "title" "Event: Pup found food")
-     (mtext "text" "Food size")
-     (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
-              (lambda (v) (entity-add-value! "size" "varchar" v) '()))
+     (horiz
+      (mtext "text" "Food size")
+      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
+               (lambda (v) (entity-add-value! "size" "varchar" v) '())))
+     (spacer 20)
      (horiz
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
@@ -758,11 +763,14 @@
     (list
      (mtitle "title" "Event: Pup is cared for")
      (build-grid-selector "pf-pupcare-who" "single" "Who cared for the pup?")
-     (mtext "text" "Type of care")
+     (spacer 20)
      (horiz
+      (mtext "text" "Type of care")
       (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap
                (lambda (v)
-                 (entity-add-value! "type" "varchar" v) '()))
+                 (entity-add-value! "type" "varchar" v) '())))
+     (spacer 20)
+     (horiz
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
                  (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
@@ -816,6 +824,7 @@
        (mtoggle-button "pf-pupaggr-win" "Win?"
                        (lambda (v)
                          (entity-add-value! "win" "varchar" (if v "yes" "no")) '()))))
+     (spacer 20)
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
@@ -951,7 +960,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap gp-col
     (list
-     (build-grid-selector "gp-mov-leader" "single" "Group movement: Leader")
+     (build-grid-selector "gp-mov-leader" "single" "<b>Group movement</b>: Leader")
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
@@ -959,29 +968,30 @@
                    (lambda (v) (entity-add-value! "pack-width" "int" (string->number v)) '()))
        (medit-text "gp-mov-l" "Pack depth" "numeric"
                    (lambda (v) (entity-add-value! "pack-depth" "int" (string->number v)) '()))
-       (medit-text "gp-mov-c" "How many mongooses?" "numeric"
+       (medit-text "gp-mov-c" "How many?" "numeric"
                    (lambda (v) (entity-add-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
-        (mtext "" "Where to")
-        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
-                 (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))
-
-       (vert
         (mtext "" "Direction")
         (spinner (make-id "gp-mov-to") (list "To" "From") fillwrap
                  (lambda (v) (entity-add-value! "direction" "varchar" v)  '())))
 
-       (horiz
-        (mbutton "pf-grpmov-done" "Done"
-                 (lambda ()
-                   (entity-record-values db "stream" "group-move")
-                   (list (replace-fragment (get-id "event-holder") "events"))))
-        (mbutton "pf-grpalarm-cancel" "Cancel"
-                 (lambda ()
-                   (list (replace-fragment (get-id "event-holder") "events")))))))))
+       (vert
+        (mtext "" "Where to")
+        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
+                 (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))))
+
+     (spacer 20)
+     (horiz
+      (mbutton "pf-grpmov-done" "Done"
+               (lambda ()
+                 (entity-record-values db "stream" "group-move")
+                 (list (replace-fragment (get-id "event-holder") "events"))))
+      (mbutton "pf-grpalarm-cancel" "Cancel"
+               (lambda ()
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1322,6 +1332,9 @@
      (let ((user-id (ktv-get (get-entity db "local" 1) "user-id")))
        (set-current! 'user-id user-id)
        (list
+        (gps-start "gps" (lambda (loc)
+                           (list (toast (number->string (car loc))
+                                        (number->string (cadr loc))))))
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
