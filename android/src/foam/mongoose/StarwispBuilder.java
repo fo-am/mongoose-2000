@@ -537,7 +537,7 @@ public class StarwispBuilder
 
                 ArrayAdapter spinnerArrayAdapter =
                     new ArrayAdapter<String>(ctx,
-                                             android.R.layout.simple_spinner_item,
+                                             R.layout.spinner_item,
                                              spinnerArray) {
                     public View getView(int position, View convertView,ViewGroup parent) {
                         View v = super.getView(position, convertView, parent);

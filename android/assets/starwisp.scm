@@ -347,27 +347,27 @@
 ;; user interface abstraction
 
 (define (mbutton id title fn)
-  (button (make-id id) title 20 fillwrap fn))
+  (button (make-id id) title 30 fillwrap fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 20 (layout 150 100 1 'centre 0) fn))
+  (button (make-id id) title 30 (layout 150 100 1 'centre 0) fn))
 
 (define (mtoggle-button id title fn)
-  (toggle-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
+  (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 0) "plain" fn))
+  (toggle-button (make-id id) title 30 (layout 150 100 1 'centre 0) "plain" fn))
 
 (define (mtext id text)
-  (text-view (make-id id) text 20 fillwrap))
+  (text-view (make-id id) text 30 fillwrap))
 
 (define (mtitle id text)
-  (text-view (make-id id) text 40 fillwrap))
+  (text-view (make-id id) text 50 fillwrap))
 
 (define (medit-text id text type fn)
   (vert
    (mtext (string-append id "-title") text)
-   (edit-text (make-id id) "" 20 type fillwrap fn)))
+   (edit-text (make-id id) "" 30 type fillwrap fn)))
 
 (define (mclear-toggles id-list)
   (map
@@ -405,7 +405,7 @@
      0 'horizontal
      (layout 'fill-parent 'wrap-content 1 'left 2) trans-col
      (list
-      (image-view (make-id "im") "arrow_left" (layout 100 'fill-parent 1 'left 0))
+      (image-view (make-id "im") "arrow_left" (layout 200 'fill-parent 1 'left 0))
       (scroll-view
        (make-id "scroller")
        (layout 'wrap-content 'wrap-content 1 'left 20)
@@ -414,9 +414,9 @@
          (make-id name) 'horizontal
          (layout 'wrap-content 'wrap-content 1 'centre 20) trans-col
          (list
-          (button-grid (make-id name) type 3 20 (layout 100 40 1 'left 40)
+          (button-grid (make-id name) type 3 30 (layout 100 60 1 'left 40)
                        (list) (lambda (v) '()))))))
-      (image-view (make-id "im") "arrow_right" (layout 100 'fill-parent 1 'right 0)))))))
+      (image-view (make-id "im") "arrow_right" (layout 200 'fill-parent 1 'right 0)))))))
 
 ;; assumes grid selectors on mongeese only
 (define (fast-get-name item)
@@ -440,7 +440,7 @@
     (let ((r (update-widget
      'button-grid (get-id name) 'grid-buttons
      (list
-      type 3 20 (layout 100 40 1 'left 0)
+      type 3 30 (layout 100 60 1 'left 0)
       (map
        (lambda (ii)
          (list (car ii) (caddr ii)))
@@ -469,16 +469,16 @@
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
 
 (define (db-mongooses-by-pack-male)
-  (db-all-where2
+  (db-all-where2or
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "gender" "varchar" "Male")))
+   (ktv "gender" "varchar" "Male") "Unknown"))
 
 (define (db-mongooses-by-pack-female)
-  (db-all-where2
+  (db-all-where2or
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "gender" "varchar" "Female")))
+   (ktv "gender" "varchar" "Female") "Unknown"))
 
 
 ;; (y m d h m s)
@@ -522,6 +522,8 @@
    (update-debug)))
 
 
+(define pf-length 20) ;; minutes...
+
 (define (timer-cb)
   (set-current!
    'timer-seconds
@@ -529,16 +531,28 @@
   (append
    (cond
     ((< (get-current 'timer-seconds 59) 0)
-     (set-current! 'timer-minutes (- (get-current 'timer-minutes 20) 1))
+     (set-current! 'timer-minutes (- (get-current 'timer-minutes pf-length) 1))
      (set-current! 'timer-seconds 59)
-     (list
-      (replace-fragment (get-id "pf-top") "pf-scan1")))
+     (cond ((< (get-current 'timer-minutes pf-length) 1)
+            (list
+             (alert-dialog
+              "pup-focal-end"
+              "Pup focal time is up, have you finished?"
+              (lambda (v)
+                (cond
+                 ((eqv? v 1)
+                  (list (finish-activity 1)))
+                 (else
+                  (set-current! 'timer-minutes 1)
+                  (list)))))))
+           (else
+            (list (replace-fragment (get-id "pf-top") "pf-scan1")))))
     (else '()))
    (list
     (delayed "timer" 1000 timer-cb)
     (update-widget
      'text-view (get-id "pf-timer-time-minutes") 'text
-     (string-append (number->string (get-current 'timer-minutes 20))))
+     (string-append (number->string (get-current 'timer-minutes pf-length))))
     (update-widget
      'text-view (get-id "pf-timer-time") 'text
      (string-append (number->string (get-current 'timer-seconds 59))))
@@ -559,6 +573,10 @@
                                    (get-id "gc-top") next-frag))))
                      (else '()))))))))
 
+(define (force-pause)
+  (list
+   (delayed "timer" 1000 (lambda () '()))
+   (update-widget 'toggle-button (get-id "pf-pause") 'checked 1)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
@@ -629,8 +647,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap pf-col
     (list
-     (mtext "title" "Nearest Neighbour Scan")
-     (build-grid-selector "pf-scan-nearest" "single" "Closest Mongoose")
+     (build-grid-selector "pf-scan-nearest" "single" "Nearest Neighbour Scan: Closest Mongoose")
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done"
               (lambda ()
@@ -834,21 +851,22 @@
    (linear-layout
     (make-id "") 'vertical fillwrap gp-col
     (list
-     (mtext "title" "Event: Group Interaction")
-     (build-grid-selector "gp-int-pack" "single" "Inter-group interaction: Other pack identity")
-     (build-grid-selector "gp-int-leader" "single" "Leader")
-     (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
-      (list
-       (vert
+     (build-grid-selector "gp-int-leader" "single" "<b>Inter-group interaction</b> Leader mongoose")
+     (horiz
+      (linear-layout
+       (make-id "") 'vertical (layout 400 'fill-parent '1 'left 0) trans-col
+       (list
         (mtext "text" "Outcome")
         (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight retreat" "Fight win") fillwrap
                  (lambda (v)
-                   (entity-add-value! "outcome" "varchar" v) '())))
-       (vert
+                   (entity-add-value! "outcome" "varchar" v) '()))
         (mtext "text" "Duration")
-        (edit-text (make-id "gp-int-dur") "" 20 "numeric" fillwrap
-                   (lambda (v) (entity-add-value! "duration" "int" (string->number v)) '())))
+        (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
+                   (lambda (v) (entity-add-value! "duration" "int" (string->number v)) '()))))
+      (build-grid-selector "gp-int-pack" "single" "Other pack"))
+     (linear-layout
+      (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
+      (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
                   (entity-record-values db "stream" "group-interaction")
@@ -862,20 +880,22 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (list
-      (populate-grid-selector
-       "gp-int-pack" "single"
-       (db-all db "sync" "pack")
-       (lambda (pack)
-         (entity-add-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
-         (list)))
-      (populate-grid-selector
-       "gp-int-leader" "single"
-       (db-mongooses-by-pack)
-       (lambda (individual)
-         (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
-         (list)))
-      ))
+     (append
+      (force-pause)
+      (list
+       (populate-grid-selector
+        "gp-int-pack" "single"
+        (db-all db "sync" "pack")
+        (lambda (pack)
+          (entity-add-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
+          (list)))
+       (populate-grid-selector
+        "gp-int-leader" "single"
+        (db-mongooses-by-pack)
+        (lambda (individual)
+          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
+          (list)))
+       )))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -911,13 +931,15 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (list
-      (populate-grid-selector
-       "gp-alarm-caller" "single"
-       (db-mongooses-by-pack)
-       (lambda (individual)
-         (entity-add-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
-         (list)))
+     (append
+      (force-pause)
+      (list
+       (populate-grid-selector
+        "gp-alarm-caller" "single"
+        (db-mongooses-by-pack)
+        (lambda (individual)
+          (entity-add-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
+          (list))))
       ))
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -929,8 +951,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap gp-col
     (list
-     (mtitle "title" "Event: Group movement")
-     (build-grid-selector "gp-mov-leader" "single" "Leader")
+     (build-grid-selector "gp-mov-leader" "single" "Group movement: Leader")
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
@@ -947,6 +968,12 @@
         (mtext "" "Where to")
         (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
                  (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))
+
+       (vert
+        (mtext "" "Direction")
+        (spinner (make-id "gp-mov-to") (list "To" "From") fillwrap
+                 (lambda (v) (entity-add-value! "direction" "varchar" v)  '())))
+
        (horiz
         (mbutton "pf-grpmov-done" "Done"
                  (lambda ()
@@ -960,14 +987,16 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (list
-      (populate-grid-selector
-       "gp-mov-leader" "single"
-       (db-mongooses-by-pack)
-       (lambda (individual)
-         (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
-         (list)))
-      ))
+     (append
+      (force-pause)
+      (list
+       (populate-grid-selector
+        "gp-mov-leader" "single"
+        (db-mongooses-by-pack)
+        (lambda (individual)
+          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
+          (list)))
+       )))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -979,7 +1008,7 @@
     (make-id "") 'vertical fillwrap gp-col
     (list
      (mtitle "title" "Make a note")
-     (edit-text (make-id "note-text") "" 20 "text" fillwrap
+     (edit-text (make-id "note-text") "" 30 "text" fillwrap
                 (lambda (v)
                   (entity-add-value! "text" "varchar" v)
                   '()))
@@ -997,7 +1026,7 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (list))
+     (force-pause))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1018,7 +1047,7 @@
      (mtoggle-button "gc-start-main-obs" "Main observer"
                      (lambda (v) (entity-add-value! "main-observer" "varchar" v) '()))
      (mtext "" "Code")
-     (edit-text (make-id "gc-start-code") "" 20 "numeric" fillwrap
+     (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
                 (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
      (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-weights"
@@ -1054,7 +1083,7 @@
      (mtitle "title" "Weights")
      (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
      (horiz
-      (edit-text (make-id "gc-weigh-weight") "" 20 "numeric" fillwrap
+      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
                  (lambda (v)
                    (entity-add-value! "weight" "varchar" v)
                    '()))
@@ -1272,8 +1301,8 @@
   (activity
    "main"
    (vert
-    (text-view (make-id "main-title") "Mongoose 2000" 40 fillwrap)
-    (text-view (make-id "main-about") "Advanced mongoose technology" 20 fillwrap)
+    (text-view (make-id "main-title") "Mongoose 2000" 50 fillwrap)
+    (text-view (make-id "main-about") "Advanced mongoose technology" 30 fillwrap)
     (spacer 10)
     (horiz
      (mbutton2 "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
@@ -1385,8 +1414,8 @@
      0 'vertical fillwrap gc-bgcol
      (list
       (text-view (make-id "obs-title") "" 40 fillwrap)
-      (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 400 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 450 1 'left 0))
+      (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 520 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 520 1 'left 0))
       (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1421,11 +1450,19 @@
                   (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
       (mbutton2 "pf1-done" "Done"
                (lambda ()
-                 (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
-                 (set-current! 'timer-minutes 20)
-                 (set-current! 'timer-seconds 59)
-                 (list
-                  (start-activity "pup-focal" 2 ""))))
+                 (cond
+                  ((current-exists? 'individual)
+                   (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
+                   (set-current! 'timer-minutes pf-length)
+                   (set-current! 'timer-seconds 0)
+                   (list
+                    (start-activity "pup-focal" 2 "")))
+                  (else
+                   (list
+                    (alert-dialog
+                     "pup-focal-check"
+                     "You need to specify an pup for the focal"
+                     (lambda () '())))))))
       )))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1458,7 +1495,7 @@
         (list
          (mtext "title" "Time left:")
          (mtitle "pf-timer-time-minutes"
-                 (number->string (get-current 'timer-minutes 20)))))
+                 (number->string (get-current 'timer-minutes pf-length)))))
        (linear-layout
         0 'vertical fillwrap trans-col
         (list
@@ -1471,8 +1508,8 @@
                          (if v
                              (list (delayed "timer" 1000 (lambda () '())))
                              (list (delayed "timer" 1000 timer-cb))))))
-      (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 400 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 450 1 'left 0))
+      (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 515 1 'left 0))
+      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 515 1 'left 0))
       (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0))))))
 
     (lambda (activity arg)
@@ -1480,7 +1517,7 @@
     (lambda (activity arg)
       (list
        (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
-                      (number->string (get-current 'timer-minutes 20)))
+                      (number->string (get-current 'timer-minutes pf-length)))
        (update-widget 'text-view (get-id "pf-timer-time") 'text
                       (number->string (get-current 'timer-seconds 60)))
        (delayed "timer" 1000 timer-cb)))
@@ -1540,7 +1577,7 @@
    (vert
     (text-view (make-id "title") "New pack" 40 fillwrap)
     (spacer 10)
-    (text-view (make-id "new-pack-name-text") "Pack name" 20 fillwrap)
+    (text-view (make-id "new-pack-name-text") "Pack name" 30 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (spacer 10)
@@ -1567,7 +1604,7 @@
    "manage-individual"
    (vert
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
-    (text-view (make-id "manage-individual-pack-name") "Pack:" 20 fillwrap)
+    (text-view (make-id "manage-individual-pack-name") "Pack:" 30 fillwrap)
     (build-grid-selector "manage-individuals-list" "button" "Choose individual")
     (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
     )
@@ -1594,17 +1631,17 @@
    "new-individual"
    (vert
     (text-view (make-id "title") "New Mongoose" 40 fillwrap)
-    (text-view (make-id "new-individual-pack-name") "Pack:" 20 fillwrap)
-    (text-view (make-id "new-individual-name-text") "Name" 20 fillwrap)
+    (text-view (make-id "new-individual-pack-name") "Pack:" 30 fillwrap)
+    (text-view (make-id "new-individual-name-text") "Name" 30 fillwrap)
     (edit-text (make-id "new-individual-name") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "name" "varchar" v) '()))
-    (text-view (make-id "new-individual-name-text") "Gender" 20 fillwrap)
-    (spinner (make-id "new-individual-gender") (list "Female" "Male") fillwrap
+    (text-view (make-id "new-individual-name-text") "Gender" 30 fillwrap)
+    (spinner (make-id "new-individual-gender") (list "Female" "Male" "Unknown") fillwrap
              (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
-    (text-view (make-id "new-individual-dob-text") "Date of Birth" 20 fillwrap)
+    (text-view (make-id "new-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") (date->string (list date-day date-month date-year)) 25 fillwrap)
-     (button (make-id "date") "Set date" 20 fillwrap
+     (button (make-id "date") "Set date" 30 fillwrap
              (lambda ()
                (list (date-picker-dialog
                       "new-individual-date"
@@ -1615,10 +1652,10 @@
                            (update-widget
                             'text-view
                             (get-id "new-individual-dob") 'text datestring)))))))))
-    (text-view (make-id "new-individual-litter-text") "Litter code" 20 fillwrap)
+    (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
-    (text-view (make-id "new-individual-chip-text") "Chip code" 20 fillwrap)
+    (text-view (make-id "new-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (horiz
@@ -1654,16 +1691,16 @@
    (vert
     (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
     (spacer 10)
-    (text-view (make-id "update-individual-name-text") "Name" 20 fillwrap)
+    (text-view (make-id "update-individual-name-text") "Name" 30 fillwrap)
     (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "name" "varchar" v) '()))
-    (text-view (make-id "update-individual-name-text") "Gender" 20 fillwrap)
+    (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
     (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap
              (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
-    (text-view (make-id "update-individual-dob-text") "Date of Birth" 20 fillwrap)
+    (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
-     (button (make-id "date") "Set date" 20 fillwrap
+     (button (make-id "date") "Set date" 30 fillwrap
              (lambda ()
                (list (date-picker-dialog
                       "update-individual-date"
@@ -1675,10 +1712,10 @@
                             'text-view
                             (get-id "update-individual-dob") 'text datestring)))))))))
 
-    (text-view (make-id "update-individual-litter-text") "Litter code" 20 fillwrap)
+    (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
-    (text-view (make-id "update-individual-chip-text") "Chip code" 20 fillwrap)
+    (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (spacer 10)
@@ -1723,24 +1760,24 @@
    "tag-location"
    (vert
     (text-view (make-id "title") "Tag Location" 40 fillwrap)
-    (text-view (make-id "tag-location-gps-text") "GPS" 20 fillwrap)
+    (text-view (make-id "tag-location-gps-text") "GPS" 30 fillwrap)
     (horiz
-     (text-view (make-id "tag-location-gps-lat") "LAT" 20 fillwrap)
-     (text-view (make-id "tag-location-gps-lng") "LNG" 20 fillwrap))
+     (text-view (make-id "tag-location-gps-lat") "LAT" 30 fillwrap)
+     (text-view (make-id "tag-location-gps-lng") "LNG" 30 fillwrap))
 
-    (text-view (make-id "tag-location-name-text") "Name" 20 fillwrap)
+    (text-view (make-id "tag-location-name-text") "Name" 30 fillwrap)
     (edit-text (make-id "tag-location-name") "" 30 "text" fillwrap (lambda (v) '()))
 
-    (text-view (make-id "tag-location-pack-text") "Associated pack" 20 fillwrap)
+    (text-view (make-id "tag-location-pack-text") "Associated pack" 30 fillwrap)
     (spinner (make-id "tag-location-pack") (list "Pack 1" "Pack 2") fillwrap (lambda (v) '()))
 
-    (text-view (make-id "tag-location-radius-text") "Approx radius of area" 20 fillwrap)
+    (text-view (make-id "tag-location-radius-text") "Approx radius of area" 30 fillwrap)
     (seek-bar (make-id "tag-location-radius") 100 fillwrap (lambda (v) '()))
-    (text-view (make-id "tag-location-radius-value") "10m" 20 fillwrap)
+    (text-view (make-id "tag-location-radius-value") "10m" 30 fillwrap)
 
     (horiz
-     (button (make-id "tag-location-cancel") "Cancel" 20 fillwrap (lambda () (list (finish-activity 2))))
-     (button (make-id "tag-location-done") "Done" 20 fillwrap (lambda () (list (finish-activity 2)))))
+     (button (make-id "tag-location-cancel") "Cancel" 30 fillwrap (lambda () (list (finish-activity 2))))
+     (button (make-id "tag-location-done") "Done" 30 fillwrap (lambda () (list (finish-activity 2)))))
 
     )
    (lambda (activity arg)

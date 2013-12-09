@@ -33,6 +33,7 @@
 
   <style name="StarwispSpinner" parent="android:style/Widget.Spinner">
     <item name="android:textColor">@color/text</item>
+    <item name="android:textSize">50sp</item>
     <item name="android:background">@drawable/swarmspinner</item>
   </style>
 
