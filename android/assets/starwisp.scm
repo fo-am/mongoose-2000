@@ -303,7 +303,9 @@
           (debug! (string-append
                    "Requesting "
                    (number->string (length r)) " entities"))
-          r)))))))
+          (cons
+           (play-sound "active")
+           r))))))))
 
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
@@ -320,7 +322,8 @@
              ((> (length r) 0)
               (debug! (string-append "Uploading " (number->string (length r)) " items..."))
               (list
-               (toast "Uploading data...")))
+               (toast "Uploading data...")
+               (play-sound "active")))
              (else
               (debug! "No data changed to upload")
               (set-current! 'upload 1)
@@ -517,9 +520,21 @@
                  (get-current 'debug-text "")))
 
 (define (debug-timer-cb)
-  (list
-   (delayed "debug-timer" 1000 debug-timer-cb)
-   (update-debug)))
+  (append
+   (cond
+    ((get-current 'sync-on #f)
+     (set-current! 'upload 0)
+     (set-current! 'download 0)
+     (connect-to-net
+      (lambda ()
+        (append
+         (list (toast "sync-cb"))
+         (upload-dirty db)
+         (suck-new db "sync")))))
+    (else '()))
+   (list
+    (delayed "debug-timer" (+ 5000 (random 5000)) debug-timer-cb)
+    (update-debug))))
 
 
 (define pf-length 20) ;; minutes...
@@ -1826,16 +1841,7 @@
     (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
     (mtext "sync-dirty" "...")
     (horiz
-     (mbutton2 "sync-all" "Sync me"
-               (lambda ()
-                 (set-current! 'upload 0)
-                 (set-current! 'download 0)
-                 (connect-to-net
-                  (lambda ()
-                    (append
-                     (upload-dirty db)
-                     (suck-new db "sync"))))))
-
+     (mtoggle-button2 "sync-all" "Sync me" (lambda (v) (set-current! 'sync-on v)))
      (mbutton2 "sync-syncall" "Push all"
                (lambda ()
                  (let ((r (append
@@ -1903,6 +1909,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (set-current! 'sync-on #f)
      (append
       (debug-timer-cb)
       (list

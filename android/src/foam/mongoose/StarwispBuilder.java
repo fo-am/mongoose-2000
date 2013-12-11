@@ -690,8 +690,16 @@ public class StarwispBuilder
             }
 
             if (token.equals("play-sound")) {
-                MediaPlayer mp = MediaPlayer.create(ctx, R.raw.ping);
-                mp.start();
+                String name = arr.getString(3);
+
+                if (name.equals("ping")) {
+                    MediaPlayer mp = MediaPlayer.create(ctx, R.raw.ping);
+                    mp.start();
+                }
+                if (name.equals("active")) {
+                    MediaPlayer mp = MediaPlayer.create(ctx, R.raw.active);
+                    mp.start();
+                }
             }
 
             if (token.equals("vibrate")) {
