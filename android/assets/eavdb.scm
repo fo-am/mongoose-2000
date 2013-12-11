@@ -293,9 +293,9 @@
                 " as b on b.entity_id = e.entity_id "
                 "where e.entity_type = ? "
                 "and a.attribute_id = ? and a.value = ? "
-                "and b.attribute_id = ? and b.value > DateTime(?)"
+                "and b.attribute_id = ? and (b.value > DateTime(?) and b.value != ?)"
                 )
-            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2))))
+            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2) "Unknown")))
     (msg "date select" (db-status db))
     (if (null? s)
         '()
@@ -314,9 +314,9 @@
                 " as b on b.entity_id = e.entity_id "
                 "where e.entity_type = ? "
                 "and a.attribute_id = ? and a.value = ? "
-                "and b.attribute_id = ? and b.value < DateTime(?)"
+                "and b.attribute_id = ? and (b.value < DateTime(?) or b.value = ?)"
                 )
-            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2))))
+            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2) "Unknown")))
     (msg "date select" (db-status db))
     (if (null? s)
         '()
@@ -324,7 +324,6 @@
          (lambda (i)
            (vector-ref i 0))
          (cdr s)))))
-
 
 (define (update-entities-where2 db table type ktv ktv2)
   (let ((s (db-select
@@ -431,7 +430,6 @@
             (all-entities-where-older db table type ktv ktv2))))
     (prof-end "db-all-where older")
     r))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data

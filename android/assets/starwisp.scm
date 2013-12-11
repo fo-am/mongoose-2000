@@ -358,6 +358,15 @@
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
 
+(define (mtoggle-button-yes id title fn)
+  (toggle-button (make-id id) title 30 (layout 49 43 1 'centre 0) "yes" fn))
+
+(define (mtoggle-button-maybe id title fn)
+  (toggle-button (make-id id) title 30 (layout  49 43 1 'centre 0) "maybe" fn))
+
+(define (mtoggle-button-no id title fn)
+  (toggle-button (make-id id) title 30 (layout  49 43 1 'centre 0) "no" fn))
+
 (define (mtoggle-button2 id title fn)
   (toggle-button (make-id id) title 30 (layout 150 100 1 'centre 0) "plain" fn))
 
@@ -425,19 +434,27 @@
 (define (fast-get-name item)
   (list-ref (list-ref item 1) 2))
 
-(define (build-button-items name items)
-  (map
-   (lambda (item)
-     (let ((item-name (fast-get-name item)))
-       (list (make-id (string-append name item-name))
-             item
-             item-name)))
-   items))
+(define (build-button-items name items unknown)
+  (append
+   (map
+    (lambda (item)
+      (let ((item-name (fast-get-name item)))
+        (list (make-id (string-append name item-name))
+              item
+              item-name)))
+    items)
+   (if unknown
+       (list
+        (list (make-id (string-append name "-unknown"))
+              (list (ktv "name" "varchar" "Unknown")
+                    (ktv "unique_id" "varchar" "Unknown"))
+              "???"))
+       '())))
 
-(define (populate-grid-selector name type items fn)
+(define (populate-grid-selector name type items unknown fn)
   (prof-start "popgrid")
   (prof-start "popgrid setup")
-  (let ((id->items (build-button-items name items))
+  (let ((id->items (build-button-items name items unknown))
         (selected-set '()))
     (prof-end "popgrid setup")
     (let ((r (update-widget
@@ -446,7 +463,7 @@
       type 3 30 (layout 100 60 1 'left 0)
       (map
        (lambda (ii)
-         (list (car ii) (caddr ii)))
+         (dbg (list (car ii) (caddr ii))))
        id->items)
       (lambda (v state)
         (cond
@@ -508,6 +525,59 @@
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
    (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
+
+
+
+(define (tri-state id text key)
+  (linear-layout
+   (make-id "") 'vertical (layout 'fill-parent 'wrap-content '1 'centre 0) trans-col
+   (list
+    (linear-layout
+     (make-id "") 'horizontal (layout 'wrap-content 'wrap-parent '1 'centre 0) trans-col
+     (list
+      (mtoggle-button-yes
+       (string-append id "-y") ""
+       (lambda (v)
+         (cond
+          (v
+           (entity-add-value! key "varchar" "yes")
+           (list
+            (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 0)
+            (update-widget 'toggle-button (get-id (string-append id "-m")) 'checked 0)))
+               (else
+                (list
+                 (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 1))))
+              ))
+      (mtoggle-button-maybe
+       (string-append id "-m")  ""
+       (lambda (v)
+         (cond
+          (v
+           (entity-add-value! key "varchar" "maybe")
+           (list
+            (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
+            (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 0)))
+          (else
+           (list
+            (update-widget 'toggle-button (get-id (string-append id "-m")) 'checked 1))))
+         ))
+
+      (mtoggle-button-no
+       (string-append id "-n") ""
+       (lambda (v)
+         (cond
+          (v
+           (entity-add-value! key "varchar" "no")
+           (list
+            (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
+            (update-widget 'toggle-button (get-id (string-append id "-m")) 'checked 0)))
+          (else
+           (list
+            (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 1))))
+         ))))
+
+    (text-view 0 text 30 (layout 'wrap-content 'wrap-parent '1 'centre 0)))))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -680,13 +750,13 @@
       (vibrate 300)
       (populate-grid-selector
        "pf-scan-nearest" "single"
-       (db-mongooses-by-pack-adults)
+       (db-mongooses-by-pack-adults) #t
        (lambda (individual)
          (entity-add-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
-       (db-mongooses-by-pack-adults)
+       (db-mongooses-by-pack-adults) #t
        (lambda (individuals)
          (entity-add-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
@@ -728,7 +798,7 @@
      (list
       (populate-grid-selector
        "pf-pupfeed-who" "single"
-       (db-mongooses-by-pack-adults)
+       (db-mongooses-by-pack-adults) #t
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -802,7 +872,7 @@
      (list
       (populate-grid-selector
        "pf-pupcare-who" "single"
-       (db-mongooses-by-pack-adults)
+       (db-mongooses-by-pack-adults) #t
        (lambda (individual)
          (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -833,12 +903,16 @@
         (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap
                  (lambda (v)
                    (entity-add-value! "level" "varchar" v) '())))
-       (mtoggle-button "pf-pupaggr-in" "Initiate?"
-                       (lambda (v)
-                         (entity-add-value! "initiate" "varchar" (if v "yes" "no")) '()))
-       (mtoggle-button "pf-pupaggr-win" "Win?"
-                       (lambda (v)
-                         (entity-add-value! "win" "varchar" (if v "yes" "no")) '()))))
+
+       (tri-state "pf-pupaggr-in" "Initiate?" "initiate")
+
+       ;(mtoggle-button "pf-pupaggr-in" "Initiate?"
+       ;                (lambda (v)
+       ;                  (entity-add-value! "initiate" "varchar" (if v "yes" "no")) '()))
+
+
+       (tri-state "pf-pupaggr-win" "Win?" "win")))
+
      (spacer 20)
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
@@ -858,7 +932,7 @@
      (list
       (populate-grid-selector
        "pf-pupaggr-partner" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack) #t
        (lambda (individual)
          (entity-add-value! "id-with" "varchar" (ktv-get individual "unique_id"))
          (list)))
@@ -909,13 +983,13 @@
       (list
        (populate-grid-selector
         "gp-int-pack" "single"
-        (db-all db "sync" "pack")
+        (db-all db "sync" "pack") #f
         (lambda (pack)
           (entity-add-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
        (populate-grid-selector
         "gp-int-leader" "single"
-        (db-mongooses-by-pack)
+        (db-mongooses-by-pack) #t
         (lambda (individual)
           (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
@@ -933,15 +1007,18 @@
     (list
      (mtitle "title" "Event: Group alarm")
      (build-grid-selector "gp-alarm-caller" "single" "Alarm caller")
-     (mtext "text" "Cause")
-     (horiz
-      (spinner (make-id "gp-alarm-cause") (list "Predator" "Other mongoose pack" "Humans" "Other" "Unknown") fillwrap
-               (lambda (v)
-                 (entity-add-value! "cause" "varchar" v) '()))
-      (mtoggle-button "gp-alarm-join" "Did the others join in?"
-                      (lambda (v)
-                        (entity-add-value! "others-join" "varchar"
-                                           (if v "yes" "no")) '())))
+
+     (linear-layout
+      (make-id "") 'horizontal fillwrap trans-col
+      (list
+       (vert
+        (mtext "text" "Cause")
+        (spinner (make-id "gp-alarm-cause") (list "Predator" "Other mongoose pack" "Humans" "Other" "Unknown") fillwrap
+                 (lambda (v)
+                   (entity-add-value! "cause" "varchar" v) '())))
+
+       (tri-state "gp-alarm-join" "Did the others join in?" "others-join")))
+
      (horiz
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
@@ -960,7 +1037,7 @@
       (list
        (populate-grid-selector
         "gp-alarm-caller" "single"
-        (db-mongooses-by-pack)
+        (db-mongooses-by-pack) #t
         (lambda (individual)
           (entity-add-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
           (list))))
@@ -990,7 +1067,7 @@
       (list
        (vert
         (mtext "" "Direction")
-        (spinner (make-id "gp-mov-to") (list "To" "From") fillwrap
+        (spinner (make-id "gp-mov-dir") (list "To" "From") fillwrap
                  (lambda (v) (entity-add-value! "direction" "varchar" v)  '())))
 
        (vert
@@ -1017,7 +1094,7 @@
       (list
        (populate-grid-selector
         "gp-mov-leader" "single"
-        (db-mongooses-by-pack)
+        (db-mongooses-by-pack) #t
         (lambda (individual)
           (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
@@ -1051,7 +1128,10 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (force-pause))
+     (append
+      (force-pause)
+      (list
+       (update-widget 'edit-text (get-id "note-text") 'request-focus 1))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1089,7 +1169,7 @@
      (list
       (populate-grid-selector
        "gc-start-present" "toggle"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack) #f
        (lambda (individual)
          (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
 
@@ -1134,7 +1214,7 @@
      (list
       (populate-grid-selector
        "gc-weigh-choose" "single"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack) #f
        (lambda (individual)
          (msg "loading")
          (entity-add-value! "id-mongoose" "varchar" (ktv-get individual "unique_id"))
@@ -1173,7 +1253,7 @@
      (list
       (populate-grid-selector
        "gc-preg-choose" "toggle"
-       (db-mongooses-by-pack-female)
+       (db-mongooses-by-pack-female) #f
        (lambda (individual)
          (list)))
       ))
@@ -1208,11 +1288,11 @@
    (lambda (fragment arg)
      (list
       (populate-grid-selector "gc-pup-choose" "toggle"
-       (db-mongooses-by-pack-pups)
+       (db-mongooses-by-pack-pups) #f
        (lambda (individual)
          (list)))
       (populate-grid-selector "gc-pup-escort" "toggle"
-       (db-mongooses-by-pack-adults)
+       (db-mongooses-by-pack-adults) #t
        (lambda (individual)
          (list)))
       ))
@@ -1246,12 +1326,12 @@
      (list
       (populate-grid-selector
        "gc-oestrus-female" "single"
-       (db-mongooses-by-pack-female)
+       (db-mongooses-by-pack-female) #f
        (lambda (individual)
          (list)))
       (populate-grid-selector
        "gc-oestrus-guard" "single"
-       (db-mongooses-by-pack-male)
+       (db-mongooses-by-pack-male) #f
        (lambda (individual)
        ))))
    (lambda (fragment) '())
@@ -1340,7 +1420,7 @@
                  (update-entity
                   db "local" 1 (list (ktv "user-id" "varchar" v)))))
     (mtext "foo" "Database")
-    (mbutton2 "main-sync" "Sync" (lambda () (list (start-activity "sync" 0 "")))))
+    (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 "")))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1429,7 +1509,7 @@
      (list
       (populate-grid-selector
        "choose-obs-pack-selector" "single"
-       (db-all db "sync" "pack")
+       (db-all db "sync" "pack") #f
        (lambda (pack)
          (msg "in selector" pack)
          (set-current! 'pack pack)
@@ -1482,7 +1562,7 @@
       (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
                   (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
       (horiz
-       (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+       (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
        (mbutton2 "pf1-done" "Done"
                  (lambda ()
                    (cond
@@ -1506,7 +1586,7 @@
      (list
       (populate-grid-selector
        "pf1-grid" "single"
-       (db-mongooses-by-pack-pups)
+       (db-mongooses-by-pack-pups) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
@@ -1568,7 +1648,7 @@
                       (number->string (get-current 'timer-seconds 60)))
        (delayed "timer" 1000 timer-cb)))
     (lambda (activity) '())
-    (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
+    (lambda (activity) '())
     (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
     (lambda (activity) '())
     (lambda (activity requestcode resultcode) '()))
@@ -1599,14 +1679,16 @@
    (vert
     (text-view (make-id "title") "Manage packs" 40 fillwrap)
     (build-grid-selector "manage-packs-list" "button" "Choose pack")
-    (mbutton2 "manage-packs-new" "New pack" (lambda () (list (start-activity "new-pack" 2 ""))))
+    (horiz
+     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2 "manage-packs-new" "New pack" (lambda () (list (start-activity "new-pack" 2 "")))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-packs-list" "button" (db-all db "sync" "pack")
+       "manage-packs-list" "button" (db-all db "sync" "pack") #f
        (lambda (pack)
          (set-current! 'pack pack)
          (list (start-activity "manage-individual" 2 ""))))
@@ -1651,7 +1733,9 @@
     (text-view (make-id "title") "Manage individuals" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 30 fillwrap)
     (build-grid-selector "manage-individuals-list" "button" "Choose individual")
-    (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
+    (horiz
+     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 "")))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1659,7 +1743,7 @@
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
-       (db-mongooses-by-pack)
+       (db-mongooses-by-pack) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
@@ -1685,7 +1769,7 @@
              (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
-     (text-view (make-id "new-individual-dob") (date->string (list date-day date-month date-year)) 25 fillwrap)
+     (text-view (make-id "new-individual-dob") (date->string (date-time)) 25 fillwrap)
      (button (make-id "date") "Set date" 30 fillwrap
              (lambda ()
                (list (date-picker-dialog
@@ -1696,7 +1780,12 @@
                           (list
                            (update-widget
                             'text-view
-                            (get-id "new-individual-dob") 'text datestring)))))))))
+                            (get-id "new-individual-dob") 'text datestring))))))))
+     (button (make-id "unknown-date") "Unknown" 30 fillwrap
+             (lambda ()
+               (entity-add-value! "dob" "varchar" "Unknown")
+               (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
+     )
     (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
@@ -1719,9 +1808,9 @@
      ;; make sure all fields exist
      (entity-add-value! "name" "varchar" "noname")
      (entity-add-value! "gender" "varchar" "Female")
-     (entity-add-value! "dob" "varchar" "00/00/00")
-     (entity-add-value! "litter-code" "varchar" "123")
-     (entity-add-value! "chip-code" "varchar" "123")
+     (entity-add-value! "dob" "varchar" "00-00-00")
+     (entity-add-value! "litter-code" "varchar" "")
+     (entity-add-value! "chip-code" "varchar" "")
      (list
       (update-widget 'text-view (get-id "new-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))))
@@ -1740,7 +1829,7 @@
     (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
                (lambda (v) (entity-add-value! "name" "varchar" v) '()))
     (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
-    (spinner (make-id "update-individual-gender") (list "Female" "Male") fillwrap
+    (spinner (make-id "update-individual-gender") (list "Female" "Male" "Unknown") fillwrap
              (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
@@ -1755,7 +1844,12 @@
                           (list
                            (update-widget
                             'text-view
-                            (get-id "update-individual-dob") 'text datestring)))))))))
+                            (get-id "update-individual-dob") 'text datestring))))))))
+     (button (make-id "update-unknown-date") "Unknown" 30 fillwrap
+             (lambda ()
+               (entity-add-value! "dob" "varchar" "Unknown")
+               (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
+     )
 
     (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
@@ -1787,7 +1881,10 @@
         (update-widget 'text-view (get-id "update-individual-dob") 'text
                        (ktv-get individual "dob"))
         (update-widget 'spinner (get-id "update-individual-gender") 'selection
-                       (if (equal? (ktv-get individual "gender") "Female") 0 1))
+                       (cond
+                        ((equal? (ktv-get individual "gender") "Female") 0)
+                        ((equal? (ktv-get individual "gender") "Male") 1)
+                        (else 2)))
         (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
                        (ktv-get individual "litter-code"))
         (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
@@ -1902,7 +1999,7 @@
        (debug-text-view (make-id "sync-debug") "..." 15 (layout 'fill-parent 400 1 'left 0)))))
     (spacer 10)
     (horiz
-     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2 "sync-back" "Back" (lambda () (list (finish-activity 1))))
      (mbutton2 "sync-send" "[Prof]" (lambda () (prof-print) (list))))
     )
 

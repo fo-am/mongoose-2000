@@ -793,7 +793,7 @@
     r))
 
 (define (top-callback type activity-name activity args)
-  ;;(display "activity-callback ")(display type)(display " ")(display args)(newline)
+  ;;(display "activity/fragment-callback ")(display type)(display " ")(display args)(newline)
   (if (not activity)
       (begin (display "no activity/fragment called ")(display activity-name)(newline))
       (let ((ret (cond

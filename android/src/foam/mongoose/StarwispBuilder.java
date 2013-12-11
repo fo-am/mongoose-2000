@@ -67,6 +67,7 @@ import android.view.View;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
+import android.view.inputmethod.InputMethodManager;
 import android.text.TextWatcher;
 import android.text.Html;
 import android.text.Editable;
@@ -485,11 +486,21 @@ public class StarwispBuilder
             }
 
             if (type.equals("toggle-button")) {
-                ToggleButton v;
-                if (arr.getString(5).equals("plain")) {
-                    v = new ToggleButton(ctx);
-                } else {
+                ToggleButton v = new ToggleButton(ctx);
+                if (arr.getString(5).equals("fancy")) {
                     v = (ToggleButton)ctx.getLayoutInflater().inflate(R.layout.toggle_button_fancy, null);
+                }
+
+                if (arr.getString(5).equals("yes")) {
+                    v = (ToggleButton)ctx.getLayoutInflater().inflate(R.layout.toggle_button_yes, null);
+                }
+
+                if (arr.getString(5).equals("maybe")) {
+                    v = (ToggleButton)ctx.getLayoutInflater().inflate(R.layout.toggle_button_maybe, null);
+                }
+
+                if (arr.getString(5).equals("no")) {
+                    v = (ToggleButton)ctx.getLayoutInflater().inflate(R.layout.toggle_button_no, null);
                 }
 
                 v.setId(arr.getInt(1));
@@ -1148,6 +1159,11 @@ public class StarwispBuilder
                 EditText v = (EditText)vv;
                 if (token.equals("text")) {
                     v.setText(arr.getString(3));
+                }
+                if (token.equals("request-focus")) {
+                    v.requestFocus();
+                    InputMethodManager imm = (InputMethodManager) ctx.getSystemService(Context.INPUT_METHOD_SERVICE);
+                    imm.showSoftInput(v, InputMethodManager.SHOW_IMPLICIT);
                 }
                 return;
             }
