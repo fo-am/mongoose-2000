@@ -1373,37 +1373,40 @@
                            (set-current! 'observation obs-gp)
                            (mclear-toggles (list "choose-obs-pf" "choose-obs-gc"))))))))
     (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
-    (mbutton2
-     "choose-obs-start" "Start"
-     (lambda ()
-       ;; set up the observation fragments
-       (let ((obs (get-current 'observation "none")))
-         (when (not (equal? obs "none"))
-           (set-current!
-            'observation-fragments
-            (cond
-             ((equal? obs obs-gc) gc-fragments)
-             (else '())))))
 
-       ;; go to observation
-       (if (and (current-exists? 'pack)
-                (current-exists? 'observation))
-           (cond
-            ((eq? (get-current 'observation "none") obs-pf)
-             (list (start-activity "pup-focal-start" 2 "")))
-            ((eq? (get-current 'observation "none") obs-gp)
-             (list (start-activity "group-events" 2 "")))
-            (else
-             (entity-reset!)
-             (entity-add-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
-             (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
-             (list
-              (start-activity "group-composition" 2 ""))))
-           (list
-            (alert-dialog
-             "choose-obs-finish"
-             "Need to specify a pack and an observation"
-             (lambda () '()))))))
+    (horiz
+     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2
+      "choose-obs-start" "Start"
+      (lambda ()
+        ;; set up the observation fragments
+        (let ((obs (get-current 'observation "none")))
+          (when (not (equal? obs "none"))
+                (set-current!
+                 'observation-fragments
+                 (cond
+                  ((equal? obs obs-gc) gc-fragments)
+                  (else '())))))
+
+        ;; go to observation
+        (if (and (current-exists? 'pack)
+                 (current-exists? 'observation))
+            (cond
+             ((eq? (get-current 'observation "none") obs-pf)
+              (list (start-activity "pup-focal-start" 2 "")))
+             ((eq? (get-current 'observation "none") obs-gp)
+              (list (start-activity "group-events" 2 "")))
+             (else
+              (entity-reset!)
+              (entity-add-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
+              (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
+              (list
+               (start-activity "group-composition" 2 ""))))
+            (list
+             (alert-dialog
+              "choose-obs-finish"
+              "Need to specify a pack and an observation"
+              (lambda () '())))))))
     )
    (lambda (activity arg)
      (activity-layout activity))
@@ -1463,21 +1466,23 @@
                    (lambda (v) (entity-add-value! "pack-depth" "int" v) '())))
       (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
                   (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
-      (mbutton2 "pf1-done" "Done"
-               (lambda ()
-                 (cond
-                  ((current-exists? 'individual)
-                   (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
-                   (set-current! 'timer-minutes pf-length)
-                   (set-current! 'timer-seconds 0)
-                   (list
-                    (start-activity "pup-focal" 2 "")))
-                  (else
-                   (list
-                    (alert-dialog
-                     "pup-focal-check"
-                     "You need to specify an pup for the focal"
-                     (lambda () '())))))))
+      (horiz
+       (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+       (mbutton2 "pf1-done" "Done"
+                 (lambda ()
+                   (cond
+                    ((current-exists? 'individual)
+                     (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
+                     (set-current! 'timer-minutes pf-length)
+                     (set-current! 'timer-seconds 0)
+                     (list
+                      (start-activity "pup-focal" 2 "")))
+                    (else
+                     (list
+                      (alert-dialog
+                       "pup-focal-check"
+                       "You need to specify an pup for the focal"
+                       (lambda () '()))))))))
       )))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1525,7 +1530,18 @@
                              (list (delayed "timer" 1000 timer-cb))))))
       (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 515 1 'left 0))
       (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 515 1 'left 0))
-      (mbutton "pf-done" "Done" (lambda () (list (finish-activity 0))))))
+      (mbutton "pf-done" "Done"
+               (lambda ()
+                 (list
+                  (alert-dialog
+                   "pup-focal-end-done"
+                   "Finish pup focal are you sure?"
+                   (lambda (v)
+                     (cond
+                      ((eqv? v 1)
+                       (list (finish-activity 1)))
+                      (else
+                       (list))))))))))
 
     (lambda (activity arg)
       (activity-layout activity))
@@ -1546,11 +1562,10 @@
   (activity
    "group-events"
    (linear-layout
-    0 'vertical wrap gp-col
+    0 'vertical fill gp-col
     (list
-     (build-fragment "events" (make-id "event-holder") (layout 580 450 1 'left 0))
+     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 515 1 'left 0))
      (horiz
-      (mbutton "gpe-save" "Save" (lambda () (list)))
       (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0)))))))
    (lambda (activity arg)
      (activity-layout activity))
@@ -1862,7 +1877,16 @@
                     (map
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
-                     entity-types)))))))
+                     entity-types))))))
+     (mbutton2 "sync-export" "Email local data"
+               (lambda ()
+                 (debug! "Sending mail")
+                 (list
+                  (send-mail
+                   ""
+                   "From Mongoose2000" "Please find attached your local mongoose data"
+                   (list "/sdcard/mongoose/local-mongoose.db")))))
+     )
     (spacer 10)
     (mtitle "" "Debug")
     (scroll-view-vert
@@ -1871,8 +1895,9 @@
       (vert
        (debug-text-view (make-id "sync-debug") "..." 15 (layout 'fill-parent 400 1 'left 0)))))
     (spacer 10)
-    (mbutton2 "sync-send" "Done" (lambda () (list (finish-activity 2))))
-    (mbutton2 "sync-send" "Prof" (lambda () (prof-print) (list)))
+    (horiz
+     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2 "sync-send" "[Prof]" (lambda () (prof-print) (list))))
     )
 
    (lambda (activity arg)

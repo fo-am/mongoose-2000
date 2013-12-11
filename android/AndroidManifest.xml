@@ -20,7 +20,7 @@
         <activity android:name="ObservationsActivity" android:configChanges="orientation"></activity>
 
         <activity android:name="GroupCompositionActivity" android:configChanges="orientation"></activity>
-        <activity android:name="PupFocalStartActivity" android:configChanges="orientation"></activity>
+        <activity android:name="PupFocalStartActivity" android:noHistory="true" android:configChanges="orientation"></activity>
         <activity android:name="PupFocalActivity" android:configChanges="orientation"></activity>
         <activity android:name="GroupEventsActivity" android:configChanges="orientation"></activity>
 
