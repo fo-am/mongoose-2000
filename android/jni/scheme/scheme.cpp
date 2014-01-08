@@ -4337,6 +4337,13 @@ static pointer opexe_6(scheme *sc, enum scheme_opcodes op) {
           }
           s_return(sc,sc->F);
      }
+     case OP_CLOSE_DB: {
+          if (is_string(car(sc->args))) {
+               the_db_container.remove(string_value(car(sc->args)));
+               s_return(sc,sc->T);
+          }
+          s_return(sc,sc->F);
+     }
      case OP_EXEC_DB: {
           if (is_string(car(sc->args)) &&
               is_string(cadr(sc->args))) {

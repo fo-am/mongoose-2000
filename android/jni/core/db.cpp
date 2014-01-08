@@ -29,6 +29,12 @@ db::db(const char *fn) :
 
 db::~db()
 {
+    // v2 in case of pending transactions
+    int rc = sqlite3_close_v2(m_db);
+    if( rc != SQLITE_OK )
+    {
+        // do something...
+    }
 }
 
 sqlite3_stmt *db::prepare(const char *sql)

@@ -72,17 +72,21 @@
 ;; persistent database
 
 (define db "/sdcard/mongoose/local-mongoose.db")
-(db-open db)
-(setup db "local")
-(setup db "sync")
-(setup db "stream")
 
-(insert-entity-if-not-exists
- db "local" "app-settings" "null" 1
- (list
-  (ktv "user-id" "varchar" "No name yet...")))
-
-(display (db-all db "local" "app-settings"))(newline)
+(define (setup-database!)
+  (msg "setting up database")
+  (db-close db) ;; close just in case (sorts out db file delete while running problem)
+  (db-open db)
+  (msg "setting up tables")
+  (setup db "local")
+  (setup db "sync")
+  (setup db "stream")
+  (msg (db-status db))
+  (insert-entity-if-not-exists
+   db "local" "app-settings" "null" 1
+   (list
+    (ktv "user-id" "varchar" "No name yet...")))
+  (msg (db-all db "local" "app-settings")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
@@ -241,7 +245,7 @@
    '()
    entities))
 
-(define (suck-entity-from-server db table unique-id exists)
+(define (suck-entity-from-server db table unique-id)
   ;; ask for the current version
   (http-request
    (string-append unique-id "-update-new")
@@ -249,7 +253,8 @@
    (lambda (data)
      ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
      (let ((entity (list-ref data 0))
-           (ktvlist (list-ref data 1)))
+           (ktvlist (list-ref data 1))
+           (exists (entity-exists? db table unique-id)))
        (if (not exists)
            (insert-entity-wholesale
             db table
@@ -286,7 +291,7 @@
                               #f)))
                     ;; if we don't have this entity or the version on the server is newer
                     (if (or (not exists) old)
-                        (cons (suck-entity-from-server db table unique-id exists) r)
+                        (cons (suck-entity-from-server db table unique-id) r)
                         r)))
                 '()
                 data)))
@@ -310,9 +315,11 @@
 (define (build-dirty)
   (let ((sync (get-dirty-stats db "sync"))
         (stream (get-dirty-stats db "stream")))
-    (string-append
-     "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
-     "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
+    (if (or (not sync) (not stream))
+        "No data yet"
+        (string-append
+         "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
+         "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream))))))
 
 (define (upload-dirty db)
   (let ((r (append
@@ -603,7 +610,7 @@
          (suck-new db "sync")))))
     (else '()))
    (list
-    (delayed "debug-timer" (+ 5000 (random 5000)) debug-timer-cb)
+    (delayed "debug-timer" (+ 10000 (random 5000)) debug-timer-cb)
     (update-debug))))
 
 
@@ -1424,6 +1431,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (setup-database!)
      (let ((user-id (ktv-get (get-entity db "local" 1) "user-id")))
        (set-current! 'user-id user-id)
        (list
