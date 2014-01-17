@@ -215,11 +215,32 @@
 
 (define (all-entities db table type)
   (let ((s (db-select
-            db (string-append "select e.entity_id from " table "_entity as e "
-                              "join " table "_value_varchar "
-                              " as n on n.entity_id = e.entity_id "
-                              "where entity_type = ? and n.attribute_id = ? order by n.value")
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id "
+                "where entity_type = ? and n.attribute_id = ? "
+                "order by substr(n.value,3)")
             type "name")))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+(define (all-entities-where-ignore-delete db table type ktv)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "where e.entity_type = ? order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            "name" type)))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -232,13 +253,16 @@
   (let ((s (db-select
             db (string-append
                 "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
                 "join " table "_value_varchar "
-                " as n on n.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? "
-                "and a.value = ? and n.attribute_id = ? order by n.value")
-            type (ktv-key ktv) (ktv-value ktv) "name")))
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            "name" "deleted" type)))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -251,12 +275,19 @@
   (let ((s (db-select
             db (string-append
                 "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
-                "join " table "_value_" (ktv-type ktv2)
-                " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ? ")
-            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
+                "join " table "_value_" (ktv-type ktv2) " "
+                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and b.value = ? "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            (ktv-key ktv2) (ktv-value ktv2)
+            "name" "deleted" type)))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -269,12 +300,19 @@
   (let ((s (db-select
             db (string-append
                 "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
-                "join " table "_value_" (ktv-type ktv2)
-                " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and (b.value = ? or b.value = ?) ")
-            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2) or-value)))
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
+                "join " table "_value_" (ktv-type ktv2) " "
+                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value = ? or b.value = ?) "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            (ktv-key ktv2) (ktv-value ktv2) or-value
+            "name" "deleted" type)))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -287,15 +325,19 @@
   (let ((s (db-select
             db (string-append
                 "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
-                "join " table "_value_" (ktv-type ktv2)
-                " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? "
-                "and a.attribute_id = ? and a.value = ? "
-                "and b.attribute_id = ? and (b.value > DateTime(?) and b.value != ?)"
-                )
-            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2) "Unknown")))
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ?"
+                "join " table "_value_" (ktv-type ktv2) " "
+                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value > DateTime(?) and b.value != ?) "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            (ktv-key ktv2) (ktv-value ktv2) "Unknown"
+            "name" "deleted" type)))
     (msg "date select" (db-status db))
     (if (null? s)
         '()
@@ -308,15 +350,19 @@
   (let ((s (db-select
             db (string-append
                 "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
-                "join " table "_value_" (ktv-type ktv2)
-                " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? "
-                "and a.attribute_id = ? and a.value = ? "
-                "and b.attribute_id = ? and (b.value < DateTime(?) or b.value = ?)"
-                )
-            type (ktv-key ktv) (ktv-value ktv) (ktv-key ktv2) (ktv-value ktv2) "Unknown")))
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ?"
+                "join " table "_value_" (ktv-type ktv2) " "
+                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value < DateTime(?) and b.value != ?) "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            (ktv-key ktv2) (ktv-value ktv2) "Unknown"
+            "name" "deleted" type)))
     (msg "date select" (db-status db))
     (if (null? s)
         '()
@@ -333,8 +379,10 @@
                 " as a on a.entity_id = e.entity_id "
                 "join " table "_value_" (ktv-type ktv2)
                 " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ? ")
-            type (ktv-key ktv) (ktv-key ktv2) (ktv-value ktv) (ktv-value ktv2))))
+                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ?")
+            type
+            (ktv-key ktv) (ktv-key ktv2)
+            (ktv-value ktv) (ktv-value ktv2))))
     (msg (db-status db))
     (if (null? s)
         '()
@@ -385,6 +433,15 @@
 ;            (all-entities db table type))))
 ;    (prof-end "db-all-where")
 ;    r))
+
+(define (db-all-where-ignore-delete db table type ktv)
+  (prof-start "db-all-where")
+  (let ((r (map
+            (lambda (i)
+              (get-entity db table i))
+            (all-entities-where-ignore-delete db table type ktv))))
+    (prof-end "db-all-where")
+    r))
 
 (define (db-all-where db table type ktv)
   (prof-start "db-all-where")

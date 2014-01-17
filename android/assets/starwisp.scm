@@ -495,6 +495,12 @@
    db "sync" "mongoose"
    (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
 
+(define (db-mongooses-by-pack-ignore-delete)
+  (db-all-where-ignore-delete
+   db "sync" "mongoose"
+   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
+
+
 (define (db-mongooses-by-pack-male)
   (db-all-where2or
    db "sync" "mongoose"
@@ -1751,7 +1757,7 @@
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
-       (db-mongooses-by-pack) #f
+       (db-mongooses-by-pack-ignore-delete) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
@@ -1867,8 +1873,14 @@
                (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
     (spacer 10)
     (horiz
-     (mbutton2 "update-individual-delete" "Delete" (lambda () (list (finish-activity 2))))
-     (mbutton2 "update-individual-died" "Died" (lambda () (list (finish-activity 2)))))
+     (mtoggle-button2 "update-individual-delete" "Delete"
+                      (lambda (v)
+                        (entity-add-value! "deleted" "int" (if v 1 0))
+                        (list)))
+     (mtoggle-button2 "update-individual-died" "Died"
+                      (lambda (v)
+                        (entity-add-value! "deleted" "int" (if v 2 0))
+                        (list))))
     (horiz
      (mbutton2 "update-individual-cancel" "Cancel"
                (lambda () (entity-reset!) (list (finish-activity 2))))
@@ -1883,6 +1895,7 @@
      (entity-reset!)
      (entity-set! (get-current 'individual '()))
      (let ((individual (get-current 'individual '())))
+       (msg "deleted = " (ktv-get individual "deleted"))
        (list
         (update-widget 'edit-text (get-id "update-individual-name") 'text
                        (ktv-get individual "name"))
@@ -1896,9 +1909,13 @@
         (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
                        (ktv-get individual "litter-code"))
         (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
-                       (ktv-get individual "chip-code")))
+                       (ktv-get individual "chip-code"))
 
-       ))
+        (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
+                       (if (eqv? (ktv-get individual "deleted") 1) 1 0))
+        (update-widget 'toggle-button (get-id "update-individual-died") 'checked
+                       (if (eqv? (ktv-get individual "deleted") 2) 1 0))
+        )))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
