@@ -213,6 +213,23 @@
      (list "unique_id" "varchar" unique-id)
      (get-entity-plain db table entity-id))))
 
+(define (all-entities-sort-normal db table type)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id "
+                "where entity_type = ? and n.attribute_id = ? "
+                "order by n.value")
+            type "name")))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
 (define (all-entities db table type)
   (let ((s (db-select
             db (string-append
@@ -229,6 +246,7 @@
          (lambda (i)
            (vector-ref i 0))
          (cdr s)))))
+
 
 (define (all-entities-where-ignore-delete db table type ktv)
   (let ((s (db-select
@@ -259,7 +277,7 @@
                 "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
                 "left join " table "_value_int "
                 "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
                 "order by substr(n.value,3)")
             (ktv-key ktv) (ktv-value ktv)
             "name" "deleted" type)))
@@ -283,7 +301,7 @@
                 "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
                 "left join " table "_value_int "
                 "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
                 "order by substr(n.value,3)")
             (ktv-key ktv) (ktv-value ktv)
             (ktv-key ktv2) (ktv-value ktv2)
@@ -308,7 +326,7 @@
                 "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
                 "left join " table "_value_int "
                 "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
                 "order by substr(n.value,3)")
             (ktv-key ktv) (ktv-value ktv)
             (ktv-key ktv2) (ktv-value ktv2) or-value
@@ -324,7 +342,7 @@
 (define (all-entities-where-newer db table type ktv ktv2)
   (let ((s (db-select
             db (string-append
-                "select e.entity_id from " table "_entity as e "
+                "select e.entity_id,d.value,b.value from " table "_entity as e "
                 "join " table "_value_" (ktv-type ktv) " "
                 "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ?"
                 "join " table "_value_" (ktv-type ktv2) " "
@@ -333,11 +351,14 @@
                 "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
                 "left join " table "_value_int "
                 "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)")
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)"
+                )
             (ktv-key ktv) (ktv-value ktv)
             (ktv-key ktv2) (ktv-value ktv2) "Unknown"
-            "name" "deleted" type)))
+            "name" "deleted"
+            type)))
+    (msg "where newer" (ktv-value ktv2) s)
     (msg "date select" (db-status db))
     (if (null? s)
         '()
@@ -358,7 +379,7 @@
                 "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
                 "left join " table "_value_int "
                 "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value is NULL or d.value = 0) "
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
                 "order by substr(n.value,3)")
             (ktv-key ktv) (ktv-value ktv)
             (ktv-key ktv2) (ktv-value ktv2) "Unknown"
@@ -412,6 +433,15 @@
     (cons ktv (cdr ktv-list)))
    (else (cons (car ktv-list) (ktv-set (cdr ktv-list) ktv)))))
 
+
+(define (db-all-sort-normal db table type)
+  (prof-start "db-all")
+  (let ((r (map
+   (lambda (i)
+     (get-entity db table i))
+   (all-entities-sort-normal db table type))))
+    (prof-end "db-all")
+    r))
 
 (define (db-all db table type)
   (prof-start "db-all")

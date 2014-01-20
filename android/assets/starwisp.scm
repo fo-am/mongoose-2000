@@ -86,7 +86,7 @@
    db "local" "app-settings" "null" 1
    (list
     (ktv "user-id" "varchar" "No name yet...")))
-  (msg (db-all db "local" "app-settings")))
+  (msg (db-all-sort-normal db "local" "app-settings")))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
@@ -470,7 +470,7 @@
       type 3 30 (layout 100 60 1 'left 0)
       (map
        (lambda (ii)
-         (dbg (list (car ii) (caddr ii))))
+         (list (car ii) (caddr ii)))
        id->items)
       (lambda (v state)
         (cond
@@ -996,7 +996,7 @@
       (list
        (populate-grid-selector
         "gp-int-pack" "single"
-        (db-all db "sync" "pack") #f
+        (db-all-sort-normal db "sync" "pack") #f
         (lambda (pack)
           (entity-add-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
@@ -1523,7 +1523,7 @@
      (list
       (populate-grid-selector
        "choose-obs-pack-selector" "single"
-       (db-all db "sync" "pack") #f
+       (db-all-sort-normal db "sync" "pack") #f
        (lambda (pack)
          (msg "in selector" pack)
          (set-current! 'pack pack)
@@ -1702,7 +1702,7 @@
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-packs-list" "button" (db-all db "sync" "pack") #f
+       "manage-packs-list" "button" (db-all-sort-normal db "sync" "pack") #f
        (lambda (pack)
          (set-current! 'pack pack)
          (list (start-activity "manage-individual" 2 ""))))

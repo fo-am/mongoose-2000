@@ -957,6 +957,9 @@ public class StarwispBuilder
 
 ///////////////////////////////////////////////////////////
 
+            // problem associating the id number
+            if (id==0) return;
+
             // now try and find the widget
             View vv=ctx.findViewById(id);
             if (vv==null)
