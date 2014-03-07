@@ -73,6 +73,7 @@ public class starwisp extends StarwispActivity
 
         ActivityManager.RegisterActivity("tag-location",TagLocationActivity.class);
         ActivityManager.RegisterActivity("sync",SyncActivity.class);
+        ActivityManager.RegisterActivity("export",ExportActivity.class);
     };
 
     /** Called when the activity is first created. */

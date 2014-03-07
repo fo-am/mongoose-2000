@@ -230,6 +230,44 @@
            (vector-ref i 0))
          (cdr s)))))
 
+(define (all-entities-with-parent db table type parent)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_varchar "
+                "as p on p.entity_id = e.entity_id "
+                "where entity_type = ? and p.attribute_id = ? "
+                "and p.value = ?")
+            type "parent" parent)))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+
+(define (all-entities-in-date-range db table type start end)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_varchar "
+                "as t on t.entity_id = e.entity_id "
+                "where entity_type = ? and t.attribute_id = ? "
+                "and t.value > DateTime(?) and t.value <= DateTime(?) "
+                "order by t.value desc")
+            type "time" start end
+            )))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+
 (define (all-entities db table type)
   (let ((s (db-select
             db (string-append
@@ -433,6 +471,20 @@
     (cons ktv (cdr ktv-list)))
    (else (cons (car ktv-list) (ktv-set (cdr ktv-list) ktv)))))
 
+(define (ktv-filter ktv-list key)
+  (filter
+   (lambda (ktv)
+     (not (equal? (ktv-key ktv) key)))
+   ktv-list))
+
+(define (ktv-filter-many ktv-list key-list)
+  (foldl
+   (lambda (key r)
+     (ktv-filter r key))
+   ktv-list
+   key-list))
+
+;; todo, sort these out...
 
 (define (db-all-sort-normal db table type)
   (prof-start "db-all")
@@ -443,12 +495,31 @@
     (prof-end "db-all")
     r))
 
+(define (db-all-in-date-range db table type start end)
+  (prof-start "db-all")
+  (let ((r (map
+   (lambda (i)
+     (get-entity db table i))
+   (all-entities-in-date-range db table type start end))))
+    (prof-end "db-all")
+    r))
+
+
 (define (db-all db table type)
   (prof-start "db-all")
   (let ((r (map
    (lambda (i)
      (get-entity db table i))
    (all-entities db table type))))
+    (prof-end "db-all")
+    r))
+
+(define (db-all-with-parent db table type parent)
+  (prof-start "db-all")
+  (let ((r (map
+   (lambda (i)
+     (get-entity db table i))
+   (all-entities-with-parent db table type parent))))
     (prof-end "db-all")
     r))
 
@@ -747,3 +818,74 @@
          db (string-append
              "select entity_id, unique_id from "
              table "_entity where entity_type = ?") entity-type))))
+
+
+
+
+(define (deref-entity entity)
+  (foldl
+   (lambda (ktv r)
+     (append
+      r
+      (list
+       (ktv-key ktv)
+       (cond
+        ;; dereferences lists of ids
+        ((and
+          (> (string-length (ktv-key ktv)) 8)
+          (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
+         (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))))
+        ;; look for unique ids and dereference them
+        ((and
+          (> (string-length (ktv-key ktv)) 3)
+          (equal? (substring (ktv-key ktv) 0 3) "id-"))
+         (get-entity-name db "sync" (ktv-value ktv)))
+        (else
+         (ktv-value ktv))))))
+   '()
+   entity))
+
+
+(define (csvify l)
+  (foldl
+   (lambda (row r)
+     (string-append
+      (foldl
+       (lambda (col r)
+         (string-append
+          r ", "
+          (if (number? col) (number->string col)
+              (if (string? col) col
+                  (begin
+                    (msg "csvify found:" col) "oops")))))
+       r
+       row) "\n"))
+   "" l))
+
+
+
+
+(define (export-csv db table parent-entity entity-types)
+  (let* ((focal (get-entity db "sync" (get-entity-id db "sync" (ktv-get parent-entity "id-focal-subject"))))
+         (pack (get-entity db "sync" (get-entity-id db "sync" (ktv-get focal "pack-id")))))
+    (csvify
+    (foldl
+     (lambda (entity-type r)
+       (append
+        r
+        (map
+         (lambda (entity)
+           (append
+            (list
+             (ktv-get entity "time")
+             (ktv-get pack "name")
+             (ktv-get focal "name")
+             entity-type)
+            (deref-entity
+             (ktv-filter-many
+              entity (list "unique_id" "parent" "time")))))
+         (db-all-with-parent
+          db table entity-type
+          (ktv-get parent-entity "unique_id")))))
+     '()
+     entity-types))))

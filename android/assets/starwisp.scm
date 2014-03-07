@@ -32,6 +32,15 @@
    "group-alarm"
    "group-move"))
 
+(define pup-focal-export
+  (list
+   "pup-focal-nearest"
+   "pup-focal-pupfeed"
+   "pup-focal-pupfind"
+   "pup-focal-pupcare"
+   "pup-focal-pupaggr"))
+
+
 ;; colours
 
 (define pf-col (list 255 204 51 255))
@@ -72,6 +81,7 @@
 ;; persistent database
 
 (define db "/sdcard/mongoose/local-mongoose.db")
+(define main-db "/sdcard/mongoose/mongoose.db")
 
 (define (setup-database!)
   (msg "setting up database")
@@ -143,11 +153,11 @@
 (define (date-time->string dt)
   (string-append
    (number->string (list-ref dt 0)) "-"
-   (number->string (list-ref dt 1)) "-"
-   (number->string (list-ref dt 2)) " "
-   (number->string (list-ref dt 3)) ":"
-   (number->string (list-ref dt 4)) ":"
-   (substring (number->string (+ 100 (list-ref dt 5))) 1 2)))
+   (substring (number->string (+ (list-ref dt 1) 100)) 1 3) "-"
+   (substring (number->string (+ (list-ref dt 2) 100)) 1 3) " "
+   (substring (number->string (+ (list-ref dt 3) 100)) 1 3) ":"
+   (substring (number->string (+ (list-ref dt 4) 100)) 1 3) ":"
+   (substring (number->string (+ (list-ref dt 5) 100)) 1 3)))
 
 ;; build entity from all ktvs, insert to db, return unique_id
 (define (entity-record-values db table type)
@@ -1544,7 +1554,7 @@
       (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 520 1 'left 0))
       (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 520 1 'left 0))
       (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
-   (lambda (activity arg)
+  (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
@@ -2006,6 +2016,9 @@
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
                      entity-types))))))
+     (mbutton2 "sync-export2" "Export"
+               (lambda ()
+                 (list (start-activity "export" 0 ""))))
      (mbutton2 "sync-export" "Email local data"
                (lambda ()
                  (debug! "Sending mail")
@@ -2043,5 +2056,81 @@
    (lambda (activity) (list (delayed "debug-timer" 1000 (lambda () '()))))
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
+  (let ((update-list
+         (lambda ()
+           (list
+            (update-widget
+             'linear-layout (get-id "focal-list") 'contents
+             (map
+              (lambda (f)
+                (mbutton
+                 (string-append "export-" (ktv-get f "unique_id"))
+                 (ktv-get f "time")
+                 (lambda ()
+                   (msg (string-append "export-" (ktv-get f "unique_id")))
+                   (msg (export-csv main-db "stream" f pup-focal-export))
+                   '())))
+              (db-all-in-date-range
+               main-db "stream" "pup-focal"
+               (get-current 'from-date (date->string (date-minus-months (date-time) 6)))
+               (get-current 'to-date (date->string (date-time))))))))))
+  (activity
+   "export"
+   (vert
+    (text-view (make-id "title") "Export" 40 fillwrap)
+    (text-view (make-id "title") "Date range" 20 fillwrap)
+
+    (horiz
+     (button (make-id "date-from") "From" 30 fillwrap
+             (lambda ()
+               (list (date-picker-dialog
+                      "export-from-date"
+                      (lambda (day month year)
+                        (let ((datestring (date->string (list year (+ month 1) day))))
+                          (msg "setting current from to" datestring)
+                          (set-current! 'from-date datestring)
+                          (update-list)))))))
+
+     (button (make-id "date-to") "To" 30 fillwrap
+             (lambda ()
+               (list (date-picker-dialog
+                      "export-to-date"
+                      (lambda (day month year)
+                        (let ((datestring (date->string (list year (+ month 1) day))))
+                          (msg "setting current to to" datestring)
+                          (set-current! 'to-date datestring)
+                          (update-list))))))))
+
+    (text-view (make-id "title") "Focals" 40 fillwrap)
+
+    (linear-layout
+     (make-id "focal-list")
+     'vertical
+     (layout 'fill-parent 'wrap-content 1 'left 0)
+     (list 0 0 0 0)
+     (list))
+    )
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     ;; open the main database
+     (db-open main-db)
+     (msg "opened main database")
+     (msg (db-status db))
+     ;;(msg (db-select db "select * from stream_entity where entity_type = 'pup-focal';"))
+     ;;(msg (all-entities-in-date-range
+     ;;      db "stream" "pup-focal"
+     ;;      (date->string (date-minus-months (date-time) 3))
+     ;;      (date->string (date-time))
+     ;;      ))
+     (update-list))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '())))
+
+
 
   )
