@@ -126,7 +126,7 @@
 
 
 (define (entity-create! db table entity-type ktv-list)
-  ;;(msg "creating:" entity-type ktv-list)
+  (msg "creating:" entity-type ktv-list)
   (let ((values
          (append
           (list
@@ -136,6 +136,7 @@
            (ktv "lon" "real" (cadr (get-current 'location '(0 0))))
            (ktv "deleted" "int" 0))
           ktv-list)))
+    (msg "about to insert")
     (let ((r (insert-entity/get-unique
               db table entity-type (get-current 'user-id "no id")
               values)))
@@ -153,7 +154,7 @@
        ((and unique-id (not (null? values)))
         (update-entity db table (entity-id-from-unique db table unique-id) values)
         ;; removed due to save button no longer exiting activity - need to keep!
-        ;;(entity-reset!)
+        (entity-reset!)
         )
        (else
         (msg "no values or no id to update as entity:" unique-id "values:" values))))))

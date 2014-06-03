@@ -495,13 +495,13 @@
      (mbutton "pf-scan-done" "Done"
               (lambda ()
                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                (entity-record-values! db "stream" "pup-focal-nearest")
+                (entity-record-values!)
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "pup-focal-nearest" '())
      (entity-set-value! "scan-time" "varchar" (date-time->string (date-time)))
      (list
       (play-sound "ping")
@@ -543,7 +543,7 @@
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values! db "stream" "pup-focal-pupfeed")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfeed-cancel" "Cancel"
                (lambda ()
@@ -552,7 +552,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init!  db "stream" "pup-focal-pupfeed" '())
      (list
       (populate-grid-selector
        "pf-pupfeed-who" "single"
@@ -581,7 +581,7 @@
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values! db "stream" "pup-focal-pupfind")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfind-cancel" "Cancel"
                (lambda ()
@@ -590,7 +590,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "pup-focal-pupfind" '())
      (list
       ))
    (lambda (fragment) '())
@@ -617,7 +617,7 @@
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values! db "stream" "pup-focal-pupcare")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupcare-cancel" "Cancel"
                (lambda ()
@@ -626,7 +626,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "pup-focal-pupcare" '())
      (list
       (populate-grid-selector
        "pf-pupcare-who" "single"
@@ -676,7 +676,7 @@
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values! db "stream" "pup-focal-pupaggr")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupaggr-cancel" "Cancel"
                (lambda ()
@@ -686,7 +686,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "pup-focal-pupaggr" '())
      (list
       (populate-grid-selector
        "pf-pupaggr-partner" "single"
@@ -725,7 +725,7 @@
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
-                  (entity-record-values! db "stream" "group-interaction")
+                  (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
                 (lambda ()
@@ -735,7 +735,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "group-interaction" '())
      (append
       (force-pause)
       (list
@@ -780,7 +780,7 @@
      (horiz
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
-                 (entity-record-values! db "stream" "group-alarm")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
@@ -789,7 +789,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "group-alarm" '())
      (append
       (force-pause)
       (list
@@ -837,7 +837,7 @@
      (horiz
       (mbutton "pf-grpmov-done" "Done"
                (lambda ()
-                 (entity-record-values! db "stream" "group-move")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
@@ -846,7 +846,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "group-move" '())
      (append
       (force-pause)
       (list
@@ -875,17 +875,16 @@
      (horiz
       (mbutton "note-done" "Done"
                (lambda ()
-                 (entity-record-values! db "stream" "note")
+                 (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
                (lambda ()
-                 (entity-reset!)
                  (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init!  db "stream" "note" '())
      (append
       (force-pause)
       (list
@@ -957,8 +956,8 @@
                  (msg "saving to " (get-current 'entity-id "0"))
                  (if (get-current 'updating #f)
                      (entity-update-values! db "stream")
-                     (entity-record-values! db "stream" "weight")
-                 (entity-reset!)
+                     (entity-record-values!)
+                 (entity-init! db "stream" "weight" '())
                  '()))))
 
      (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))
@@ -968,7 +967,7 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-reset!)
+     (entity-init! db "stream" "weight" '())
      (list
       (populate-grid-selector
        "gc-weigh-choose" "single"
@@ -1178,22 +1177,25 @@
                (lambda (v)
                  (set-current! 'user-id v)
                  (update-entity
-                  db "local" 1 (list (ktv "user-id" "varchar" v)))))
+                  db "local" 1 (list (ktv "user-id" "varchar" v)))
+                 '()))
     (mtext "foo" "Database")
     (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 "")))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (msg "on-start")
      (setup-database!)
      (let ((user-id (ktv-get (get-entity db "local" 1) "user-id")))
        (set-current! 'user-id user-id)
-       (list
-        (gps-start "gps" (lambda (loc)
+       (msg "on-start 2")
+       (dbg (list
+             (gps-start "gps" (lambda (loc)
                            (set-current! 'location loc)
                            (list (toast (string-append
                                          (number->string (car loc)) ", "
                                          (number->string (cadr loc)))))))
-        (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
+             (update-widget 'edit-text (get-id "main-id-text") 'text user-id)))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1328,7 +1330,7 @@
                  (lambda ()
                    (cond
                     ((current-exists? 'individual)
-                     (set-current! 'pup-focal-id (entity-record-values! db "stream" "pup-focal"))
+                     (set-current! 'pup-focal-id (entity-record-values!))
                      (set-current! 'timer-minutes pf-length)
                      (set-current! 'timer-seconds 0)
                      (list
@@ -1343,7 +1345,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-reset!)
+     (entity-init! db "stream" "pup-focal" '())
      (list
       (populate-grid-selector
        "pf1-grid" "single"
@@ -1471,16 +1473,17 @@
     (spacer 10)
     (horiz
      (mbutton2 "new-pack-cancel" "Cancel"
-               (lambda () (entity-reset!) (list (finish-activity 2))))
+               (lambda ()
+                 (list (finish-activity 2))))
      (mbutton2 "new-pack-done" "Done"
                (lambda ()
-                 (entity-record-values! db "sync" "pack")
+                 (entity-record-values!)
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-reset!)
+     (entity-init! db "sync" "pack" '())
      (list))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1555,17 +1558,17 @@
                (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
     (horiz
      (mbutton2 "new-individual-cancel" "Cancel"
-               (lambda () (entity-reset!) (list (finish-activity 2))))
+               (lambda () (list (finish-activity 2))))
      (mbutton2 "new-individual-done" "Done"
                (lambda ()
                  (entity-set-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-                 (entity-record-values! db "sync" "mongoose")
+                 (entity-record-values!)
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-reset!)
+     (entity-init! db "sync" "mongoose" '())
      ;; make sure all fields exist
      (entity-set-value! "name" "varchar" "noname")
      (entity-set-value! "gender" "varchar" "Female")
@@ -1630,17 +1633,17 @@
                         (list))))
     (horiz
      (mbutton2 "update-individual-cancel" "Cancel"
-               (lambda () (entity-reset!) (list (finish-activity 2))))
+               (lambda () (list (finish-activity 2))))
      (mbutton2 "update-individual-done" "Done"
                (lambda ()
-                 (entity-update-values! db "sync")
+                 (entity-update-values!)
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-reset!)
-     (entity-set! (get-current 'individual '()))
+     (entity-init! db "sync" "individual"
+                   (get-entity-by-unique db "sync" (get-current 'individual #f)))
      (let ((individual (get-current 'individual '())))
        (msg "deleted = " (ktv-get individual "deleted"))
        (list
