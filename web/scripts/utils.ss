@@ -35,6 +35,10 @@
   (when (not (equal? a b))
         (error "unit " msg a b)))
 
+(define (rndf)
+  (random))
+
+(define (choose l) (list-ref l (random (length l))))
 
 ;
 ; -- procedure+: string-split STRING
@@ -136,3 +140,7 @@
           ((null? charset) (split-by-whitespace str maxsplit))
           (else (split-by-charset str charset maxsplit))))))
 )
+
+
+(define (feq a b)
+  (< (abs (- a b)) 0.001))

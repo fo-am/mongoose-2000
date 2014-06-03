@@ -19,7 +19,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class UpdateIndividualActivity extends StarwispActivity
+public class UpdateIndividualActivity extends foam.starwisp.StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)

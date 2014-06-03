@@ -98,279 +98,14 @@
     (ktv "user-id" "varchar" "No name yet...")))
   (msg (db-all-sort-normal db "local" "app-settings")))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; stuff in memory
-
-(define (store-set store key value)
-  (cond
-   ((null? store) (list (list key value)))
-   ((eq? key (car (car store)))
-    (cons (list key value) (cdr store)))
-   (else
-    (cons (car store) (store-set (cdr store) key value)))))
-
-(define (store-get store key default)
-  (cond
-   ((null? store) default)
-   ((eq? key (car (car store)))
-    (cadr (car store)))
-   (else
-    (store-get (cdr store) key default))))
-
-(define (store-exists? store key)
-  (cond
-   ((null? store) #f)
-   ((eq? key (car (car store)))
-    #t)
-   (else
-    (store-exists? (cdr store) key))))
-
-(define store '())
-
-(define (set-current! key value)
-  (set! store (store-set store key value)))
-
-(define (get-current key default)
-  (store-get store key default))
-
-(define (current-exists? key)
-  (store-exists? store key))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; db abstraction
-
-;; store a ktv, replaces existing with same key
-(define (entity-add-value! key type value)
-  (set-current!
-   'entity-values
-   (ktv-set
-    (get-current 'entity-values '())
-    (ktv key type value))))
-
-(define (entity-set! ktv-list)
-  (set-current! 'entity-values ktv-list))
-
-(define (date-time->string dt)
-  (string-append
-   (number->string (list-ref dt 0)) "-"
-   (substring (number->string (+ (list-ref dt 1) 100)) 1 3) "-"
-   (substring (number->string (+ (list-ref dt 2) 100)) 1 3) " "
-   (substring (number->string (+ (list-ref dt 3) 100)) 1 3) ":"
-   (substring (number->string (+ (list-ref dt 4) 100)) 1 3) ":"
-   (substring (number->string (+ (list-ref dt 5) 100)) 1 3)))
-
-;; build entity from all ktvs, insert to db, return unique_id
-(define (entity-record-values db table type)
-  ;; standard bits
-  (entity-add-value! "user" "varchar" (get-current 'user-id "none"))
-  (entity-add-value! "time" "varchar" (date-time->string (date-time)))
-  (entity-add-value! "lat" "real" (car (get-current 'location '(0 0))))
-  (entity-add-value! "lon" "real" (cadr (get-current 'location '(0 0))))
-  (let ((values (get-current 'entity-values '())))
-    (cond
-     ((not (null? values))
-      (let ((r (insert-entity/get-unique
-                db table type (get-current 'user-id "no id")
-                values)))
-        (msg "inserted a " type)
-        (entity-reset!) r))
-     (else
-      (msg "no values to add as entity!") #f))))
-
-(define (entity-update-values db table)
-  ;; standard bits
-  (let ((values (get-current 'entity-values '()))
-        (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
-    (cond
-     ((and unique-id (not (null? values)))
-      (update-entity db table (entity-id-from-unique db table unique-id) values)
-      (msg "updated " unique-id)
-      (entity-reset!))
-     (else
-      (msg "no values or no id to update as entity:" unique-id "values:" values)))))
-
-(define (entity-reset!)
-  (set-current! 'entity-values '()))
-
-(define (assemble-array entities)
-  (foldl
-   (lambda (i r)
-     (if (equal? r "") (ktv-get i "unique_id")
-         (string-append r "," (ktv-get i "unique_id"))))
-   ""
-   entities))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; syncing code
-
-(define url "http://192.168.2.1:8888/mongoose?")
-
-(define (build-url-from-ktv ktv)
-  (string-append "&" (ktv-key ktv) ":" (ktv-type ktv) "=" (stringify-value-url ktv)))
-
-(define (build-url-from-ktvlist ktvlist)
-  (foldl
-   (lambda (ktv r)
-     (string-append r (build-url-from-ktv ktv)))
-   "" ktvlist))
-
-(define (build-url-from-entity table e)
-  (string-append
-   url
-   "fn=sync"
-   "&table=" table
-   "&entity-type=" (list-ref (car e) 0)
-   "&unique-id=" (list-ref (car e) 1)
-   "&dirty=" (number->string (list-ref (car e) 2))
-   "&version=" (number->string (list-ref (car e) 3))
-   (build-url-from-ktvlist (cadr e))))
-
-;; spit all dirty entities to server
-(define (spit db table entities)
-  (foldl
-   (lambda (e r)
-     (debug! (string-append "Sending a " (car (car e)) " to Raspberry Pi"))
-     (append
-      (list
-       (http-request
-        (string-append "req-" (list-ref (car e) 1))
-        (build-url-from-entity table e)
-        (lambda (v)
-          (cond
-           ((or (equal? (car v) "inserted") (equal? (car v) "match"))
-            (update-entity-clean db table (cadr v))
-            (debug! (string-append "Uploaded " (car (car e)))))
-           ((equal? (car v) "no change")
-            (debug! (string-append "No change for " (car (car e)))))
-           ((equal? (car v) "updated")
-            (update-entity-clean db table (cadr v))
-            (debug! (string-append "Updated changed " (car (car e)))))
-           (else
-            (debug! (string-append
-                     "Problem uploading "
-                     (car (car e)) " : " (car v)))))
-          (list
-           (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))))))
-      r))
-   '()
-   entities))
-
-(define (suck-entity-from-server db table unique-id)
-  ;; ask for the current version
-  (http-request
-   (string-append unique-id "-update-new")
-   (string-append url "fn=entity&table=" table "&unique-id=" unique-id)
-   (lambda (data)
-     ;; check "sync-insert" in sync.ss raspberry pi-side for the contents of 'entity'
-     (let ((entity (list-ref data 0))
-           (ktvlist (list-ref data 1))
-           (exists (entity-exists? db table unique-id)))
-       (if (not exists)
-           (insert-entity-wholesale
-            db table
-            (list-ref entity 0) ;; entity-type
-            (list-ref entity 1) ;; unique-id
-            0 ;; dirty
-            (list-ref entity 2) ;; version
-            ktvlist)
-           (update-to-version
-            db table (get-entity-id db table unique-id)
-            (list-ref entity 2) ktvlist))
-       (debug! (string-append (if exists "Got new: " "Updated: ") (ktv-get ktvlist "name")))
-       (list
-        (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty)))))))
-
-;; repeatedly read version and request updates
-(define (suck-new db table)
-  (debug! "Requesting new entities")
-  (list
-   (http-request
-    "new-entities-req"
-    (string-append url "fn=entity-versions&table=" table)
-    (lambda (data)
-      (let ((r (foldl
-                (lambda (i r)
-                  (let* ((unique-id (car i))
-                         (version (cadr i))
-                         (exists (entity-exists? db table unique-id))
-                         (old
-                          (if exists
-                              (> version (get-entity-version
-                                          db table
-                                          (get-entity-id db table unique-id)))
-                              #f)))
-                    ;; if we don't have this entity or the version on the server is newer
-                    (if (or (not exists) old)
-                        (cons (suck-entity-from-server db table unique-id) r)
-                        r)))
-                '()
-                data)))
-        (cond
-         ((null? r)
-          (debug! "No new data to download")
-          (set-current! 'download 1)
-          (append
-           (if (eqv? (get-current 'upload 0) 1)
-               (list (play-sound "ping")) '())
-           (list
-            (toast "No new data to download")) r))
-         (else
-          (debug! (string-append
-                   "Requesting "
-                   (number->string (length r)) " entities"))
-          (cons
-           (play-sound "active")
-           r))))))))
-
-(define (build-dirty)
-  (let ((sync (get-dirty-stats db "sync"))
-        (stream (get-dirty-stats db "stream")))
-    (if (or (not sync) (not stream))
-        "No data yet"
-        (string-append
-         "Pack data: " (number->string (car sync)) "/" (number->string (cadr sync)) " "
-         "Focal data: " (number->string (car stream)) "/" (number->string (cadr stream))))))
-
-(define (upload-dirty db)
-  (let ((r (append
-            (spit db "sync" (dirty-entities db "sync"))
-            (spit db "stream" (dirty-entities db "stream")))))
-    (append (cond
-             ((> (length r) 0)
-              (debug! (string-append "Uploading " (number->string (length r)) " items..."))
-              (list
-               (toast "Uploading data...")
-               (play-sound "active")))
-             (else
-              (debug! "No data changed to upload")
-              (set-current! 'upload 1)
-              (append
-               (if (eqv? (get-current 'download 0) 1)
-                   (list (play-sound "ping")) '())
-               (list
-                (toast "No data changed to upload"))))) r)))
-
-(define (connect-to-net fn)
-  (list
-   (network-connect
-    "network"
-    "mongoose-web"
-    (lambda (state)
-      (debug! (string-append "Raspberry Pi connection state now: " state))
-      (append
-       (if (equal? state "Connected") (fn) '())
-       (list
-        ;;(update-widget 'text-view (get-id "sync-connect") 'text state)
-        ))))))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user interface abstraction
 
 (define (mbutton id title fn)
-  (button (make-id id) title 30 fillwrap fn))
+  (button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 10) fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 30 (layout 150 100 1 'centre 0) fn))
+  (button (make-id id) title 30 (layout 150 100 1 'centre 10) fn))
 
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
@@ -563,7 +298,7 @@
        (lambda (v)
          (cond
           (v
-           (entity-add-value! key "varchar" "yes")
+           (entity-set-value! key "varchar" "yes")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 0)
             (update-widget 'toggle-button (get-id (string-append id "-m")) 'checked 0)))
@@ -576,7 +311,7 @@
        (lambda (v)
          (cond
           (v
-           (entity-add-value! key "varchar" "maybe")
+           (entity-set-value! key "varchar" "maybe")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
             (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 0)))
@@ -590,7 +325,7 @@
        (lambda (v)
          (cond
           (v
-           (entity-add-value! key "varchar" "no")
+           (entity-set-value! key "varchar" "no")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
             (update-widget 'toggle-button (get-id (string-append id "-m")) 'checked 0)))
@@ -759,15 +494,15 @@
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done"
               (lambda ()
-                (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                (entity-record-values db "stream" "pup-focal-nearest")
+                (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                (entity-record-values! db "stream" "pup-focal-nearest")
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-reset!)
-     (entity-add-value! "scan-time" "varchar" (date-time->string (date-time)))
+     (entity-set-value! "scan-time" "varchar" (date-time->string (date-time)))
      (list
       (play-sound "ping")
       (vibrate 300)
@@ -775,13 +510,13 @@
        "pf-scan-nearest" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
-         (entity-add-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
        (db-mongooses-by-pack-adults) #t
        (lambda (individuals)
-         (entity-add-value! "id-list-close" "varchar" (assemble-array individuals))
+         (entity-set-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
       ))
    (lambda (fragment) '())
@@ -802,13 +537,13 @@
       (mtext "text" "Food size")
       (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap
                (lambda (v)
-                 (entity-add-value! "size" "varchar" v) '())))
+                 (entity-set-value! "size" "varchar" v) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
-                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values db "stream" "pup-focal-pupfeed")
+                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values! db "stream" "pup-focal-pupfeed")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfeed-cancel" "Cancel"
                (lambda ()
@@ -823,7 +558,7 @@
        "pf-pupfeed-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
-         (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -840,13 +575,13 @@
      (horiz
       (mtext "text" "Food size")
       (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
-               (lambda (v) (entity-add-value! "size" "varchar" v) '())))
+               (lambda (v) (entity-set-value! "size" "varchar" v) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
-                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values db "stream" "pup-focal-pupfind")
+                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values! db "stream" "pup-focal-pupfind")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfind-cancel" "Cancel"
                (lambda ()
@@ -876,13 +611,13 @@
       (mtext "text" "Type of care")
       (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap
                (lambda (v)
-                 (entity-add-value! "type" "varchar" v) '())))
+                 (entity-set-value! "type" "varchar" v) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
-                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values db "stream" "pup-focal-pupcare")
+                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values! db "stream" "pup-focal-pupcare")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupcare-cancel" "Cancel"
                (lambda ()
@@ -897,7 +632,7 @@
        "pf-pupcare-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
-         (entity-add-value! "id-who" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -920,18 +655,18 @@
         (mtext "" "Fighting over")
         (spinner (make-id "pf-pupaggr-over") (list "Food" "Escort" "Nothing" "Other") fillwrap
                  (lambda (v)
-                   (entity-add-value! "over" "varchar" v) '())))
+                   (entity-set-value! "over" "varchar" v) '())))
        (vert
         (mtext "" "Level")
         (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap
                  (lambda (v)
-                   (entity-add-value! "level" "varchar" v) '())))
+                   (entity-set-value! "level" "varchar" v) '())))
 
        (tri-state "pf-pupaggr-in" "Initiate?" "initiate")
 
        ;(mtoggle-button "pf-pupaggr-in" "Initiate?"
        ;                (lambda (v)
-       ;                  (entity-add-value! "initiate" "varchar" (if v "yes" "no")) '()))
+       ;                  (entity-set-value! "initiate" "varchar" (if v "yes" "no")) '()))
 
 
        (tri-state "pf-pupaggr-win" "Win?" "win")))
@@ -940,8 +675,8 @@
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
-                 (entity-add-value! "parent" "varchar" (get-current 'pup-focal-id ""))
-                 (entity-record-values db "stream" "pup-focal-pupaggr")
+                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-record-values! db "stream" "pup-focal-pupaggr")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupaggr-cancel" "Cancel"
                (lambda ()
@@ -957,7 +692,7 @@
        "pf-pupaggr-partner" "single"
        (db-mongooses-by-pack) #t
        (lambda (individual)
-         (entity-add-value! "id-with" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-with" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())
@@ -980,17 +715,17 @@
         (mtext "text" "Outcome")
         (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight retreat" "Fight win") fillwrap
                  (lambda (v)
-                   (entity-add-value! "outcome" "varchar" v) '()))
+                   (entity-set-value! "outcome" "varchar" v) '()))
         (mtext "text" "Duration")
         (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
-                   (lambda (v) (entity-add-value! "duration" "int" (string->number v)) '()))))
+                   (lambda (v) (entity-set-value! "duration" "int" (string->number v)) '()))))
       (build-grid-selector "gp-int-pack" "single" "Other pack"))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
-                  (entity-record-values db "stream" "group-interaction")
+                  (entity-record-values! db "stream" "group-interaction")
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
                 (lambda ()
@@ -1008,13 +743,13 @@
         "gp-int-pack" "single"
         (db-all-sort-normal db "sync" "pack") #f
         (lambda (pack)
-          (entity-add-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
+          (entity-set-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
        (populate-grid-selector
         "gp-int-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
-          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
+          (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
    (lambda (fragment) '())
@@ -1038,14 +773,14 @@
         (mtext "text" "Cause")
         (spinner (make-id "gp-alarm-cause") (list "Predator" "Other mongoose pack" "Humans" "Other" "Unknown") fillwrap
                  (lambda (v)
-                   (entity-add-value! "cause" "varchar" v) '())))
+                   (entity-set-value! "cause" "varchar" v) '())))
 
        (tri-state "gp-alarm-join" "Did the others join in?" "others-join")))
 
      (horiz
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
-                 (entity-record-values db "stream" "group-alarm")
+                 (entity-record-values! db "stream" "group-alarm")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
@@ -1062,7 +797,7 @@
         "gp-alarm-caller" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
-          (entity-add-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
+          (entity-set-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
           (list))))
       ))
    (lambda (fragment) '())
@@ -1080,29 +815,29 @@
       (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
       (list
        (medit-text "gp-mov-w" "Pack width" "numeric"
-                   (lambda (v) (entity-add-value! "pack-width" "int" (string->number v)) '()))
+                   (lambda (v) (entity-set-value! "pack-width" "int" (string->number v)) '()))
        (medit-text "gp-mov-l" "Pack depth" "numeric"
-                   (lambda (v) (entity-add-value! "pack-depth" "int" (string->number v)) '()))
+                   (lambda (v) (entity-set-value! "pack-depth" "int" (string->number v)) '()))
        (medit-text "gp-mov-c" "How many?" "numeric"
-                   (lambda (v) (entity-add-value! "pack-count" "int" (string->number v)) '()))))
+                   (lambda (v) (entity-set-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Direction")
         (spinner (make-id "gp-mov-dir") (list "To" "From") fillwrap
-                 (lambda (v) (entity-add-value! "direction" "varchar" v)  '())))
+                 (lambda (v) (entity-set-value! "direction" "varchar" v)  '())))
 
        (vert
         (mtext "" "Where to")
         (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
-                 (lambda (v) (entity-add-value! "destination" "varchar" v)  '())))))
+                 (lambda (v) (entity-set-value! "destination" "varchar" v)  '())))))
 
      (spacer 20)
      (horiz
       (mbutton "pf-grpmov-done" "Done"
                (lambda ()
-                 (entity-record-values db "stream" "group-move")
+                 (entity-record-values! db "stream" "group-move")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
@@ -1119,7 +854,7 @@
         "gp-mov-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
-          (entity-add-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
+          (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
    (lambda (fragment) '())
@@ -1135,12 +870,12 @@
      (mtitle "title" "Make a note")
      (edit-text (make-id "note-text") "" 30 "text" fillwrap
                 (lambda (v)
-                  (entity-add-value! "text" "varchar" v)
+                  (entity-set-value! "text" "varchar" v)
                   '()))
      (horiz
       (mbutton "note-done" "Done"
                (lambda ()
-                 (entity-record-values db "stream" "note")
+                 (entity-record-values! db "stream" "note")
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
                (lambda ()
@@ -1173,10 +908,10 @@
     (list
      (mtitle "title" "Start")
      (mtoggle-button "gc-start-main-obs" "Main observer"
-                     (lambda (v) (entity-add-value! "main-observer" "varchar" v) '()))
+                     (lambda (v) (entity-set-value! "main-observer" "varchar" v) '()))
      (mtext "" "Code")
      (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
-                (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
+                (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
      (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-weights"
                   (lambda () '()))
@@ -1185,16 +920,16 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
+     (set-current! 'group-composition-id (entity-record-values! db "stream" "group-composition"))
 
-     (entity-add-value!
+     (entity-set-value!
 
      (list
       (populate-grid-selector
        "gc-start-present" "toggle"
        (db-mongooses-by-pack) #f
        (lambda (individual)
-         (lambda (v) (entity-add-value! "group-comp-code" "varchar" v) '()))
+         (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))
 
          (list)))
       ))
@@ -1213,16 +948,16 @@
      (horiz
       (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
                  (lambda (v)
-                   (entity-add-value! "weight" "varchar" v)
+                   (entity-set-value! "weight" "varchar" v)
                    '()))
       (mbutton "gc-weigh-save" "Save"
                (lambda ()
                  (msg "saving")
-                 (entity-add-value! "parent" "varchar" (get-current 'group-composition-id 0))
+                 (entity-set-value! "parent" "varchar" (get-current 'group-composition-id 0))
                  (msg "saving to " (get-current 'entity-id "0"))
                  (if (get-current 'updating #f)
-                     (entity-update-values db "stream")
-                     (entity-record-values db "stream" "weight")
+                     (entity-update-values! db "stream")
+                     (entity-record-values! db "stream" "weight")
                  (entity-reset!)
                  '()))))
 
@@ -1240,7 +975,7 @@
        (db-mongooses-by-pack) #f
        (lambda (individual)
          (msg "loading")
-         (entity-add-value! "id-mongoose" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-mongoose" "varchar" (ktv-get individual "unique_id"))
          (set-current! 'updating #f)
          (let ((s (db-all-where2
                    db "stream" "weight"
@@ -1248,7 +983,7 @@
                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id")))))
            (when (not (null? s))
                  (msg "found previous")
-                 (entity-add-value! "unique_id" "varchar" (ktv-get (car s) "unique_id"))
+                 (entity-set-value! "unique_id" "varchar" (ktv-get (car s) "unique_id"))
                  (set-current! 'updating #t))
            (msg "-->" s)
            (list
@@ -1436,6 +1171,8 @@
      (mbutton2 "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
      (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
      (mbutton2 "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 "")))))
+
+    (image-view 0 "mongooses" fillwrap)
     (mtext "foo" "Your ID")
     (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
@@ -1517,8 +1254,8 @@
               (list (start-activity "group-events" 2 "")))
              (else
               (entity-reset!)
-              (entity-add-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
-              (set-current! 'group-composition-id (entity-record-values db "stream" "group-composition"))
+              (entity-set-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
+              (set-current! 'group-composition-id (entity-record-values! db "stream" "group-composition"))
               (list
                (start-activity "group-composition" 2 ""))))
             (list
@@ -1580,18 +1317,18 @@
       (build-grid-selector "pf1-grid" "single" "Select pup")
       (horiz
        (medit-text "pf1-width" "Pack width - left to right" "numeric"
-                   (lambda (v) (entity-add-value! "pack-width" "int" v) '()))
+                   (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
        (medit-text "pf1-height" "Pack depth - front to back" "numeric"
-                   (lambda (v) (entity-add-value! "pack-depth" "int" v) '())))
+                   (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
       (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
-                  (lambda (v) (entity-add-value! "pack-count" "int" v) '()))
+                  (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
       (horiz
        (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
        (mbutton2 "pf1-done" "Done"
                  (lambda ()
                    (cond
                     ((current-exists? 'individual)
-                     (set-current! 'pup-focal-id (entity-record-values db "stream" "pup-focal"))
+                     (set-current! 'pup-focal-id (entity-record-values! db "stream" "pup-focal"))
                      (set-current! 'timer-minutes pf-length)
                      (set-current! 'timer-seconds 0)
                      (list
@@ -1613,7 +1350,7 @@
        (db-mongooses-by-pack-pups) #f
        (lambda (individual)
          (set-current! 'individual individual)
-         (entity-add-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
          '()))))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1730,14 +1467,14 @@
     (spacer 10)
     (text-view (make-id "new-pack-name-text") "Pack name" 30 fillwrap)
     (edit-text (make-id "new-pack-name") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "name" "varchar" v) '()))
     (spacer 10)
     (horiz
      (mbutton2 "new-pack-cancel" "Cancel"
                (lambda () (entity-reset!) (list (finish-activity 2))))
      (mbutton2 "new-pack-done" "Done"
                (lambda ()
-                 (entity-record-values db "sync" "pack")
+                 (entity-record-values! db "sync" "pack")
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -1787,10 +1524,10 @@
     (text-view (make-id "new-individual-pack-name") "Pack:" 30 fillwrap)
     (text-view (make-id "new-individual-name-text") "Name" 30 fillwrap)
     (edit-text (make-id "new-individual-name") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "name" "varchar" v) '()))
     (text-view (make-id "new-individual-name-text") "Gender" 30 fillwrap)
     (spinner (make-id "new-individual-gender") (list "Female" "Male" "Unknown") fillwrap
-             (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
+             (lambda (v) (entity-set-value! "gender" "varchar" v) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") (date->string (date-time)) 25 fillwrap)
@@ -1800,29 +1537,29 @@
                       "new-individual-date"
                       (lambda (day month year)
                         (let ((datestring (date->string (list year (+ month 1) day))))
-                          (entity-add-value! "dob" "varchar" datestring)
+                          (entity-set-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
                             'text-view
                             (get-id "new-individual-dob") 'text datestring))))))))
      (button (make-id "unknown-date") "Unknown" 30 fillwrap
              (lambda ()
-               (entity-add-value! "dob" "varchar" "Unknown")
+               (entity-set-value! "dob" "varchar" "Unknown")
                (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
      )
     (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
     (text-view (make-id "new-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
     (horiz
      (mbutton2 "new-individual-cancel" "Cancel"
                (lambda () (entity-reset!) (list (finish-activity 2))))
      (mbutton2 "new-individual-done" "Done"
                (lambda ()
-                 (entity-add-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-                 (entity-record-values db "sync" "mongoose")
+                 (entity-set-value! "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
+                 (entity-record-values! db "sync" "mongoose")
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -1830,11 +1567,11 @@
    (lambda (activity arg)
      (entity-reset!)
      ;; make sure all fields exist
-     (entity-add-value! "name" "varchar" "noname")
-     (entity-add-value! "gender" "varchar" "Female")
-     (entity-add-value! "dob" "varchar" "00-00-00")
-     (entity-add-value! "litter-code" "varchar" "")
-     (entity-add-value! "chip-code" "varchar" "")
+     (entity-set-value! "name" "varchar" "noname")
+     (entity-set-value! "gender" "varchar" "Female")
+     (entity-set-value! "dob" "varchar" "00-00-00")
+     (entity-set-value! "litter-code" "varchar" "")
+     (entity-set-value! "chip-code" "varchar" "")
      (list
       (update-widget 'text-view (get-id "new-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))))
@@ -1851,10 +1588,10 @@
     (spacer 10)
     (text-view (make-id "update-individual-name-text") "Name" 30 fillwrap)
     (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "name" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "name" "varchar" v) '()))
     (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
     (spinner (make-id "update-individual-gender") (list "Female" "Male" "Unknown") fillwrap
-             (lambda (v) (entity-add-value! "gender" "varchar" v) '()))
+             (lambda (v) (entity-set-value! "gender" "varchar" v) '()))
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
@@ -1864,39 +1601,39 @@
                       "update-individual-date"
                       (lambda (day month year)
                         (let ((datestring (date->string (list year (+ month 1) day))))
-                          (entity-add-value! "dob" "varchar" datestring)
+                          (entity-set-value! "dob" "varchar" datestring)
                           (list
                            (update-widget
                             'text-view
                             (get-id "update-individual-dob") 'text datestring))))))))
      (button (make-id "update-unknown-date") "Unknown" 30 fillwrap
              (lambda ()
-               (entity-add-value! "dob" "varchar" "Unknown")
+               (entity-set-value! "dob" "varchar" "Unknown")
                (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
      )
 
     (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "litter-code" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
     (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-add-value! "chip-code" "varchar" v) '()))
+               (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
     (spacer 10)
     (horiz
      (mtoggle-button2 "update-individual-delete" "Delete"
                       (lambda (v)
-                        (entity-add-value! "deleted" "int" (if v 1 0))
+                        (entity-set-value! "deleted" "int" (if v 1 0))
                         (list)))
      (mtoggle-button2 "update-individual-died" "Died"
                       (lambda (v)
-                        (entity-add-value! "deleted" "int" (if v 2 0))
+                        (entity-set-value! "deleted" "int" (if v 2 0))
                         (list))))
     (horiz
      (mbutton2 "update-individual-cancel" "Cancel"
                (lambda () (entity-reset!) (list (finish-activity 2))))
      (mbutton2 "update-individual-done" "Done"
                (lambda ()
-                 (entity-update-values db "sync")
+                 (entity-update-values! db "sync")
                  (list (finish-activity 2)))))
     )
    (lambda (activity arg)
@@ -2068,9 +1805,12 @@
                  (string-append "export-" (ktv-get f "unique_id"))
                  (ktv-get f "time")
                  (lambda ()
-                   (msg (string-append "export-" (ktv-get f "unique_id")))
-                   (msg (export-csv main-db "stream" f pup-focal-export))
-                   '())))
+                   (save-data "pup-focal-export.csv" (export-csv main-db "stream" f pup-focal-export))
+                   (list
+                    (send-mail
+                     ""
+                     "From Mongoose2000" "Please find attached your mongoose data"
+                     (list "/sdcard/mongoose/pup-focal-export.csv"))))))
               (db-all-in-date-range
                main-db "stream" "pup-focal"
                (get-current 'from-date (date->string (date-minus-months (date-time) 6)))
@@ -2115,6 +1855,7 @@
      (activity-layout activity))
    (lambda (activity arg)
      ;; open the main database
+     (db-close main-db)
      (db-open main-db)
      (msg "opened main database")
      (msg (db-status db))

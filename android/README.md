@@ -1,4 +1,4 @@
-Mongoose 2000
-=============
+Open Sauces Notebook
+====================
 
-A remote tool for behaviour researchers in the field
+A structured notebook for recipes

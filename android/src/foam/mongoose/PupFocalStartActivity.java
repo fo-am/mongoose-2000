@@ -19,7 +19,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class PupFocalStartActivity extends StarwispActivity
+public class PupFocalStartActivity extends foam.starwisp.StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)

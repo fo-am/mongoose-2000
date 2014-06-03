@@ -67,8 +67,6 @@
     ((zero? i) (cons v (list-replace (cdr l) (- i 1) v)))
     (else (cons (car l) (list-replace (cdr l) (- i 1) v)))))
 
-(define (choose l) (list-ref l (random (length l))))
-
 (define (set-cons v l)
   (if (list-contains? l v)
       l

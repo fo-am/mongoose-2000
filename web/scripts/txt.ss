@@ -26,7 +26,7 @@
     ((boolean? v) (if v "#t" "#f"))
     ((list? v)
      (cond
-       ((null? v) "'()")
+       ((null? v) "()")
        (else
         (list->txt v))))
     (else (printf "scheme->txt, unsupported type for ~a~n" v) 0)))

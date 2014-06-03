@@ -50,6 +50,28 @@
       (insert (car lst) fn
               (sort (cdr lst) fn))))
 
+;; (chop (1 2 3 4) 2) -> ((1 2) (3 4))
+(define (chop l n)
+  (define (_ in out c)
+    (display c)(newline)
+    (cond
+      ((null? in) out)
+      ((zero? c) (_ (cdr in) (cons (list (car in)) out) (- n 1)))
+      (else (_ (cdr in) (cons (cons (car in) (car out)) (cdr out)) (- c 1)))))
+  (reverse (map reverse (_ l '(()) n))))
+
+(define (crop l n)
+  (cond
+   ((null? l) '())
+   ((zero? n) '())
+   (else (cons (car l) (crop (cdr l) (- n 1))))))
+
+(define (in-list? n l)
+  (cond
+    ((null? l) #f)
+    ((equal? n (car l)) #t)
+    (else (in-list? n (cdr l)))))
+
 (define (find n l)
   (cond
     ((null? l) #f)
@@ -61,6 +83,15 @@
     ((null? l) #f)
     ((eqv? n (car (car l))) (car l))
     (else (findv n (cdr l)))))
+
+;; find the index of an item in a flat list
+(define (index-find n l)
+  (define (_ l i)
+    (cond
+     ((null? l) #f)
+     ((equal? n (car l)) i)
+     (else (_ (cdr l) (+ i 1)))))
+  (_ l 0))
 
 (define (sorted-add l i)
   (cond
@@ -162,7 +193,7 @@
                 (insert elt fn (cdr sorted-lst))))))
 
 (define (choose l)
-  (list-ref l (abs (random (- (length l) 1)))))
+  (list-ref l (random (length l))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; time
@@ -170,10 +201,10 @@
 (define (time->seconds t)
    (+ (car t) (/ (cadr t) 1000000)))
 
-(define start-time (time->seconds (time)))
+(define start-time (time->seconds (time-of-day)))
 
 (define (time-now)
-  (- (time->seconds (time)) start-time))
+  (- (time->seconds (time-of-day)) start-time))
 
 ;; just for graph so don't have to be accurate!!!
 (define (date->day d)
@@ -247,10 +278,13 @@
                (display "random: unrecognized message")
                (newline))))))))
 
-(define random
+(define rand
   (random-maker 19781116))  ;; another arbitrarily chosen birthday
 
-(define rndf random)
+(define (random n)
+  (abs (modulo (rand n) n)))
+
+(define rndf rand)
 
 (define (rndvec) (vector (rndf) (rndf) (rndf)))
 
@@ -411,13 +445,7 @@
 ;; android ui
 
 (define (layout width height weight gravity margin) (list "layout" width height weight gravity margin))
-(define (layout-width l) (list-ref l 1))
-(define (layout-height l) (list-ref l 2))
-(define (layout-weight l) (list-ref l 3))
-(define (layout-gravity l) (list-ref l 4))
-(define (layout-margin l) (list-ref l 5))
-
-(define centre-layout (layout 'wrap-content 'wrap-content 1 'centre 0))
+(define (rlayout width height margin rules) (list "relative-layout" width height margin rules))
 
 (define (widget-type w) (list-ref w 0))
 (define (widget-id w) (list-ref w 1))
@@ -426,6 +454,9 @@
 (define (linear-layout id orientation layout colour children)
   (list "linear-layout" id orientation layout colour children))
 (define (linear-layout-children t) (list-ref t 5))
+(define (relative-layout id layout colour children)
+  (list "relative-layout" id layout colour children))
+(define (relative-layout-children t) (list-ref t 4))
 (define (frame-layout id layout children)
   (list "frame-layout" id layout children))
 (define (frame-layout-children t) (list-ref t 3))
@@ -434,6 +465,10 @@
 (define (scroll-view-vert id layout children)
   (list "scroll-view-vert" id layout children))
 (define (scroll-view-children t) (list-ref t 3))
+(define (draggable id orientation layout colour children listener)
+  (list "draggable" id orientation layout colour children listener))
+(define (draggable-children t) (list-ref t 5))
+(define (draggable-listener t) (list-ref t 6))
 (define (view-pager id layout fragment-list)
   (list "view-pager" id layout fragment-list))
 (define (space layout) (list "space" "999" layout))
@@ -447,6 +482,8 @@
 (define (edit-text-listener t) (list-ref t 6))
 (define (button id text text-size layout listener) (list "button" id text text-size layout listener))
 (define (button-listener t) (list-ref t 5))
+(define (image-button id image layout listener) (list "image-button" id image layout listener))
+(define (image-button-listener t) (list-ref t 4))
 (define (toggle-button id text text-size layout style listener) (list "toggle-button" id text text-size layout style listener))
 (define (toggle-button-listener t) (list-ref t 6))
 (define (seek-bar id max layout listener) (list "seek-bar" id max layout listener))
@@ -472,7 +509,10 @@
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
 (define (http-download name url filename) (list "http-download" 0 "http-download" name filename url))
+(define (http-upload name url filename) (list "http-upload" 0 "http-upload" name filename url))
 (define (send-mail to subject body attachments) (list "send-mail" 0 "send-mail" to subject body attachments))
+(define (take-photo filename code) (list "take-photo" 0 "take-photo" filename code))
+(define (walk-draggable name id fn) (list "walk-draggable" 0 "walk-draggable" name fn id))
 
 (define (dialog-fragment id layout fragment-name fn)
   (list "dialog-fragment" 0 "dialog-fragment" id layout fragment-name fn))
@@ -541,18 +581,27 @@
 ;      r)))
 
 (define (get-id name)
-  (id-map-get name))
+  (let ((r (id-map-get name)))
+    (cond
+     ((zero? r) (msg "no id found for" name) 0)
+     (else r))))
 
 (define (make-id name)
+  ;;(msg "making id for" name)
   (let ((id (id-map-get name)))
     (cond
      ((zero? id)
+      ;;(msg "this is a new id")
      ; (prof-start "make-id")
       (id-map-add name current-id)
       (set! current-id (+ current-id 1))
      ; (prof-end "make-id")
       (- current-id 1))
-     (else id))))
+     (else
+      ;; seems scheme is shut down while the id store keeps going?
+      (when (> id current-id) (set! current-id (+ id 1)))
+      ;;(msg "we have seen this one before")
+      id))))
 
 (define prof-map '())
 
@@ -608,10 +657,10 @@
              (* (/ (prof-item-accum d) tot) 100) "%"))
      prof-map)))
 
-(define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
-(define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
-(define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
-(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
+(define wrap (layout 'wrap-content 'wrap-content -1 'left 0))
+(define fillwrap (layout 'fill-parent 'wrap-content -1 'left 0))
+(define wrapfill (layout 'wrap-content 'fill-parent -1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent -1 'left 0))
 
 (define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
 
@@ -619,15 +668,42 @@
 (define (horiz . l)
   (linear-layout
    0 'horizontal
-   (layout 'fill-parent 'wrap-content 1 'left 0)
+   (layout 'fill-parent 'wrap-content -1 'centre 0)
    (list 0 0 0 0)
+   l))
+
+(define (horiz-colour col . l)
+  (linear-layout
+   0 'horizontal
+   (layout 'fill-parent 'wrap-content -1 'centre 0)
+   col
    l))
 
 (define (vert . l)
   (linear-layout
    0 'vertical
-   (layout 'fill-parent 'wrap-content 1 'left 0)
+   (layout 'fill-parent 'wrap-content 1 'centre 20)
    (list 0 0 0 0)
+   l))
+
+(define (vert-colour col . l)
+  (linear-layout
+   0 'vertical
+   (layout 'fill-parent 'wrap-content 1 'centre 20)
+   col
+   l))
+
+(define (vert-fill . l)
+  (linear-layout
+   0 'vertical
+   (layout 'fill-parent 'fill-parent 1 'left 0)
+   (list 0 0 0 0)
+   l))
+
+(define (relative rules colour . l)
+  (relative-layout
+   0 (rlayout 'fill-parent 'wrap-content 20 rules)
+   colour
    l))
 
 (define (activity name layout on-create on-start on-resume on-pause on-stop on-destroy on-activity-result)
@@ -671,8 +747,11 @@
 (define (widget-get-children w)
   (cond
    ((equal? (widget-type w) "linear-layout") (linear-layout-children w))
+   ((equal? (widget-type w) "relative-layout") (relative-layout-children w))
    ((equal? (widget-type w) "frame-layout") (frame-layout-children w))
    ((equal? (widget-type w) "scroll-view") (scroll-view-children w))
+   ((equal? (widget-type w) "scroll-view-vert") (scroll-view-children w))
+   ((equal? (widget-type w) "draggable") (draggable-children w))
 ;;   ((equal? (widget-type w) "grid-layout") (grid-layout-children w))
    (else '())))
 
@@ -680,10 +759,12 @@
   (cond
    ((equal? (widget-type w) "edit-text") (edit-text-listener w))
    ((equal? (widget-type w) "button") (button-listener w))
+   ((equal? (widget-type w) "image-button") (image-button-listener w))
    ((equal? (widget-type w) "toggle-button") (toggle-button-listener w))
    ((equal? (widget-type w) "seek-bar") (seek-bar-listener w))
    ((equal? (widget-type w) "spinner") (spinner-listener w))
    ((equal? (widget-type w) "button-grid") (button-grid-listener w))
+   ((equal? (widget-type w) "draggable") (draggable-listener w))
    (else #f)))
 
 ;; walk through activity stripping callbacks
@@ -694,10 +775,11 @@
    (else
     (let* ((w (car widget-list))
            (c (widget-get-children w)))
-      (if (not (null? c))
-          (update-callbacks! c)
-          (let ((cb (widget-get-callback w)))
-            (when cb (add-callback! (callback (widget-id w) (widget-type w) cb))))))
+      (when (not (null? c))
+            (update-callbacks! c))
+      (let ((cb (widget-get-callback w)))
+        (when cb
+              (add-callback! (callback (widget-id w) (widget-type w) cb)))))
     (update-callbacks! (cdr widget-list)))))
 
 ;; walk through update stripping callbacks
@@ -709,6 +791,7 @@
          ((null? w) #f)
          ;; drill deeper
          ((eq? (update-widget-token w) 'contents)
+          (msg "updateing contents from callback")
           (update-callbacks! (update-widget-value w)))
          ((eq? (update-widget-token w) 'grid-buttons)
           (add-callback! (callback (update-widget-id w)
@@ -762,6 +845,7 @@
                   (equal? (list-ref event 0) "http-request")
                   (equal? (list-ref event 0) "network-connect")
                   (equal? (list-ref event 0) "delayed")
+                  (equal? (list-ref event 0) "walk-draggable")
                   (equal? (list-ref event 0) "gps-start"))
                  (add-new-dialog! event)))
          events)))
@@ -832,6 +916,8 @@
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "button")
                  ((callback-fn cb)))
+                ((equal? (callback-type cb) "image-button")
+                 ((callback-fn cb)))
                 ((equal? (callback-type cb) "toggle-button")
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "seek-bar")
@@ -840,9 +926,17 @@
                  ((callback-fn cb) (car args)))
                 ((equal? (callback-type cb) "button-grid")
                  ((callback-fn cb) (car args) (cadr args)))
+                ((equal? (callback-type cb) "draggable")
+                 ((callback-fn cb)))
                 (else
                  (msg "no callbacks for type" (callback-type cb))))))
-          ;;(update-callbacks! events)
+          ;; this was just update-callbacks, commented out,
+          ;; expecting trouble here... (but seems to fix new widgets from
+          ;; widget callbacks so far)
+          (update-callbacks-from-update! events)
           (update-dialogs! events)
           (send (scheme->json events))
           (prof-end "widget-callback")))))
+
+
+(alog "lib.scm done")

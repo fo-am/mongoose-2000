@@ -56,25 +56,27 @@
 (define (register-proc r) (list-ref r 1))
 
 ; builds the argument list from the registered requests
-(define (request-run reg req)
+(define (request-run reg req request)
   (apply (register-proc reg)
-         (map
-          (lambda (arg)
-            ;; if it's registered as an argument
-            (if (req-has-arg? (register-req reg) (car arg))
-                ;; send it through plain
-                (filter-string (cdr arg))
-                ;; send it with the argument name
-                (cons (string->symbol (filter-string (symbol->string (car arg))))
-                      (filter-string (cdr arg)))))
-          (req-args req))))
+         (cons
+	  request
+	  (map
+	   (lambda (arg)
+	     ;; if it's registered as an argument
+	     (if (req-has-arg? (register-req reg) (car arg))
+		 ;; send it through plain
+		 (filter-string (cdr arg))
+		 ;; send it with the argument name
+		 (cons (string->symbol (filter-string (symbol->string (car arg))))
+		       (filter-string (cdr arg)))))
+	   (req-args req)))))
 
 ;; look up this request in the registry and run it
-(define (request-dispatch reg req)
+(define (request-dispatch reg req request)
   (cond
    ((null? reg) (printf "unknown command ~a~n" (req-name req))
     (pluto-response (string-append "unknown command " (symbol->string (req-name req)))))
    ((equal? (req-name (register-req (car reg))) (req-name req))
-    (request-run (car reg) req))
+    (request-run (car reg) req request))
    (else
-    (request-dispatch (cdr reg) req))))
+    (request-dispatch (cdr reg) req request))))

@@ -1,0 +1,4 @@
+#!/bin/bash
+./server.scm 8889
+
+

@@ -19,12 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class PupFocalActivity extends foam.starwisp.StarwispActivity
+public class ExportActivity extends foam.starwisp.StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "pup-focal";
+        m_Name = "export";
         super.onCreate(savedInstanceState);
     }
 }
