@@ -345,6 +345,7 @@
 ;; review
 
 (define (review-build-contents uid entity)
+  (msg "review-build-contents")
   (append
    (map
     (lambda (ktv)
@@ -367,7 +368,20 @@
        (else (mtext "" (string-append (ktv-type ktv) " not handled")))))
     entity)
    (list
-    (mbutton (string-append uid "-save") "Save" (lambda () '())))))
+    (horiz
+     (mbutton "review-item-cancel" "Cancel" (lambda () (list (finish-activity 0))))
+     (mbutton (string-append uid "-save") "Save" (lambda () '()))))))
+
+(define (review-item-build)
+  (let ((uid (entity-get-value "unique_id")))
+    (msg "review-item-build" uid)
+    (list
+     (update-widget
+      'linear-layout
+      (get-id "review-item-container")
+      'contents
+      (review-build-contents
+       uid (get-current 'entity-values '()))))))
 
 (define (review-update-list)
   (list
@@ -379,27 +393,15 @@
        (let* ((data (car dirty-entity))
               (entity (cadr dirty-entity))
               (time (ktv-get entity "time"))
+              (type (list-ref data 0))
               (uid (list-ref data 1)))
-         (msg dirty-entity)
-         (vert
-          (mtoggle-button
-           (string-append "review-" uid)
-           (string-append (list-ref data 0) (if time (string-append "-" time) ""))
-           (lambda (v)
-             (list
-              (update-widget 'linear-layout
-                             (get-id (string-append uid "-container"))
-                             'contents
-                             (if (not v) '() (review-build-contents uid entity)))
-              )))
-          (linear-layout
-           (make-id (string-append uid "-container"))
-           'vertical
-           (layout 'fill-parent 'wrap-content 1 'centre 0)
-           (list 0 0 0 0)
-           (list)))))
+         (mbutton
+          (string-append "review-" uid)
+          (string-append type (if time (string-append "-" time) ""))
+          (lambda ()
+            (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+            (list (start-activity "review-item" 0 ""))))))
      (dirty-entities-for-review db "stream")))))
-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -1245,8 +1247,8 @@
                  '()))
     (mtext "foo" "Database")
     (horiz
-     (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 ""))))
-     (mbutton2 "main-review" "Review changes" (lambda () (list (start-activity "review" 0 ""))))))
+     (mbutton2 "main-review" "Review changes" (lambda () (list (start-activity "review" 0 ""))))
+     (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 ""))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1957,6 +1959,27 @@
      (activity-layout activity))
    (lambda (activity arg)
      (review-update-list))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
+
+  (activity
+   "review-item"
+   (vert
+    (text-view (make-id "title") "Review item" 40 fillwrap)
+    (linear-layout
+     (make-id "review-item-container")
+     'vertical
+     (layout 'fill-parent 'wrap-content 1 'left 0)
+     (list 0 0 0 0)
+     (list))
+    )
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (review-item-build))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
