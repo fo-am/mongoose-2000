@@ -32,6 +32,7 @@
         <activity android:name="TagLocationActivity" android:configChanges="orientation"></activity>
         <activity android:name="SyncActivity" android:configChanges="orientation"></activity>
         <activity android:name="ExportActivity" android:configChanges="orientation"></activity>
+        <activity android:name="ReviewActivity" android:configChanges="orientation"></activity>
     </application>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />

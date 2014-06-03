@@ -80,6 +80,23 @@
             (get-entity-plain-for-sync db table (vector-ref i 0))))
          (cdr de)))))
 
+;; include all the ktvs
+(define (dirty-entities-for-review db table)
+  (let ((de (db-select
+             db (string-append
+                 "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;"))))
+    (if (null? de)
+        '()
+        (map
+         (lambda (i)
+           ;;(msg "dirty-entities")
+           (list
+            ;; build according to url ([table] entity-type unique-id dirty version)
+            (cdr (vector->list i))
+            (get-entity-plain db table (vector-ref i 0))))
+         (cdr de)))))
+
+
 ;; todo: BROKEN...
 ;; used for sync-all
 ;(define (dirty-and-all-entities db table)

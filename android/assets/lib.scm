@@ -682,7 +682,7 @@
 (define (vert . l)
   (linear-layout
    0 'vertical
-   (layout 'fill-parent 'wrap-content 1 'centre 20)
+   (layout 'fill-parent 'fill-parent -1 'centre 20)
    (list 0 0 0 0)
    l))
 

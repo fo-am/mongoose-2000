@@ -108,7 +108,7 @@
   (button (make-id id) title 30 (layout 150 100 1 'centre 10) fn))
 
 (define (mtoggle-button id title fn)
-  (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 0) "fancy" fn))
+  (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 10) "fancy" fn))
 
 (define (mtoggle-button-yes id title fn)
   (toggle-button (make-id id) title 30 (layout 49 43 1 'centre 0) "yes" fn))
@@ -120,7 +120,7 @@
   (toggle-button (make-id id) title 30 (layout  49 43 1 'centre 0) "no" fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 30 (layout 150 100 1 'centre 0) "plain" fn))
+  (toggle-button (make-id id) title 30 (layout 150 100 1 'centre 10) "plain" fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 30 fillwrap))
@@ -132,6 +132,11 @@
   (vert
    (mtext (string-append id "-title") text)
    (edit-text (make-id id) "" 30 type fillwrap fn)))
+
+(define (medit-text-value id text value type fn)
+  (vert
+   (mtext (string-append id "-title") text)
+   (edit-text (make-id id) value 30 type fillwrap fn)))
 
 (define (mclear-toggles id-list)
   (map
@@ -335,6 +340,65 @@
          ))))
 
     (text-view 0 text 30 (layout 'wrap-content 'wrap-parent '1 'centre 0)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; review
+
+(define (review-build-contents uid entity)
+  (append
+   (map
+    (lambda (ktv)
+      (cond
+       ((equal? (ktv-type ktv) "varchar")
+        (medit-text-value (string-append uid (ktv-key ktv))
+                          (ktv-key ktv)
+                          (ktv-value ktv) "normal"
+                          (lambda (v) '())))
+       ((equal? (ktv-type ktv) "int")
+        (medit-text-value (string-append uid (ktv-key ktv))
+                          (ktv-key ktv)
+                          (number->string (ktv-value ktv)) "numeric"
+                          (lambda (v) '())))
+       ((equal? (ktv-type ktv) "real")
+        (medit-text-value (string-append uid (ktv-key ktv))
+                          (ktv-key ktv)
+                          (number->string (ktv-value ktv)) "numeric"
+                          (lambda (v) '())))
+       (else (mtext "" (string-append (ktv-type ktv) " not handled")))))
+    entity)
+   (list
+    (mbutton (string-append uid "-save") "Save" (lambda () '())))))
+
+(define (review-update-list)
+  (list
+   (update-widget
+    'linear-layout (get-id "review-list") 'contents
+    (map
+     (lambda (dirty-entity)
+       ;; consists of ((type,uid,dirty,version) (ktvlist))
+       (let* ((data (car dirty-entity))
+              (entity (cadr dirty-entity))
+              (time (ktv-get entity "time"))
+              (uid (list-ref data 1)))
+         (msg dirty-entity)
+         (vert
+          (mtoggle-button
+           (string-append "review-" uid)
+           (string-append (list-ref data 0) (if time (string-append "-" time) ""))
+           (lambda (v)
+             (list
+              (update-widget 'linear-layout
+                             (get-id (string-append uid "-container"))
+                             'contents
+                             (if (not v) '() (review-build-contents uid entity)))
+              )))
+          (linear-layout
+           (make-id (string-append uid "-container"))
+           'vertical
+           (layout 'fill-parent 'wrap-content 1 'centre 0)
+           (list 0 0 0 0)
+           (list)))))
+     (dirty-entities-for-review db "stream")))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1180,7 +1244,9 @@
                   db "local" 1 (list (ktv "user-id" "varchar" v)))
                  '()))
     (mtext "foo" "Database")
-    (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 "")))))
+    (horiz
+     (mbutton2 "main-sync" "Sync database" (lambda () (list (start-activity "sync" 0 ""))))
+     (mbutton2 "main-review" "Review changes" (lambda () (list (start-activity "review" 0 ""))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1876,5 +1942,25 @@
    (lambda (activity requestcode resultcode) '())))
 
 
+  (activity
+   "review"
+   (vert
+    (text-view (make-id "title") "Review changes" 40 fillwrap)
+    (linear-layout
+     (make-id "review-list")
+     'vertical
+     (layout 'fill-parent 'wrap-content 1 'left 0)
+     (list 0 0 0 0)
+     (list))
+    )
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (review-update-list))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
 
   )
