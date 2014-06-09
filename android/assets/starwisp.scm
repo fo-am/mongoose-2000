@@ -791,6 +791,7 @@
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
+                  (msg "entity-record-values about to be called?")
                   (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"

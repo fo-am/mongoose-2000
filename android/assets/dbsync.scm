@@ -90,20 +90,21 @@
 
 ;; version to check the entity has the key
 (define (entity-set-value! key type value)
-  (let ((existing-type (ktv-get-type (get-current 'entity-values '()) key)))
-    (if (equal? existing-type type)
+;  (let ((existing-type (ktv-get-type (get-current 'entity-values '()) key)))
+;    (if (equal? existing-type type)
         (set-current!
          'entity-values
          (ktv-set
           (get-current 'entity-values '())
           (ktv key type value)))
         ;;
-        (begin
-          (msg "entity-set-value! - adding new " key "of type" type "to entity")
-          (entity-add-value-create! key type value)))
+;        (begin
+;          (msg "entity-set-value! - adding new " key "of type" type "to entity")
+;          (entity-add-value-create! key type value)))
     ;; save straight to local db every time
     ;;(entity-update-single-value! (list key type value))
-    ))
+        ;;       )
+        )
 
 
 (define (date-time->string dt)

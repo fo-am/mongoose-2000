@@ -53,7 +53,6 @@
 ;; (chop (1 2 3 4) 2) -> ((1 2) (3 4))
 (define (chop l n)
   (define (_ in out c)
-    (display c)(newline)
     (cond
       ((null? in) out)
       ((zero? c) (_ (cdr in) (cons (list (car in)) out) (- n 1)))
@@ -791,7 +790,7 @@
          ((null? w) #f)
          ;; drill deeper
          ((eq? (update-widget-token w) 'contents)
-          (msg "updateing contents from callback")
+          ;;(msg "updateing contents from callback")
           (update-callbacks! (update-widget-value w)))
          ((eq? (update-widget-token w) 'grid-buttons)
           (add-callback! (callback (update-widget-id w)
@@ -834,7 +833,7 @@
 
 
 (define (update-dialogs! events)
-  (msg "update-dialogs" events)
+  ;;(msg "update-dialogs" events)
   (when (list? events)
         (for-each
          (lambda (event)
@@ -850,7 +849,8 @@
                   (equal? (list-ref event 0) "gps-start"))
                  (add-new-dialog! event)))
          events))
-  (msg "update-dialogs end"))
+  ;;(msg "update-dialogs end")
+  )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -879,7 +879,7 @@
     r))
 
 (define (top-callback type activity-name activity args)
-  (display "activity/fragment-callback ")(display type)(display " ")(display args)(newline)
+  ;;(display "activity/fragment-callback ")(display type)(display " ")(display args)(newline)
   (if (not activity)
       (begin (display "no activity/fragment called ")(display activity-name)(newline))
       (let ((ret (cond
@@ -899,7 +899,7 @@
           (update-callbacks! (list ret)))
          (else
           (update-dialogs! ret)
-          (msg "top-callback inbetween")
+          ;;(msg "top-callback inbetween")
           (update-callbacks-from-update! ret)))
         (send (scheme->json ret)))))
 
@@ -909,10 +909,10 @@
         (activity-list-find fragments name))))
 
 (define (widget-callback activity-name widget-id args)
-  (msg "widget-callback" activity-name widget-id args)
+  ;;(msg "widget-callback" activity-name widget-id args)
   (prof-start "widget-callback")
   (let ((cb (find-callback widget-id)))
-    (msg cb)
+    ;;(msg cb)
     (if (not cb)
         (msg "no widget" widget-id "found!")
         (let ((events
@@ -938,7 +938,7 @@
           ;; this was just update-callbacks, commented out,
           ;; expecting trouble here... (but seems to fix new widgets from
           ;; widget callbacks so far)
-          (msg "callback returned" events)
+          ;;(msg "callback returned" events)
           (update-callbacks-from-update! events)
           (update-dialogs! events)
           (send (scheme->json events))

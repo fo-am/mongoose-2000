@@ -65,6 +65,7 @@
     ;; add all the keys
     (for-each
      (lambda (ktv)
+       (msg "inserting" ktv)
        (insert-value db table id ktv dirty))
      ktvlist)
 
