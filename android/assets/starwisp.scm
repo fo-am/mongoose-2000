@@ -1994,14 +1994,17 @@
   (activity
    "review"
    (vert
-    (text-view (make-id "title") "Review changes" 40 fillwrap)
-    (linear-layout
-     (make-id "review-list")
-     'vertical
-     (layout 'fill-parent 'wrap-content 1 'left 0)
-     (list 0 0 0 0)
-     (list))
-    )
+    (text-view 0 "Review changes" 40 fillwrap)
+    (scroll-view-vert
+     0 (layout 'fill-parent 'wrap-content 1 'left 0)
+     (list
+      (linear-layout
+       (make-id "review-list")
+       'vertical
+       (layout 'fill-parent 'fill-parent 1 'left 0)
+       (list 0 0 0 0)
+       (list))
+      )))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
