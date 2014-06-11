@@ -1511,7 +1511,7 @@
 
     (linear-layout
      0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
-     (list 0 0 0 0) (list (spacer 10)))
+     (list 0 0 0 0) (list (spacer  10)))
 
     (relative
      '(("parent-bottom"))
