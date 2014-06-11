@@ -108,6 +108,9 @@
 (define (mbutton2 id title fn)
   (button (make-id id) title 20 (layout 150 100 1 'centre 5) fn))
 
+(define (mbutton-small id title fn)
+  (button (make-id id) title 30 (layout 'wrap-content 'wrap-content -1 'right 5) fn))
+
 (define (mtoggle-button id title fn)
   (toggle-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) "fancy" fn))
 
@@ -478,22 +481,27 @@
      (string-append (number->string (get-current 'timer-seconds 59))))
     )))
 
-(define (next-button id dialog-msg next-frag fn)
-  (mbutton (string-append id "-nextb") "Next"
-           (lambda ()
-             (list
-              (alert-dialog
-               (string-append id "-d")
-               dialog-msg
-               (lambda (v)
-                 (cond
-                  ((eqv? v 1)
-                   (msg "recording from next button")
-                   (entity-update-values!)
-                   (append
-                    (fn) (list (replace-fragment
-                                (get-id "gc-top") next-frag))))
-                  (else '()))))))))
+(define (next-button id dialog-msg last-frag next-frag fn)
+  (horiz
+   (mbutton (string-append id "-backb") "Back"
+             (lambda ()
+               (list (replace-fragment (get-id "gc-top") last-frag))))
+
+   (mbutton (string-append id "-nextb") "Next"
+             (lambda ()
+               (list
+                (alert-dialog
+                 (string-append id "-d")
+                 dialog-msg
+                 (lambda (v)
+                   (cond
+                    ((eqv? v 1)
+                     (msg "recording from next button")
+                     (entity-update-values!)
+                     (append
+                      (fn) (list (replace-fragment
+                                  (get-id "gc-top") next-frag))))
+                    (else '())))))))))
 
 (define (force-pause)
   (list
@@ -992,7 +1000,7 @@
      (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
                 (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
-     (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-weights"
+     (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
                   (lambda () '()))
      ))
 
@@ -1037,7 +1045,7 @@
                  '()))))
 
      (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))
-     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-preg"
+     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
                   (lambda () '()))))
 
    (lambda (fragment arg)
@@ -1077,7 +1085,7 @@
     (list
      (mtitle "title" "Pregnant females")
      (build-grid-selector "gc-preg-choose" "toggle" "Choose")
-     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-pup-assoc"
+     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-weights" "gc-pup-assoc"
                   (lambda () '()))))
 
    (lambda (fragment arg)
@@ -1113,7 +1121,7 @@
        (spinner (make-id "gc-pup-accuracy") (list "Weak" "Medium" "Strong") fillwrap
                 (lambda (v) '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
-     (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-oestrus"
+     (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
                   (lambda () '()))))
 
    (lambda (fragment arg)
@@ -1151,7 +1159,7 @@
        (spinner (make-id "gc-oestrus-accuracy") (list "Weak" "Medium" "Strong") fillwrap
                 (lambda (v) '()))))
      (build-grid-selector "gc-oestrus-guard" "single" "Choose mate guard")
-     (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-babysitting"
+     (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
                   (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1178,7 +1186,7 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "" "Babysitters")
-     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-end"
+     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-oestrus" "gc-end"
                   (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1195,7 +1203,7 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "" "Finish group composition")
-     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-end"
+     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-babysitting" "gc-end"
                   (lambda () (list (finish-activity 0))))))
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -1371,12 +1379,27 @@
   (activity
    "group-composition"
    (linear-layout
-    0 'vertical fillwrap gc-bgcol
+    0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+    gc-col
     (list
-     (text-view (make-id "obs-title") "" 40 fillwrap)
-     (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 520 1 'left 0))
-     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 520 1 'left 0))
-     (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
+     (relative
+      '(("parent-top"))
+      (list 0 0 0 0)
+      (horiz
+       (text-view (make-id "obs-title") "" 40 fillwrap)
+       (mbutton-small "gc-done" "Exit" (lambda () (list (finish-activity 0))))))
+
+     (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 'wrap-content -1 'left 0))
+
+     (linear-layout
+      0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+      (list 0 0 0 0) (list (spacer 10)))
+
+
+     (relative
+      '(("parent-bottom"))
+      (list 0 0 0 0)
+      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 'wrap-content -1 'left 0)))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1395,38 +1418,34 @@
 
   (activity
    "pup-focal-start"
-   (linear-layout
-    0 'vertical fillwrap pf-bgcol
-    (list
-     (vert
-      (mtitle "" "Pup focal setup")
-      (mtext "pf1-pack" "Pack")
-      (build-grid-selector "pf1-grid" "single" "Select pup")
-      (horiz
-       (medit-text "pf1-width" "Pack width - left to right" "numeric"
-                   (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
-       (medit-text "pf1-height" "Pack depth - front to back" "numeric"
-                   (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
-      (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
-                  (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
-      (horiz
-       (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
-       (mbutton2 "pf1-done" "Done"
-                 (lambda ()
-                   (cond
-                    ((current-exists? 'individual)
-                     (set-current! 'pup-focal-id (entity-record-values!))
-                     (set-current! 'timer-minutes pf-length)
-                     (set-current! 'timer-seconds 0)
-                     (list
-                      (start-activity "pup-focal" 2 "")))
-                    (else
-                     (list
-                      (alert-dialog
-                       "pup-focal-check"
-                       "You need to specify an pup for the focal"
-                       (lambda () '()))))))))
-      )))
+   (vert
+    (mtitle "" "Pup focal setup")
+    (mtext "pf1-pack" "Pack")
+    (build-grid-selector "pf1-grid" "single" "Select pup")
+    (horiz
+     (medit-text "pf1-width" "Pack width - left to right" "numeric"
+                 (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
+     (medit-text "pf1-height" "Pack depth - front to back" "numeric"
+                 (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
+    (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
+                (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
+    (horiz
+     (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
+     (mbutton2 "pf1-done" "Done"
+               (lambda ()
+                 (cond
+                  ((current-exists? 'individual)
+                   (set-current! 'pup-focal-id (entity-record-values!))
+                   (set-current! 'timer-minutes pf-length)
+                   (set-current! 'timer-seconds 0)
+                   (list
+                    (start-activity "pup-focal" 2 "")))
+                  (else
+                   (list
+                    (alert-dialog
+                     "pup-focal-check"
+                     "You need to specify an pup for the focal"
+                     (lambda () '())))))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1448,9 +1467,13 @@
 
   (activity
    "pup-focal"
-    (linear-layout
-     0 'vertical fillwrap pf-bgcol
-     (list
+   (linear-layout
+    0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+    pf-col
+    (list
+     (relative
+      '(("parent-top"))
+      (list 0 0 0 0)
       (horiz
        (mtitle "title" "Pup Focal")
        (linear-layout
@@ -1470,46 +1493,53 @@
                          (msg "pausing")
                          (if v
                              (list (delayed "timer" 1000 (lambda () '())))
-                             (list (delayed "timer" 1000 timer-cb))))))
-      (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 515 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 515 1 'left 0))
-      (mbutton "pf-done" "Done"
-               (lambda ()
-                 (list
-                  (alert-dialog
-                   "pup-focal-end-done"
-                   "Finish pup focal are you sure?"
-                   (lambda (v)
-                     (cond
-                      ((eqv? v 1)
-                       (list (finish-activity 1)))
-                      (else
-                       (list))))))))))
+                             (list (delayed "timer" 1000 timer-cb)))))
+       (mbutton-small "pf-done" "Exit"
+                      (lambda ()
+                        (list
+                         (alert-dialog
+                          "pup-focal-end-done"
+                          "Finish pup focal are you sure?"
+                          (lambda (v)
+                            (cond
+                             ((eqv? v 1)
+                              (list (finish-activity 1)))
+                             (else
+                              (list))))))))))
 
-    (lambda (activity arg)
-      (activity-layout activity))
-    (lambda (activity arg)
-      (list
-       (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
-                      (number->string (get-current 'timer-minutes pf-length)))
-       (update-widget 'text-view (get-id "pf-timer-time") 'text
-                      (number->string (get-current 'timer-seconds 60)))
-       (delayed "timer" 1000 timer-cb)))
-    (lambda (activity) '())
-    (lambda (activity) '())
-    (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
-    (lambda (activity) '())
-    (lambda (activity requestcode resultcode) '()))
+    (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 'wrap-content -1 'left 0))
+
+    (linear-layout
+     0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+     (list 0 0 0 0) (list (spacer 10)))
+
+    (relative
+     '(("parent-bottom"))
+     (list 0 0 0 0)
+     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 'wrap-content 1 'left 0)))))
+
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (list
+      (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
+                     (number->string (get-current 'timer-minutes pf-length)))
+      (update-widget 'text-view (get-id "pf-timer-time") 'text
+                     (number->string (get-current 'timer-seconds 60)))
+      (delayed "timer" 1000 timer-cb)))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) (list (delayed "timer" 1000 (lambda () '()))))
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
 
 
   (activity
    "group-events"
-   (linear-layout
-    0 'vertical fill gp-col
-    (list
-     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 515 1 'left 0))
-     (horiz
-      (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0)))))))
+   (vert
+    (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 'wrap-content 1 'left 0))
+    (horiz
+     (mbutton "gpe-done" "Done" (lambda () (list (finish-activity 0))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg) (list))
