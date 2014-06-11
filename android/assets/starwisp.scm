@@ -40,6 +40,7 @@
    "pup-focal-pupcare"
    "pup-focal-pupaggr"))
 
+(define list-sizes (list "Small" "Medium" "Large"))
 
 ;; colours
 
@@ -102,41 +103,41 @@
 ;; user interface abstraction
 
 (define (mbutton id title fn)
-  (button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 10) fn))
+  (button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) fn))
 
 (define (mbutton2 id title fn)
-  (button (make-id id) title 30 (layout 150 100 1 'centre 10) fn))
+  (button (make-id id) title 20 (layout 150 100 1 'centre 5) fn))
 
 (define (mtoggle-button id title fn)
-  (toggle-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 10) "fancy" fn))
+  (toggle-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) "fancy" fn))
 
 (define (mtoggle-button-yes id title fn)
-  (toggle-button (make-id id) title 30 (layout 49 43 1 'centre 0) "yes" fn))
+  (toggle-button (make-id id) title 20 (layout 49 43 1 'centre 0) "yes" fn))
 
 (define (mtoggle-button-maybe id title fn)
-  (toggle-button (make-id id) title 30 (layout  49 43 1 'centre 0) "maybe" fn))
+  (toggle-button (make-id id) title 20 (layout  49 43 1 'centre 0) "maybe" fn))
 
 (define (mtoggle-button-no id title fn)
-  (toggle-button (make-id id) title 30 (layout  49 43 1 'centre 0) "no" fn))
+  (toggle-button (make-id id) title 20 (layout  49 43 1 'centre 0) "no" fn))
 
 (define (mtoggle-button2 id title fn)
-  (toggle-button (make-id id) title 30 (layout 150 100 1 'centre 10) "plain" fn))
+  (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 5) "plain" fn))
 
 (define (mtext id text)
-  (text-view (make-id id) text 30 fillwrap))
+  (text-view (make-id id) text 20 fillwrap))
 
 (define (mtitle id text)
-  (text-view (make-id id) text 50 fillwrap))
+  (text-view (make-id id) text 40 fillwrap))
 
 (define (medit-text id text type fn)
   (vert
    (mtext (string-append id "-title") text)
-   (edit-text (make-id id) "" 30 type fillwrap fn)))
+   (edit-text (make-id id) "" 20 type fillwrap fn)))
 
 (define (medit-text-value id text value type fn)
   (vert
    (mtext (string-append id "-title") text)
-   (edit-text (make-id id) value 30 type fillwrap fn)))
+   (edit-text (make-id id) value 20 type fillwrap fn)))
 
 (define (mclear-toggles id-list)
   (map
@@ -177,13 +178,13 @@
       (image-view (make-id "im") "arrow_left" (layout 200 'fill-parent 1 'left 0))
       (scroll-view
        (make-id "scroller")
-       (layout 'wrap-content 'wrap-content 1 'left 20)
+       (layout 'wrap-content 'wrap-content 1 'left 5)
        (list
         (linear-layout
          (make-id name) 'horizontal
-         (layout 'wrap-content 'wrap-content 1 'centre 20) trans-col
+         (layout 'wrap-content 'wrap-content 1 'centre 5) trans-col
          (list
-          (button-grid (make-id name) type 3 30 (layout 100 60 1 'left 40)
+          (button-grid (make-id name) type 3 20 (layout 100 60 1 'left 5)
                        (list) (lambda (v) '()))))))
       (image-view (make-id "im") "arrow_right" (layout 200 'fill-parent 1 'right 0)))))))
 
@@ -217,7 +218,7 @@
     (let ((r (update-widget
      'button-grid (get-id name) 'grid-buttons
      (list
-      type 3 30 (layout 100 60 1 'left 0)
+      type 3 20 (layout 80 50 1 'left 2)
       (map
        (lambda (ii)
          (list (car ii) (caddr ii)))
@@ -347,30 +348,40 @@
 (define (review-build-contents uid entity)
   (msg "review-build-contents")
   (append
-   (map
-    (lambda (ktv)
-      (cond
-       ((equal? (ktv-type ktv) "varchar")
-        (medit-text-value (string-append uid (ktv-key ktv))
-                          (ktv-key ktv)
-                          (ktv-value ktv) "normal"
-                          (lambda (v) '())))
-       ((equal? (ktv-type ktv) "int")
-        (medit-text-value (string-append uid (ktv-key ktv))
-                          (ktv-key ktv)
-                          (number->string (ktv-value ktv)) "numeric"
-                          (lambda (v) '())))
-       ((equal? (ktv-type ktv) "real")
-        (medit-text-value (string-append uid (ktv-key ktv))
-                          (ktv-key ktv)
-                          (number->string (ktv-value ktv)) "numeric"
-                          (lambda (v) '())))
-       (else (mtext "" (string-append (ktv-type ktv) " not handled")))))
+   (foldl
+    (lambda (ktv r)
+      (append
+       r (cond
+          ((or (equal? (ktv-key ktv) "unique_id")
+               (equal? (ktv-key ktv) "deleted")) '())
+          ((equal? (ktv-type ktv) "varchar")
+           (list (medit-text-value (string-append uid (ktv-key ktv))
+                                   (ktv-key ktv)
+                                   (ktv-value ktv) "normal"
+                                   (lambda (v)
+                                     (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
+          ((equal? (ktv-type ktv) "int")
+           (list (medit-text-value (string-append uid (ktv-key ktv))
+                                   (ktv-key ktv)
+                                   (number->string (ktv-value ktv)) "numeric"
+                                   (lambda (v)
+                                     (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
+          ((equal? (ktv-type ktv) "real")
+           (list (medit-text-value (string-append uid (ktv-key ktv))
+                                   (ktv-key ktv)
+                                   (number->string (ktv-value ktv)) "numeric"
+                                   (lambda (v)
+                                     (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
+          (else (mtext "" (string-append (ktv-type ktv) " not handled")) '()))))
+    '()
     entity)
    (list
     (horiz
      (mbutton "review-item-cancel" "Cancel" (lambda () (list (finish-activity 0))))
-     (mbutton (string-append uid "-save") "Save" (lambda () '()))))))
+     (mbutton (string-append uid "-save") "Save"
+              (lambda ()
+                (entity-update-values!)
+                (list (finish-activity 0))))))))
 
 (define (review-item-build)
   (let ((uid (entity-get-value "unique_id")))
@@ -468,19 +479,21 @@
     )))
 
 (define (next-button id dialog-msg next-frag fn)
-     (mbutton (string-append id "-nextb") "Next"
-              (lambda ()
-                (list
-                 (alert-dialog
-                  (string-append id "-d")
-                  dialog-msg
-                  (lambda (v)
-                    (cond
-                     ((eqv? v 1)
-                      (append
-                       (fn) (list (replace-fragment
-                                   (get-id "gc-top") next-frag))))
-                     (else '()))))))))
+  (mbutton (string-append id "-nextb") "Next"
+           (lambda ()
+             (list
+              (alert-dialog
+               (string-append id "-d")
+               dialog-msg
+               (lambda (v)
+                 (cond
+                  ((eqv? v 1)
+                   (msg "recording from next button")
+                   (entity-update-values!)
+                   (append
+                    (fn) (list (replace-fragment
+                                (get-id "gc-top") next-frag))))
+                  (else '()))))))))
 
 (define (force-pause)
   (list
@@ -601,9 +614,9 @@
      (spacer 20)
      (horiz
       (mtext "text" "Food size")
-      (spinner (make-id "pf-pupfeed-size") (list "Small" "Medium" "Large") fillwrap
+      (spinner (make-id "pf-pupfeed-size") list-sizes fillwrap
                (lambda (v)
-                 (entity-set-value! "size" "varchar" v) '())))
+                 (entity-set-value! "size" "varchar" (list-ref list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfeed-done" "Done"
@@ -879,7 +892,7 @@
     (list
      (build-grid-selector "gp-mov-leader" "single" "<b>Group movement</b>: Leader")
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 90 '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (medit-text "gp-mov-w" "Pack width" "numeric"
                    (lambda (v) (entity-set-value! "pack-width" "int" (string->number v)) '()))
@@ -986,19 +999,15 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (set-current! 'group-composition-id (entity-record-values! db "stream" "group-composition"))
-
-     (entity-set-value!
 
      (list
       (populate-grid-selector
        "gc-start-present" "toggle"
        (db-mongooses-by-pack) #f
        (lambda (individual)
-         (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))
-
-         (list)))
-      ))
+         (lambda (v) (entity-set-value! "present" "varchar" v) '()))
+       (list)))
+     )
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1279,21 +1288,21 @@
      (mtext "type" "Choose observation type")
      (horiz
       (linear-layout
-       0 'vertical wrap gc-col
+       0 'vertical fillwrap gc-col
        (list
         (mtoggle-button2 "choose-obs-gc" obs-gc
                          (lambda (v)
                            (set-current! 'observation obs-gc)
                            (mclear-toggles (list "choose-obs-pf" "choose-obs-gp"))))))
       (linear-layout
-       0 'vertical wrap pf-col
+       0 'vertical fillwrap pf-col
        (list
         (mtoggle-button2 "choose-obs-pf" obs-pf
                          (lambda (v)
                            (set-current! 'observation obs-pf)
                            (mclear-toggles (list "choose-obs-gc" "choose-obs-gp"))))))
       (linear-layout
-       0 'vertical wrap gp-col
+       0 'vertical fillwrap gp-col
        (list
         (mtoggle-button2 "choose-obs-gp" obs-gp
                          (lambda (v)
@@ -1324,9 +1333,15 @@
              ((eq? (get-current 'observation "none") obs-gp)
               (list (start-activity "group-events" 2 "")))
              (else
-              (entity-reset!)
-              (entity-set-value! "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
-              (set-current! 'group-composition-id (entity-record-values! db "stream" "group-composition"))
+              ;; create a new gc entity
+              (set-current!
+               'group-composition-id
+               (entity-create!
+                db "stream" "group-composition"
+                (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id")))))
+              ;; initialise it to the current memory entity
+              (entity-init! db "sync" "individual"
+                            (get-entity-by-unique db "sync" (get-current 'group-composition-id #f)))
               (list
                (start-activity "group-composition" 2 ""))))
             (list
@@ -1355,16 +1370,17 @@
 
   (activity
    "group-composition"
-    (linear-layout
-     0 'vertical fillwrap gc-bgcol
-     (list
-      (text-view (make-id "obs-title") "" 40 fillwrap)
-      (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 520 1 'left 0))
-      (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 520 1 'left 0))
-      (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
-  (lambda (activity arg)
+   (linear-layout
+    0 'vertical fillwrap gc-bgcol
+    (list
+     (text-view (make-id "obs-title") "" 40 fillwrap)
+     (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 520 1 'left 0))
+     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 520 1 'left 0))
+     (mbutton "gc-done" "Done" (lambda () (list (finish-activity 0))))))
+   (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (msg "creating gc activity")
      (list
       (update-widget 'text-view (get-id "obs-title") 'text
                      (string-append

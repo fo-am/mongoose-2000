@@ -656,10 +656,10 @@
              (* (/ (prof-item-accum d) tot) 100) "%"))
      prof-map)))
 
-(define wrap (layout 'wrap-content 'wrap-content -1 'left 0))
-(define fillwrap (layout 'fill-parent 'wrap-content -1 'left 0))
-(define wrapfill (layout 'wrap-content 'fill-parent -1 'left 0))
-(define fill (layout 'fill-parent 'fill-parent -1 'left 0))
+(define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
+(define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
+(define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
 
 (define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
 
@@ -681,7 +681,7 @@
 (define (vert . l)
   (linear-layout
    0 'vertical
-   (layout 'fill-parent 'fill-parent -1 'centre 20)
+   (layout 'fill-parent 'wrap-content 1 'centre 20)
    (list 0 0 0 0)
    l))
 

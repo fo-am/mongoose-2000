@@ -17,6 +17,7 @@
 
 (msg "dbsync.scm")
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
 
@@ -106,7 +107,6 @@
         ;;       )
         )
 
-
 (define (date-time->string dt)
   (string-append
    (number->string (list-ref dt 0)) "-"
@@ -148,14 +148,17 @@
 (define (entity-update-values!)
   (let ((db (get-current 'db #f))
         (table (get-current 'table #f)))
+    (msg "entity-update-values" db table)
+    (msg (get-current 'entity-values '()))
     ;; standard bits
     (let ((values (get-current 'entity-values '()))
           (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
       (cond
        ((and unique-id (not (null? values)))
+        (msg "entity-update-values inner" values)
         (update-entity db table (entity-id-from-unique db table unique-id) values)
         ;; removed due to save button no longer exiting activity - need to keep!
-        (entity-reset!)
+        ;;(entity-reset!)
         )
        (else
         (msg "no values or no id to update as entity:" unique-id "values:" values))))))
@@ -168,7 +171,7 @@
      (unique-id
       (update-entity db table (entity-id-from-unique db table unique-id) (list ktv)))
      (else
-      (msg "no values or no id to update as entity:" unique-id "values:" values)))))
+      (msg "no values or no id to update as entity:" unique-id "values:" value)))))
 
 
 (define (entity-reset!)
