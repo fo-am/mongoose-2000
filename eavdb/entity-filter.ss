@@ -50,11 +50,21 @@
     (cdr fl))
    (else (cons (car fl) (delete-filter key (cdr fl))))))
 
+;; replace - with _
+(define (mangle var)
+  (list->string
+   (map
+    (lambda (c)
+      (cond
+       ((eqv? c #\-) #\_)
+       (else c)))
+    (string->list var))))
+
 (define (build-query table filter)
   (string-append
    (foldl
     (lambda (i r)
-      (let ((var (string-append (filter-key i) "_var")))
+      (let ((var (mangle (string-append (filter-key i) "_var"))))
         ;; add a query chunk
         (string-append
          r "join " table "_value_" (filter-type i) " "
@@ -84,10 +94,10 @@
 (define (filter-entities db table type filter)
   (let ((s (apply
             db-select
-            (dbg (append
-                  (list db (build-query table filter))
-                  (build-args filter)
-                  (list type))))))
+            (append
+             (list db (build-query table filter))
+             (build-args filter)
+             (list type)))))
     (msg (db-status db))
     (if (null? s)
         '()

@@ -192,17 +192,19 @@
       (image-view (make-id "im") "arrow_right" (layout 200 'fill-parent 1 'right 0)))))))
 
 ;; assumes grid selectors on mongeese only
+;; assumes order of ktv elements?
 (define (fast-get-name item)
   (list-ref (list-ref item 1) 2))
+
+(define (fast-get-id item)
+  (list-ref (list-ref item 0) 2))
 
 (define (build-button-items name items unknown)
   (append
    (map
     (lambda (item)
-      (let ((item-name (fast-get-name item)))
-        (list (make-id (string-append name item-name))
-              item
-              item-name)))
+      (list (make-id (string-append name (fast-get-id item)))
+            item (fast-get-name item)))
     items)
    (if unknown
        (list
@@ -212,37 +214,58 @@
               "???"))
        '())))
 
-(define (populate-grid-selector name type items unknown fn)
-  (prof-start "popgrid")
-  (prof-start "popgrid setup")
+(define (populate-grid-selector name type items unknown fn . args)
   (let ((id->items (build-button-items name items unknown))
-        (selected-set '()))
-    (prof-end "popgrid setup")
+        (selected-set (if (null? args)
+                          '()
+                          (map
+                           (lambda (uid)
+                             (get-id (string-append name uid))) (car args)))))
     (let ((r (update-widget
-     'button-grid (get-id name) 'grid-buttons
-     (list
-      type 3 20 (layout 80 50 1 'left 2)
-      (map
-       (lambda (ii)
-         (list (car ii) (caddr ii)))
-       id->items)
-      (lambda (v state)
-        (cond
-         ((equal? type "toggle")
-          ;; update list of selected items
-          (if state
-              (set! selected-set (set-add v selected-set))
-              (set! selected-set (set-remove v selected-set)))
-          ;; find all items currently selected
-          (fn (map
-               (lambda (v)
-                 (cadr (findv v id->items)))
-               selected-set)))
-         (else
-          ;;(msg (findv v id->items))
-          (fn (cadr (findv v id->items))))))))))
-      (prof-end "popgrid")
+              'button-grid (get-id name) 'grid-buttons
+              (list
+               type 3 20 (layout 80 50 1 'left 2)
+               (map
+                (lambda (ii)
+                  (list (car ii) (caddr ii)))
+                id->items)
+               (lambda (v state)
+                 (cond
+                  ((equal? type "toggle")
+                   ;; update list of selected items
+                   (if state
+                       (set! selected-set (set-add v selected-set))
+                       (set! selected-set (set-remove v selected-set)))
+                   ;; find all items currently selected
+                   (fn (map
+                        (lambda (v)
+                          (cadr (findv v id->items)))
+                        selected-set)))
+                  (else
+                   ;;(msg (findv v id->items))
+                   (fn (cadr (findv v id->items))))))))))
       r)))
+
+
+(define (update-grid-selector-colours id item-id items)
+  (map
+   (lambda (item)
+     (update-widget 'button (get-id (string-append id (ktv-get item item-id)))
+                    'background-colour (list 0 100 0 155)))
+   items))
+
+(define (update-grid-selector-enabled id items)
+  (map
+   (lambda (item)
+     (update-widget 'button (get-id (string-append id item))
+                    'set-enabled 0))
+   items))
+
+(define (update-grid-selector-checked id items)
+  (map
+   (lambda (item)
+     (update-widget 'toggle-button (get-id (string-append id item)) 'checked 1))
+   items))
 
 (define (db-mongooses-by-pack)
   (db-all-where
@@ -482,31 +505,29 @@
     )))
 
 (define (next-button id dialog-msg last-frag next-frag fn)
-  (horiz
-   (mbutton (string-append id "-backb") "Back"
+  (vert
+   (spacer 30)
+   (horiz
+    (mbutton (string-append id "-backb") "Back"
              (lambda ()
                (list (replace-fragment (get-id "gc-top") last-frag))))
 
-   (mbutton (string-append id "-nextb") "Next"
+    (mbutton (string-append id "-nextb") "Next"
              (lambda ()
-               (list
-                (alert-dialog
-                 (string-append id "-d")
-                 dialog-msg
-                 (lambda (v)
-                   (cond
-                    ((eqv? v 1)
-                     (msg "recording from next button")
-                     (entity-update-values!)
-                     (append
-                      (fn) (list (replace-fragment
-                                  (get-id "gc-top") next-frag))))
-                    (else '())))))))))
+               (msg "update from next button")
+               (entity-update-values!)
+               (append
+                (fn)
+                (list
+                 (replace-fragment (get-id "gc-top") next-frag))))))))
 
 (define (force-pause)
   (list
    (delayed "timer" 1000 (lambda () '()))
    (update-widget 'toggle-button (get-id "pf-pause") 'checked 1)))
+
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
@@ -994,27 +1015,39 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "title" "Start")
-     (mtoggle-button "gc-start-main-obs" "Main observer"
-                     (lambda (v) (entity-set-value! "main-observer" "varchar" v) '()))
-     (mtext "" "Code")
-     (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
-                (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))
+     (horiz
+      (mtoggle-button "gc-start-main-obs" "I'm the main observer"
+                      (lambda (v) (entity-set-value! "main-observer" "varchar" v) '()))
+      (vert
+       (mtext "" "Code")
+       (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
+                  (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))))
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
      (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
-                  (lambda () '()))
+                  (lambda ()
+                    (set-current! 'gc-present (string-strip (entity-get-value "present") #\,))
+                    (entity-update-values!)
+                    (msg "exiting start")
+                    '()))
      ))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     ;; in case we come back from weights...
+     (entity-init! db "stream" "group-composition"
+                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
 
-     (list
-      (populate-grid-selector
-       "gc-start-present" "toggle"
-       (db-mongooses-by-pack) #f
-       (lambda (individual)
-         (lambda (v) (entity-set-value! "present" "varchar" v) '()))
-       (list)))
+     (append
+      (list
+       (populate-grid-selector
+        "gc-start-present" "toggle"
+        (db-mongooses-by-pack) #f
+        (lambda (individuals)
+          (entity-set-value! "present" "varchar" (assemble-array individuals))
+          (list))
+        (get-current 'gc-present '())))
+      (update-grid-selector-checked "gc-start-present" (get-current 'gc-present '())))
      )
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1028,50 +1061,69 @@
     (list
      (mtitle "title" "Weights")
      (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
-     (horiz
-      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
-                 (lambda (v)
-                   (entity-set-value! "weight" "varchar" v)
-                   '()))
-      (mbutton "gc-weigh-save" "Save"
-               (lambda ()
-                 (msg "saving")
-                 (entity-set-value! "parent" "varchar" (get-current 'group-composition-id 0))
-                 (msg "saving to " (get-current 'entity-id "0"))
-                 (if (get-current 'updating #f)
-                     (entity-update-values! db "stream")
-                     (entity-record-values!)
-                 (entity-init! db "stream" "weight" '())
-                 '()))))
-
-     (mtoggle-button "gc-weigh-accurate" "Accurate?" (lambda (v) '()))
+     (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
+                (lambda (v)
+                  (entity-update-single-value! (ktv "weight" "real" v))
+                  '()))
+     (mtoggle-button "gc-weigh-accurate" "Accurate?"
+                     (lambda (v)
+                       (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
+                       '()))
      (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
-                  (lambda () '()))))
+                  (lambda ()
+                    ;; reset main entity
+                    (entity-init! db "stream" "group-composition"
+                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+                    '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
      (entity-init! db "stream" "weight" '())
-     (list
-      (populate-grid-selector
-       "gc-weigh-choose" "single"
-       (db-mongooses-by-pack) #f
-       (lambda (individual)
-         (msg "loading")
-         (entity-set-value! "id-mongoose" "varchar" (ktv-get individual "unique_id"))
-         (set-current! 'updating #f)
-         (let ((s (db-all-where2
-                   db "stream" "weight"
-                   (ktv "parent" "varchar" (get-current 'group-composition-id 0))
-                   (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id")))))
-           (when (not (null? s))
-                 (msg "found previous")
-                 (entity-set-value! "unique_id" "varchar" (ktv-get (car s) "unique_id"))
-                 (set-current! 'updating #t))
-           (msg "-->" s)
-           (list
-            (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
-                           (if (null? s) "" (ktv-get (car s) "weight")))))))
+     (append
+      (list
+       (populate-grid-selector
+        "gc-weigh-choose" "single"
+        (db-mongooses-by-pack) #f
+        (lambda (individual)
+          ;; search for a weight for this individual...
+          (let ((s (db-filter
+                    db "stream" "weight"
+                    (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                          (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
+            (if (null? s)
+                ;; not there, make a new one
+                (entity-init&save! db "stream" "weight"
+                                   (list
+                                    (ktv "name" "varchar" "")
+                                    (ktv "weight" "real" 0)
+                                    (ktv "accurate" "int" 0)
+                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
+                (entity-init! db "stream" "weight" (car s)))
+            (append
+             (list
+              (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
+                             (if (null? s) "" (ktv-get (car s) "weight")))
+              (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'selected
+                             (if (null? s) 0 (ktv-get (car s) "accurate"))))
+             (update-grid-selector-colours
+              "gc-weigh-choose"
+              "id-mongoose"
+              (db-filter
+               db "stream" "weight"
+               (list
+                (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                (list "weight" "real" "!=" 0)))))))))
+      (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-present '()))
+      (update-grid-selector-colours
+       "gc-weigh-choose"
+       "id-mongoose"
+       (db-filter
+        db "stream" "weight"
+        (list
+         (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+         (list "weight" "real" "!=" 0))))
       ))
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1342,14 +1394,12 @@
               (list (start-activity "group-events" 2 "")))
              (else
               ;; create a new gc entity
+              ;; initialise it to the current memory entity
               (set-current!
                'group-composition-id
-               (entity-create!
+               (entity-init&save!
                 db "stream" "group-composition"
                 (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id")))))
-              ;; initialise it to the current memory entity
-              (entity-init! db "sync" "individual"
-                            (get-entity-by-unique db "sync" (get-current 'group-composition-id #f)))
               (list
                (start-activity "group-composition" 2 ""))))
             (list

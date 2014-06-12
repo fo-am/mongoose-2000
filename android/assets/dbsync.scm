@@ -66,6 +66,13 @@
   (set-current! 'table table)
   (set-current! 'entity-type entity-type))
 
+(define (entity-init&save! db table entity-type ktv-list)
+  (entity-init! db table entity-type ktv-list)
+  (let ((id (entity-create! db table entity-type ktv-list)))
+    (msg "1")
+    (entity-set-value! "unique_id" "varchar" id)
+    (msg "2")
+    id))
 
 ;; store a ktv, replaces existing with same key
 ;;(define (entity-add-value! key type value)
@@ -164,6 +171,7 @@
         (msg "no values or no id to update as entity:" unique-id "values:" values))))))
 
 (define (entity-update-single-value! ktv)
+  (entity-set-value! (ktv-key ktv) (ktv-type ktv) (ktv-value ktv))
   (let ((db (get-current 'db #f))
         (table (get-current 'table #f))
         (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
@@ -187,6 +195,21 @@
          (string-append r "," (ktv-get i "unique_id"))))
    ""
    entities))
+
+(define (string-strip str delim)
+  (let ((r (foldl
+            (lambda (c r)
+              (cond
+                ((eqv? c delim)
+                 (list "" (append (cadr r) (list (car r)))))
+                (else
+                 (list (string-append (car r) (string c))
+                       (cadr r)))))
+            (list "" '())
+            (string->list str))))
+    (if (equal? (car r) "")
+        (cadr r)
+        (append (cadr r) (list (car r))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
