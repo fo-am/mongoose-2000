@@ -261,11 +261,14 @@
                     'set-enabled 0))
    items))
 
-(define (update-grid-selector-checked id items)
-  (map
-   (lambda (item)
-     (update-widget 'toggle-button (get-id (string-append id item)) 'checked 1))
-   items))
+(define (update-grid-selector-checked id items-id)
+  (let ((items-str (entity-get-value items-id)))
+    (if items-str
+        (map
+         (lambda (item)
+           (update-widget 'toggle-button (get-id (string-append id item)) 'checked 1))
+         (string-split-simple items-str #\,))
+        '())))
 
 (define (db-mongooses-by-pack)
   (db-all-where
@@ -1025,7 +1028,7 @@
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
      (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
                   (lambda ()
-                    (set-current! 'gc-present (string-strip (entity-get-value "present") #\,))
+                    (set-current! 'gc-present (string-split-simple (entity-get-value "present") #\,))
                     (entity-update-values!)
                     (msg "exiting start")
                     '()))
@@ -1047,7 +1050,7 @@
           (entity-set-value! "present" "varchar" (assemble-array individuals))
           (list))
         (get-current 'gc-present '())))
-      (update-grid-selector-checked "gc-start-present" (get-current 'gc-present '())))
+      (update-grid-selector-checked "gc-start-present" "present"))
      )
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1143,13 +1146,17 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list
-      (populate-grid-selector
-       "gc-preg-choose" "toggle"
-       (db-mongooses-by-pack-female) #f
-       (lambda (individual)
-         (list)))
-      ))
+     (append
+      (list
+       (populate-grid-selector
+        "gc-preg-choose" "toggle"
+        (db-mongooses-by-pack-female) #f
+        (lambda (individuals)
+          (entity-update-single-value! (ktv "pregnant" "varchar" (assemble-array individuals)))
+          (list)))
+       )
+      (update-grid-selector-enabled "gc-preg-choose" (get-current 'gc-present '()))
+      (update-grid-selector-checked "gc-preg-choose" "pregnant")))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())

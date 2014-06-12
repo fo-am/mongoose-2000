@@ -196,7 +196,7 @@
    ""
    entities))
 
-(define (string-strip str delim)
+(define (string-split-simple str delim)
   (let ((r (foldl
             (lambda (c r)
               (cond
