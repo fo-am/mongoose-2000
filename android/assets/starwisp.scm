@@ -263,6 +263,7 @@
 
 (define (update-grid-selector-checked id items-id)
   (let ((items-str (entity-get-value items-id)))
+    (msg "selector-checked for" id items-id items-str)
     (if items-str
         (map
          (lambda (item)
@@ -530,7 +531,16 @@
    (update-widget 'toggle-button (get-id "pf-pause") 'checked 1)))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (update-selector-colours id entity-type where)
+  (update-grid-selector-colours
+   id "id-mongoose"
+   (db-filter
+    db "stream" entity-type
+    (list
+     (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+     where))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
@@ -1110,24 +1120,9 @@
                              (if (null? s) "" (ktv-get (car s) "weight")))
               (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'selected
                              (if (null? s) 0 (ktv-get (car s) "accurate"))))
-             (update-grid-selector-colours
-              "gc-weigh-choose"
-              "id-mongoose"
-              (db-filter
-               db "stream" "weight"
-               (list
-                (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-                (list "weight" "real" "!=" 0)))))))))
+             (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0)))))))
       (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-present '()))
-      (update-grid-selector-colours
-       "gc-weigh-choose"
-       "id-mongoose"
-       (db-filter
-        db "stream" "weight"
-        (list
-         (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-         (list "weight" "real" "!=" 0))))
-      ))
+      (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1169,7 +1164,7 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtext "title" "Pup Associations")
-     (build-grid-selector "gc-pup-choose" "toggle" "Choose pup")
+     (build-grid-selector "gc-pup-choose" "single" "Choose pup")
      (horiz
       (vert
        (mtext "" "Strength")
@@ -1186,16 +1181,47 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list
-      (populate-grid-selector "gc-pup-choose" "toggle"
-       (db-mongooses-by-pack-pups) #f
-       (lambda (individual)
-         (list)))
-      (populate-grid-selector "gc-pup-escort" "toggle"
-       (db-mongooses-by-pack-adults) #t
-       (lambda (individual)
-         (list)))
-      ))
+     (entity-init! db "stream" "pup-assoc" '())
+     (append
+      (list
+       (populate-grid-selector
+        "gc-pup-choose" "single"
+        (db-mongooses-by-pack-pups) #f
+        (lambda (individual)
+          ;; search for a weight for this individual...
+          (let ((s (db-filter
+                    db "stream" "pup-assoc"
+                    (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                          (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
+            (if (null? s)
+                ;; not there, make a new one
+                (entity-init&save! db "stream" "pup-assoc"
+                                   (list
+                                    (ktv "name" "varchar" "")
+                                    (ktv "id-escort" "varchar" "none")
+                                    (ktv "accurate" "varchar" "")
+                                    (ktv "strength" "varchar" "")
+                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
+                (entity-init! db "stream" "pup-assoc" (car s)))
+            (append
+             ;; rebuild the selector to clear it...
+             (list
+              (populate-grid-selector
+               "gc-pup-escort" "toggle"
+               (db-mongooses-by-pack-adults) #t
+               (lambda (individuals)
+                 (msg "setting id-escort")
+                 (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
+                 (list))))
+             (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
+             (update-grid-selector-checked "gc-pup-escort" "id-escort")
+             (update-selector-colours "gc-pup-choose" "pup-assoc" (list "id-escort" "varchar" "!=" "none")))))))
+
+      (update-grid-selector-enabled "gc-pup-choose" (get-current 'gc-present '()))
+      (update-selector-colours "gc-pup-choose" "pup-assoc" (list "id-escort" "varchar" "!=" "none"))))
+
+
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
