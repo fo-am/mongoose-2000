@@ -338,6 +338,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (string-remove-whitespace str)
+  (define (_ i)
+    (cond
+     ((>= i (string-length str)) "")
+     ((char-whitespace? (string-ref str i))
+      (_ (+ i 1)))
+     (else (string-append (string (string-ref str i))
+                          (_ (+ i 1))))))
+  (_ 0))
+
 (define (string-split str . rest)
 		; maxsplit is a positive number
   (define (split-by-whitespace str maxsplit)

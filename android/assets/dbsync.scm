@@ -197,19 +197,21 @@
    entities))
 
 (define (string-split-simple str delim)
-  (let ((r (foldl
-            (lambda (c r)
-              (cond
-                ((eqv? c delim)
-                 (list "" (append (cadr r) (list (car r)))))
-                (else
-                 (list (string-append (car r) (string c))
-                       (cadr r)))))
-            (list "" '())
-            (string->list str))))
-    (if (equal? (car r) "")
-        (cadr r)
-        (append (cadr r) (list (car r))))))
+  (string-split str (list delim)))
+
+;  (let ((r (foldl
+;            (lambda (c r)
+;              (cond
+;                ((eqv? c delim)
+;                 (list "" (append (cadr r) (list (car r)))))
+;                (else
+;                 (list (string-append (car r) (string c))
+;                       (cadr r)))))
+;            (list "" '())
+;            (string->list str))))
+;    (if (equal? (car r) "")
+;        (cadr r)
+;        (append (cadr r) (list (car r))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code

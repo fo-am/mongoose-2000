@@ -446,7 +446,10 @@
 ;; review
 
 (define (ktv-key-is-id? ktv)
-  (equal? (substring (ktv-key ktv) 0 3) "id-"))
+  (or
+   (equal? (ktv-key ktv) "pack")
+   (equal? (ktv-key ktv) "present")
+   (equal? (substring (ktv-key ktv) 0 3) "id-")))
 
 ;; search for a comma in a list of ids
 (define (ktv-value-is-list? ktv)
@@ -456,42 +459,75 @@
    #f
    (string->list (ktv-value ktv))))
 
+(define (uid->name uid)
+  (let* ((entity-id (entity-id-from-unique db "sync" uid)))
+    (ktv-get (get-entity-only db "sync" entity-id
+                              (list (list "name" "varchar")))
+             "name")))
+
 (define (review-build-id ktv)
-  (let* ((uid (ktv-value ktv))
-         (entity-id (entity-id-from-unique db "sync" uid))
-         (type (get-entity-type db "sync" entity-id))
-         (name (ktv-get (get-entity-only db "sync" entity-id
-                                         (list (list "name" "varchar")))
-                        "name")))
-    (msg (ktv-value ktv) entity-id type name)
+  (list (medit-text-value
+         (string-append (ktv-value ktv) (ktv-key ktv))
+         (ktv-key ktv)
+         (uid->name (ktv-value ktv)) "normal"
+         (lambda (v)
+           (entity-set-value! (ktv-key ktv) (ktv-type ktv) v)
+           '()))))
+
+(define (review-build-list ktv)
+  (let ((ids (string-split-simple (ktv-value ktv) #\,)))
     (list (medit-text-value
-           (string-append uid (ktv-key ktv))
            (ktv-key ktv)
-           name "normal"
+           (ktv-key ktv)
+           (foldl
+            (lambda (id r)
+              (if (equal? r "")
+                  (uid->name id)
+                  (string-append r ", " (uid->name id))))
+            ""
+            ids)
+           "normal"
            (lambda (v)
              (entity-set-value! (ktv-key ktv) (ktv-type ktv) v)
              '())))))
 
+
 (define (convert-id name)
-  (let ((new-entity (db-filter-only
-                     db "sync" "*"
-                     (list (list "name" "varchar" "=" name))
-                     (list))))
-    (msg "in convert-id")
-    (msg new-entity)
-    (if (null? new-entity)
-        #f
-        (ktv-get (car new-entity) "unique_id"))))
+  (let ((name (string-remove-whitespace name)))
+    ;; search for unique id first
+    (if (entity-exists? db "sync" name)
+        name
+        (let ((new-entity (db-filter-only
+                           db "sync" "*"
+                           (list (list "name" "varchar" "=" name))
+                           (list))))
+          (if (null? new-entity)
+              #f
+              (ktv-get (car new-entity) "unique_id"))))))
+
+(define (convert-id-list str)
+  (let ((names (string-split-simple str #\,)))
+    (foldl
+     (lambda (name r)
+       (if (string? r)
+           (let ((id (convert-id name)))
+             (if id
+                 (if (equal? r "") id (string-append r "," id))
+                 #f))
+           #f))
+     "" names)))
 
 ;; replace entity with names -> uids, or name of not found
 (define (review-validate-contents uid entity)
-  (msg "review-validate-contents")
   (foldl
    (lambda (ktv r)
      (cond
       ((string? r) r) ;; we have already found an error
       ((ktv-key-is-id? ktv)
-       (let ((replacement (convert-id (ktv-value ktv))))
+       (let ((replacement
+              (if (ktv-value-is-list? ktv)
+                  (convert-id-list (ktv-value ktv))
+                  (convert-id (ktv-value ktv)))))
          (if replacement
              (cons (list (ktv-key ktv) (ktv-type ktv) replacement) r)
              ;; ditch the entity and return error
@@ -502,24 +538,24 @@
 
 
 (define (review-build-contents uid entity)
-  (msg "review-build-contents")
   (append
    (foldl
     (lambda (ktv r)
-      (msg ktv)
       (append
        r (cond
-          ((or (equal? (ktv-key ktv) "parent")
-               (equal? (ktv-key ktv) "unique_id")
-               (equal? (ktv-key ktv) "deleted")) '())
+          ((or
+            (equal? (ktv-key ktv) "user")
+            (equal? (ktv-key ktv) "lat")
+            (equal? (ktv-key ktv) "lon")
+            (equal? (ktv-key ktv) "time")
+            (equal? (ktv-key ktv) "parent")
+            (equal? (ktv-key ktv) "unique_id")
+            (equal? (ktv-key ktv) "deleted")) '())
           ((equal? (ktv-type ktv) "varchar")
-           (msg "building review varchar")
            (if (ktv-key-is-id? ktv)
-               ;;(if (ktv-value-is-list? ktv)
-               (begin
-                 (msg "we have an id...")
-                 (review-build-id ktv))
-               ;;     (review-build-list ktv))
+               (if (ktv-value-is-list? ktv)
+                   (review-build-list ktv)
+                   (review-build-id ktv))
                ;; normal varchar
                (list (medit-text-value (string-append uid (ktv-key ktv))
                                        (ktv-key ktv)
@@ -550,7 +586,6 @@
      (mbutton (string-append uid "-save") "Save"
               (lambda ()
                 (let ((new-entity (review-validate-contents uid (get-current 'entity-values '()))))
-                  (msg "from review-validate-contents:" new-entity)
                   (cond
                    ((list? new-entity)
                     ;; replace with converted ids
@@ -561,7 +596,7 @@
                     (list
                      (alert-dialog
                       "mongoose-not-found"
-                      (string-append "Mongoose " new-entity " not found!")
+                      (string-append "Can't find mongoose or pack: " new-entity)
                       (lambda (v)
                         (cond
                          ((eqv? v 1) (list))
@@ -570,7 +605,6 @@
 
 (define (review-item-build)
   (let ((uid (entity-get-value "unique_id")))
-    (msg "review-item-build" uid)
     (list
      (update-widget
       'linear-layout
@@ -1007,7 +1041,6 @@
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
-                  (msg "entity-record-values about to be called?")
                   (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
@@ -1382,8 +1415,8 @@
                  (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
                  (list))
                (get-grid-select-init-state "id-escort"))
-              (update-widget 'spinner (get-id "gc-pup-strength") 'selection (dbg (spinner-index list-strength (dbg (entity-get-value "strength")))))
-              (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (dbg (entity-get-value "accurate"))))
+              (update-widget 'spinner (get-id "gc-pup-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
+              (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate")))
               )
              (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
              (update-grid-selector-checked "gc-pup-escort" "id-escort")
@@ -1561,13 +1594,13 @@
      (let ((user-id (ktv-get (get-entity db "local" 1) "user-id")))
        (set-current! 'user-id user-id)
        (msg "on-start 2")
-       (dbg (list
-             (gps-start "gps" (lambda (loc)
+       (list
+        (gps-start "gps" (lambda (loc)
                            (set-current! 'location loc)
                            (list (toast (string-append
                                          (number->string (car loc)) ", "
                                          (number->string (cadr loc)))))))
-             (update-widget 'edit-text (get-id "main-id-text") 'text user-id)))))
+        (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())

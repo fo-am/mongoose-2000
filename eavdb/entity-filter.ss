@@ -95,10 +95,10 @@
 (define (filter-entities db table type filter)
   (let ((s (apply
             db-select
-            (append
+            (dbg (append
              (list db (build-query table filter (not (equal? type "*"))))
              (build-args filter)
-             (if (equal? type "*") '() (list type))))))
+             (if (equal? type "*") '() (list type)))))))
     (msg (db-status db))
     (if (null? s)
         '()
