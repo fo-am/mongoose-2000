@@ -40,7 +40,65 @@
    "pup-focal-pupcare"
    "pup-focal-pupaggr"))
 
-(define list-sizes (list "Small" "Medium" "Large"))
+(define list-sizes (list (list 'small "Small")
+                         (list 'medium "Medium")
+                         (list 'large "Large")))
+
+(define list-pupcare-type
+  (list (list 'carry "Carry")
+        (list 'lead "Lead")
+        (list 'sniff "Sniff")
+        (list 'play "Play")
+        (list 'sniff "Ano-genital sniff")))
+
+(define list-aggression-over
+  (list (list 'food "Food")
+        (list 'escort "Escort")
+        (list 'nothing "Nothing")
+        (list 'other "Other")))
+
+(define list-aggression-level
+  (list (list 'block "Block")
+        (list 'snap "Snap")
+        (list 'chase "Chase")
+        (list 'push "Push")
+        (list 'fight "Fight")))
+
+(define list-interaction-outcome
+  (list (list 'retreat "Retreat")
+        (list 'advance "Advance")
+        (list 'fight-retreat "Fight retreat")
+        (list 'fight-win "Fight win")))
+
+(define list-alarm-cause
+  (list (list 'predator "Predator")
+        (list 'other-pack "Other mongoose pack")
+        (list 'humans "Humans")
+        (list 'other "Other")
+        (list 'unknown "Unknown")))
+
+(define list-move-direction
+  (list (list 'to "To")
+        (list 'from "From")))
+
+(define list-move-to
+  (list (list 'latrine "Latrine")
+        (list 'water "Water")
+        (list 'food "Food")
+        (list 'nothing "Nothing")
+        (list 'den "Den")
+        (list 'unknown "Unknown")))
+
+(define list-strength
+  (list (list 'weak "Weak")
+        (list 'medium "Medium")
+        (list 'strong "Strong")))
+
+(define list-gender
+  (list (list 'male "Male")
+        (list 'female "Female")
+        (list 'unknown "Unknown")))
+
 
 ;; colours
 
@@ -125,6 +183,9 @@
 
 (define (mtoggle-button2 id title fn)
   (toggle-button (make-id id) title 20 (layout 150 100 1 'centre 5) "plain" fn))
+
+(define (mspinner id list fn)
+  (spinner (make-id id) (map cadr list) fillwrap fn))
 
 (define (mtext id text)
   (text-view (make-id id) text 20 fillwrap))
@@ -218,9 +279,12 @@
   (let ((id->items (build-button-items name items unknown))
         (selected-set (if (null? args)
                           '()
-                          (map
-                           (lambda (uid)
-                             (get-id (string-append name uid))) (car args)))))
+                          (foldl
+                           (lambda (uid r)
+                             (if (not (equal? uid "none"))
+                                 (cons (get-id (string-append name uid)) r) r))
+                           '()
+                           (car args)))))
     (let ((r (update-widget
               'button-grid (get-id name) 'grid-buttons
               (list
@@ -251,7 +315,7 @@
   (map
    (lambda (item)
      (update-widget 'button (get-id (string-append id (ktv-get item item-id)))
-                    'background-colour (list 0 100 0 155)))
+                    'background-colour (list 255 255 0 155)))
    items))
 
 (define (update-grid-selector-enabled id items)
@@ -269,6 +333,12 @@
          (lambda (item)
            (update-widget 'toggle-button (get-id (string-append id item)) 'checked 1))
          (string-split-simple items-str #\,))
+        '())))
+
+(define (get-grid-select-init-state key)
+  (let ((v (entity-get-value key)))
+    (if v
+        (string-split-simple v #\,)
         '())))
 
 (define (db-mongooses-by-pack)
@@ -375,21 +445,87 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; review
 
+(define (ktv-key-is-id? ktv)
+  (equal? (substring (ktv-key ktv) 0 3) "id-"))
+
+;; search for a comma in a list of ids
+(define (ktv-value-is-list? ktv)
+  (foldl
+   (lambda (c r)
+     (if (or r (eqv? c #\,)) #t r))
+   #f
+   (string->list (ktv-value ktv))))
+
+(define (review-build-id ktv)
+  (let* ((uid (ktv-value ktv))
+         (entity-id (entity-id-from-unique db "sync" uid))
+         (type (get-entity-type db "sync" entity-id))
+         (name (ktv-get (get-entity-only db "sync" entity-id
+                                         (list (list "name" "varchar")))
+                        "name")))
+    (msg (ktv-value ktv) entity-id type name)
+    (list (medit-text-value
+           (string-append uid (ktv-key ktv))
+           (ktv-key ktv)
+           name "normal"
+           (lambda (v)
+             (entity-set-value! (ktv-key ktv) (ktv-type ktv) v)
+             '())))))
+
+(define (convert-id name)
+  (let ((new-entity (db-filter-only
+                     db "sync" "*"
+                     (list (list "name" "varchar" "=" name))
+                     (list))))
+    (msg "in convert-id")
+    (msg new-entity)
+    (if (null? new-entity)
+        #f
+        (ktv-get (car new-entity) "unique_id"))))
+
+;; replace entity with names -> uids, or name of not found
+(define (review-validate-contents uid entity)
+  (msg "review-validate-contents")
+  (foldl
+   (lambda (ktv r)
+     (cond
+      ((string? r) r) ;; we have already found an error
+      ((ktv-key-is-id? ktv)
+       (let ((replacement (convert-id (ktv-value ktv))))
+         (if replacement
+             (cons (list (ktv-key ktv) (ktv-type ktv) replacement) r)
+             ;; ditch the entity and return error
+             (ktv-value ktv))))
+      (else (cons ktv r))))
+   '()
+   entity))
+
+
 (define (review-build-contents uid entity)
   (msg "review-build-contents")
   (append
    (foldl
     (lambda (ktv r)
+      (msg ktv)
       (append
        r (cond
-          ((or (equal? (ktv-key ktv) "unique_id")
+          ((or (equal? (ktv-key ktv) "parent")
+               (equal? (ktv-key ktv) "unique_id")
                (equal? (ktv-key ktv) "deleted")) '())
           ((equal? (ktv-type ktv) "varchar")
-           (list (medit-text-value (string-append uid (ktv-key ktv))
-                                   (ktv-key ktv)
-                                   (ktv-value ktv) "normal"
-                                   (lambda (v)
-                                     (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
+           (msg "building review varchar")
+           (if (ktv-key-is-id? ktv)
+               ;;(if (ktv-value-is-list? ktv)
+               (begin
+                 (msg "we have an id...")
+                 (review-build-id ktv))
+               ;;     (review-build-list ktv))
+               ;; normal varchar
+               (list (medit-text-value (string-append uid (ktv-key ktv))
+                                       (ktv-key ktv)
+                                       (ktv-value ktv) "normal"
+                                       (lambda (v)
+                                         (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '())))))
           ((equal? (ktv-type ktv) "int")
            (list (medit-text-value (string-append uid (ktv-key ktv))
                                    (ktv-key ktv)
@@ -399,7 +535,10 @@
           ((equal? (ktv-type ktv) "real")
            (list (medit-text-value (string-append uid (ktv-key ktv))
                                    (ktv-key ktv)
-                                   (number->string (ktv-value ktv)) "numeric"
+                                   ;; get around previous bug, should remove
+                                   (if (number? (ktv-value ktv))
+                                       (number->string (ktv-value ktv))
+                                       (ktv-value ktv)) "numeric"
                                    (lambda (v)
                                      (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
           (else (mtext "" (string-append (ktv-type ktv) " not handled")) '()))))
@@ -410,8 +549,24 @@
      (mbutton "review-item-cancel" "Cancel" (lambda () (list (finish-activity 0))))
      (mbutton (string-append uid "-save") "Save"
               (lambda ()
-                (entity-update-values!)
-                (list (finish-activity 0))))))))
+                (let ((new-entity (review-validate-contents uid (get-current 'entity-values '()))))
+                  (msg "from review-validate-contents:" new-entity)
+                  (cond
+                   ((list? new-entity)
+                    ;; replace with converted ids
+                    (set-current! 'entity-values new-entity)
+                    ;;(entity-update-values!)
+                    (list (finish-activity 0)))
+                   (else
+                    (list
+                     (alert-dialog
+                      "mongoose-not-found"
+                      (string-append "Mongoose " new-entity " not found!")
+                      (lambda (v)
+                        (cond
+                         ((eqv? v 1) (list))
+                         (else (list)))))))))))))))
+
 
 (define (review-item-build)
   (let ((uid (entity-get-value "unique_id")))
@@ -462,10 +617,16 @@
      (set-current! 'download 0)
      (connect-to-net
       (lambda ()
+        (msg "connected, going in...")
         (append
          (list (toast "sync-cb"))
          (upload-dirty db)
-         (suck-new db "sync")))))
+         ;; important - don't receive until all are sent...
+         (if (or (have-dirty? db "sync")
+                 (have-dirty? db "stream")) '()
+             (append
+              (suck-new db "sync")
+              (start-sync-files)))))))
     (else '()))
    (list
     (delayed "debug-timer" (+ 10000 (random 5000)) debug-timer-cb)
@@ -656,9 +817,9 @@
      (spacer 20)
      (horiz
       (mtext "text" "Food size")
-      (spinner (make-id "pf-pupfeed-size") list-sizes fillwrap
-               (lambda (v)
-                 (entity-set-value! "size" "varchar" (list-ref list-sizes v)) '())))
+      (mspinner "pf-pupfeed-size" list-sizes
+                (lambda (v)
+                  (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfeed-done" "Done"
@@ -695,8 +856,8 @@
      (mtitle "title" "Event: Pup found food")
      (horiz
       (mtext "text" "Food size")
-      (spinner (make-id "pf-pupfind-size") (list "Small" "Medium" "Large") fillwrap
-               (lambda (v) (entity-set-value! "size" "varchar" v) '())))
+      (mspinner "pf-pupfind-size" list-sizes
+                (lambda (v) (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfind-done" "Done"
@@ -730,9 +891,9 @@
      (spacer 20)
      (horiz
       (mtext "text" "Type of care")
-      (spinner (make-id "pf-pupcare-type") (list "Carry" "Lead" "Sniff" "Play" "Ano-genital sniff") fillwrap
+      (mspinner "pf-pupcare-type" list-pupcare-type
                (lambda (v)
-                 (entity-set-value! "type" "varchar" v) '())))
+                 (entity-set-value! "type" "varchar" (spinner-choice list-pupcare-type v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupcare-done" "Done"
@@ -774,14 +935,14 @@
       (list
        (vert
         (mtext "" "Fighting over")
-        (spinner (make-id "pf-pupaggr-over") (list "Food" "Escort" "Nothing" "Other") fillwrap
-                 (lambda (v)
-                   (entity-set-value! "over" "varchar" v) '())))
+        (mspinner "pf-pupaggr-over" list-aggression-over
+                  (lambda (v)
+                    (entity-set-value! "over" "varchar" (spinner-choice list-aggression-over v)) '())))
        (vert
         (mtext "" "Level")
-        (spinner (make-id "pf-pupaggr-level") (list "Block" "Snap" "Chase" "Push" "Fight") fillwrap
-                 (lambda (v)
-                   (entity-set-value! "level" "varchar" v) '())))
+        (mspinner "pf-pupaggr-level" list-aggression-level
+                  (lambda (v)
+                    (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
 
        (tri-state "pf-pupaggr-in" "Initiate?" "initiate")
 
@@ -834,9 +995,9 @@
        (make-id "") 'vertical (layout 400 'fill-parent '1 'left 0) trans-col
        (list
         (mtext "text" "Outcome")
-        (spinner (make-id "gp-int-out") (list "Retreat" "Advance" "Fight retreat" "Fight win") fillwrap
-                 (lambda (v)
-                   (entity-set-value! "outcome" "varchar" v) '()))
+        (mspinner "gp-int-out" list-interaction-outcome
+                  (lambda (v)
+                    (entity-set-value! "outcome" "varchar" (spinner-choice list-interaction-outcome v)) '()))
         (mtext "text" "Duration")
         (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
                    (lambda (v) (entity-set-value! "duration" "int" (string->number v)) '()))))
@@ -893,9 +1054,9 @@
       (list
        (vert
         (mtext "text" "Cause")
-        (spinner (make-id "gp-alarm-cause") (list "Predator" "Other mongoose pack" "Humans" "Other" "Unknown") fillwrap
-                 (lambda (v)
-                   (entity-set-value! "cause" "varchar" v) '())))
+        (mspinner "gp-alarm-cause" list-alarm-cause
+                  (lambda (v)
+                    (entity-set-value! "cause" "varchar" (spinner-choice list-alarm-cause v)) '())))
 
        (tri-state "gp-alarm-join" "Did the others join in?" "others-join")))
 
@@ -947,13 +1108,13 @@
       (list
        (vert
         (mtext "" "Direction")
-        (spinner (make-id "gp-mov-dir") (list "To" "From") fillwrap
-                 (lambda (v) (entity-set-value! "direction" "varchar" v)  '())))
+        (mspinner "gp-mov-dir" list-move-direction
+                  (lambda (v) (entity-set-value! "direction" "varchar" (spinner-choice list-move-direction v))  '())))
 
        (vert
         (mtext "" "Where to")
-        (spinner (make-id "gp-mov-to") (list "Latrine" "Water" "Food" "Nothing" "Den" "Unknown") fillwrap
-                 (lambda (v) (entity-set-value! "destination" "varchar" v)  '())))))
+        (mspinner "gp-mov-to" list-move-to
+                  (lambda (v) (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
 
      (spacer 20)
      (horiz
@@ -1076,7 +1237,7 @@
      (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
                 (lambda (v)
-                  (entity-update-single-value! (ktv "weight" "real" v))
+                  (entity-update-single-value! (ktv "weight" "real" (string->number v)))
                   '()))
      (mtoggle-button "gc-weigh-accurate" "Accurate?"
                      (lambda (v)
@@ -1168,12 +1329,18 @@
      (horiz
       (vert
        (mtext "" "Strength")
-       (spinner (make-id "gc-pup-strength") (list "Weak" "Medium" "Strong") fillwrap
-                (lambda (v) '())))
+       (mspinner "gc-pup-strength" list-strength
+                 (lambda (v)
+                   (msg "updating stren")
+                   (entity-update-single-value! (ktv "strength" "varchar" (spinner-choice list-strength v)))
+                   '())))
       (vert
        (mtext "" "Accuracy")
-       (spinner (make-id "gc-pup-accuracy") (list "Weak" "Medium" "Strong") fillwrap
-                (lambda (v) '()))))
+       (mspinner "gc-pup-accuracy" list-strength
+                 (lambda (v)
+                   (msg "updating acc")
+                   (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
+                   '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
      (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
                   (lambda () '()))))
@@ -1213,7 +1380,11 @@
                (lambda (individuals)
                  (msg "setting id-escort")
                  (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
-                 (list))))
+                 (list))
+               (get-grid-select-init-state "id-escort"))
+              (update-widget 'spinner (get-id "gc-pup-strength") 'selection (dbg (spinner-index list-strength (dbg (entity-get-value "strength")))))
+              (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (dbg (entity-get-value "accurate"))))
+              )
              (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
              (update-grid-selector-checked "gc-pup-escort" "id-escort")
              (update-selector-colours "gc-pup-choose" "pup-assoc" (list "id-escort" "varchar" "!=" "none")))))))
@@ -1237,29 +1408,59 @@
      (horiz
       (vert
        (mtext "" "Strength")
-       (spinner (make-id "gc-oestrus-strength") (list "Weak" "Medium" "Strong") fillwrap
-                (lambda (v) '())))
+       (mspinner "gc-oestrus-strength" list-strength
+                 (lambda (v) '())))
       (vert
        (mtext "" "Accuracy")
-       (spinner (make-id "gc-oestrus-accuracy") (list "Weak" "Medium" "Strong") fillwrap
-                (lambda (v) '()))))
-     (build-grid-selector "gc-oestrus-guard" "single" "Choose mate guard")
+       (mspinner "gc-oestrus-accuracy" list-strength
+                 (lambda (v) '()))))
+     (build-grid-selector "gc-oestrus-guard" "toggle" "Choose mate guard")
      (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
                   (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list
-      (populate-grid-selector
-       "gc-oestrus-female" "single"
-       (db-mongooses-by-pack-female) #f
-       (lambda (individual)
-         (list)))
-      (populate-grid-selector
-       "gc-oestrus-guard" "single"
-       (db-mongooses-by-pack-male) #f
-       (lambda (individual)
-       ))))
+     (entity-init! db "stream" "mate-guard" '())
+     (append
+      (list
+       (populate-grid-selector
+        "gc-oestrus-female" "single"
+        (db-mongooses-by-pack-female) #f
+        (lambda (individual)
+          ;; search for a weight for this individual...
+          (let ((s (db-filter
+                    db "stream" "mate-guard"
+                    (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                          (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
+            (if (null? s)
+                ;; not there, make a new one
+                (entity-init&save! db "stream" "mate-guard"
+                                   (list
+                                    (ktv "name" "varchar" "")
+                                    (ktv "id-escort" "varchar" "none")
+                                    (ktv "accurate" "varchar" "")
+                                    (ktv "strength" "varchar" "")
+                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
+                (entity-init! db "stream" "mate-guard" (car s)))
+            (append
+             ;; rebuild the selector to clear it...
+             (list
+              (populate-grid-selector
+               "gc-oestrus-guard" "toggle"
+               (db-mongooses-by-pack-adults) #t
+               (lambda (individuals)
+                 (msg "setting id-escort")
+                 (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
+                 (list))
+               (get-grid-select-init-state "id-escort")))
+             (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-present '()))
+             (update-grid-selector-checked "gc-oestrus-guard" "id-escort")
+             (update-selector-colours "gc-oestrus-female" "mate-guard" (list "id-escort" "varchar" "!=" "none")))))))
+
+      (update-grid-selector-enabled "gc-oestrus-female" (get-current 'gc-present '()))
+      (update-selector-colours "gc-oestrus-female" "mate-guard" (list "id-escort" "varchar" "!=" "none"))))
+
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1727,8 +1928,8 @@
     (edit-text (make-id "new-individual-name") "" 30 "text" fillwrap
                (lambda (v) (entity-set-value! "name" "varchar" v) '()))
     (text-view (make-id "new-individual-name-text") "Gender" 30 fillwrap)
-    (spinner (make-id "new-individual-gender") (list "Female" "Male" "Unknown") fillwrap
-             (lambda (v) (entity-set-value! "gender" "varchar" v) '()))
+    (mspinner "new-individual-gender" list-gender
+             (lambda (v) (entity-set-value! "gender" "varchar" (spinner-choice list-gender v)) '()))
     (text-view (make-id "new-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "new-individual-dob") (date->string (date-time)) 25 fillwrap)
@@ -1791,8 +1992,8 @@
     (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
                (lambda (v) (entity-set-value! "name" "varchar" v) '()))
     (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
-    (spinner (make-id "update-individual-gender") (list "Female" "Male" "Unknown") fillwrap
-             (lambda (v) (entity-set-value! "gender" "varchar" v) '()))
+    (mspinner "update-individual-gender" list-gender
+              (lambda (v) (entity-set-value! "gender" "varchar" (spinner-choice list-gender v)) '()))
     (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
     (horiz
      (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
@@ -1840,8 +2041,7 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-init! db "sync" "individual"
-                   (get-entity-by-unique db "sync" (get-current 'individual #f)))
+     (entity-init! db "sync" "individual" (get-current 'individual #f))
      (let ((individual (get-current 'individual '())))
        (msg "deleted = " (ktv-get individual "deleted"))
        (list
@@ -1850,10 +2050,7 @@
         (update-widget 'text-view (get-id "update-individual-dob") 'text
                        (ktv-get individual "dob"))
         (update-widget 'spinner (get-id "update-individual-gender") 'selection
-                       (cond
-                        ((equal? (ktv-get individual "gender") "Female") 0)
-                        ((equal? (ktv-get individual "gender") "Male") 1)
-                        (else 2)))
+                       (spinner-index list-gender (ktv-get individual "gender")))
         (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
                        (ktv-get individual "litter-code"))
         (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
@@ -1910,14 +2107,7 @@
    (vert
     (text-view (make-id "sync-title") "Sync database" 40 fillwrap)
     (mtext "sync-dirty" "...")
-    (horiz
-     (mtoggle-button2 "sync-all" "Sync me" (lambda (v) (set-current! 'sync-on v)))
-     (mbutton2 "sync-syncall" "Push all"
-               (lambda ()
-                 (let ((r (append
-                           (spit db "sync" (dirty-and-all-entities db "sync"))
-                           (spit db "stream" (dirty-and-all-entities db "stream")))))
-                   (cons (toast "Uploading data...") r)))))
+    (mtoggle-button2 "sync-all" "Sync me" (lambda (v) (set-current! 'sync-on v) '()))
     (mtitle "" "Export data")
     (horiz
      (mbutton2 "sync-download" "Download"
@@ -1974,9 +2164,7 @@
       (vert
        (debug-text-view (make-id "sync-debug") "..." 15 (layout 'fill-parent 400 1 'left 0)))))
     (spacer 10)
-    (horiz
-     (mbutton2 "sync-back" "Back" (lambda () (list (finish-activity 1))))
-     (mbutton2 "sync-send" "[Prof]" (lambda () (prof-print) (list))))
+    (mbutton2 "sync-back" "Back" (lambda () (list (finish-activity 1))))
     )
 
    (lambda (activity arg)
@@ -1987,7 +2175,7 @@
       (debug-timer-cb)
       (list
        (update-widget 'debug-text-view (get-id "sync-debug") 'text (get-current 'debug-text ""))
-       (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty))
+       (update-widget 'text-view (get-id "sync-dirty") 'text (build-dirty db))
        )))
    (lambda (activity) '())
    (lambda (activity) (list (delayed "debug-timer" 1000 (lambda () '()))))

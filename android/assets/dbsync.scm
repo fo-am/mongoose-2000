@@ -179,7 +179,7 @@
      (unique-id
       (update-entity db table (entity-id-from-unique db table unique-id) (list ktv)))
      (else
-      (msg "no values or no id to update as entity:" unique-id "values:" value)))))
+      (msg "no values or no id to update as entity:" unique-id "values:" ktv)))))
 
 
 (define (entity-reset!)
@@ -698,10 +698,33 @@
                          (string-append dirname "files/" image-name)))))
    (else (msg "mupdate-widget unhandled widget type" widget-type))))
 
+;(define (spinner-choice l i)
+;  (if (number? i)
+;      (symbol->string (list-ref l i))
+;      i))
+
+;; spinner options are (list 'id-sym "Name") ...
+
 (define (spinner-choice l i)
   (if (number? i)
-      (symbol->string (list-ref l i))
+      (symbol->string (car (list-ref l i)))
       i))
+
+(define (spinner-index l s)
+  (define (_ l n s)
+    (cond
+     ((null? l) 0)
+     ((eq? (car (car l)) s) n)
+     ((_ (cdr l) (+ n 1) s))))
+  (_ l 0 (string->symbol s)))
+
+(define (spinner-index->name l i)
+  (define (_ l n)
+    (cond
+     ((null? l) "Unknown")
+     ((zero? n) (cadr (car l)))
+     ((_ (cdr l) (- n 1)))))
+  (_ l i))
 
 (define (mupdate-spinner id-symbol key choices)
   (let* ((val (entity-get-value key)))
