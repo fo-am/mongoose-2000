@@ -1357,7 +1357,7 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtext "title" "Pup Associations")
+     (mtitle "title" "Pup Associations")
      (build-grid-selector "gc-pup-choose" "single" "Choose pup")
      (horiz
       (vert
@@ -1436,7 +1436,7 @@
    (linear-layout
     (make-id "") 'vertical fill gc-col
     (list
-     (mtext "" "Oestrus")
+     (mtitle "" "Oestrus")
      (build-grid-selector "gc-oestrus-female" "single" "Choose female")
      (horiz
       (vert
@@ -1505,12 +1505,36 @@
     (make-id "") 'vertical fill gc-col
     (list
      (mtitle "" "Babysitters")
+     (mtitle "title" "Seen")
+     (build-grid-selector "gc-baby-seen" "toggle" "Choose")
+     (mtitle "title" "By elimination")
+     (build-grid-selector "gc-baby-byelim" "toggle" "Choose")
      (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-oestrus" "gc-end"
                   (lambda () '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (list))
+     (append
+      (list
+       (populate-grid-selector
+        "gc-baby-seen" "toggle"
+        (db-mongooses-by-pack-adults) #f
+        (lambda (individuals)
+          (entity-update-single-value! (ktv "baby-seen" "varchar" (assemble-array individuals)))
+          (list)))
+       )
+      (update-grid-selector-enabled "gc-baby-seen" (get-current 'gc-present '()))
+      (update-grid-selector-checked "gc-baby-seen" "baby-seen")
+      (list
+       (populate-grid-selector
+        "gc-baby-byelim" "toggle"
+        (db-mongooses-by-pack-adults) #f
+        (lambda (individuals)
+          (entity-update-single-value! (ktv "baby-byelim" "varchar" (assemble-array individuals)))
+          (list)))
+       )
+      (update-grid-selector-enabled "gc-baby-byelim" (get-current 'gc-present '()))
+      (update-grid-selector-checked "gc-baby-byelim" "baby-byelim")))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
