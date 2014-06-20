@@ -729,6 +729,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (update-selector-colours id entity-type where)
+  (msg "update-selector-colours")
   (update-grid-selector-colours
    id "id-mongoose"
    (db-filter
@@ -736,6 +737,25 @@
     (list
      (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
      where))))
+
+(define (update-selector-colours2 id entity-type where)
+  (msg "update-selector-colours")
+  (update-grid-selector-colours
+   id "id-escort"
+   (db-filter
+    db "stream" entity-type
+    (list
+     (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+     where))))
+
+(define (update-selector-colours3 id entity-type)
+  (msg "update-selector-colours")
+  (update-grid-selector-colours
+   id "id-mongoose"
+   (db-filter
+    db "stream" entity-type
+    (list
+     (list "parent" "varchar" "=" (get-current 'group-composition-id 0))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; fragments
@@ -1385,51 +1405,67 @@
      (append
       (list
        (populate-grid-selector
+        "gc-pup-escort" "single"
+        (db-mongooses-by-pack-adults) #t
+        (lambda (escort-individual)
+          ;; no pup yet...
+          (list)))
+
+       (populate-grid-selector
         "gc-pup-choose" "single"
         (db-mongooses-by-pack-pups) #f
-        (lambda (individual)
-          ;; search for a weight for this individual...
-          (let ((s (db-filter
-                    db "stream" "pup-assoc"
-                    (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-                          (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
-            (if (null? s)
-                ;; not there, make a new one
-                (entity-init&save! db "stream" "pup-assoc"
-                                   (list
-                                    (ktv "name" "varchar" "")
-                                    (ktv "id-escort" "varchar" "none")
-                                    (ktv "accurate" "varchar" "")
-                                    (ktv "strength" "varchar" "")
-                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
-                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
-                (entity-init! db "stream" "pup-assoc" (car s)))
-            (append
-             ;; rebuild the selector to clear it...
-             (list
-              (populate-grid-selector
-               "gc-pup-escort" "toggle"
-               (db-mongooses-by-pack-adults) #t
-               (lambda (individuals)
-                 (msg "setting id-escort")
-                 (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
-                 (list))
-               (get-grid-select-init-state "id-escort"))
-              (update-widget 'spinner (get-id "gc-pup-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
-              (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate")))
-              )
-             (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
-             (update-grid-selector-checked "gc-pup-escort" "id-escort")
-             (update-selector-colours "gc-pup-choose" "pup-assoc" (list "id-escort" "varchar" "!=" "none")))))))
+        (lambda (pup-individual)
+          (append
+           (list
+            (populate-grid-selector
+             "gc-pup-escort" "single"
+             (db-mongooses-by-pack-adults) #t
+             (lambda (escort-individual)
+               (let ((s (db-filter
+                         db "stream" "pup-assoc"
+                         (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                               (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
+                               (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
+                 (if (null? s)
+                     ;; not there, make a new one
+                     (entity-init&save! db "stream" "pup-assoc"
+                                        (list
+                                         (ktv "name" "varchar" "")
+                                         (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
+                                         (ktv "accurate" "varchar" "medium")
+                                         (ktv "strength" "varchar" "medium")
+                                         (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                         (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
+                     (entity-init! db "stream" "pup-assoc" (car s)))
+                 (append
+                  (list
+                   (update-widget 'spinner (get-id "gc-pup-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
+                   (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate"))))
 
+                  (update-selector-colours2 "gc-pup-escort" "pup-assoc" (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))))
+
+                 ))))
+           (update-selector-colours2 "gc-pup-escort" "pup-assoc" (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id")))
+           (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+           (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
+           ))))
+      (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-present '()))
       (update-grid-selector-enabled "gc-pup-choose" (get-current 'gc-present '()))
-      (update-selector-colours "gc-pup-choose" "pup-assoc" (list "id-escort" "varchar" "!=" "none"))))
-
+      (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+      ))
 
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '()))
+
+
+
+
+
+
+
+
 
   (fragment
    "gc-oestrus"
