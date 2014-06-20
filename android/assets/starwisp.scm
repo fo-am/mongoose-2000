@@ -1493,42 +1493,54 @@
      (append
       (list
        (populate-grid-selector
+        "gc-oestrus-guard" "single"
+        (db-mongooses-by-pack-male) #t
+        (lambda (escort-individual)
+          ;; no pup yet...
+          (list)))
+
+       (populate-grid-selector
         "gc-oestrus-female" "single"
         (db-mongooses-by-pack-female) #f
-        (lambda (individual)
-          ;; search for a weight for this individual...
-          (let ((s (db-filter
-                    db "stream" "mate-guard"
-                    (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-                          (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
-            (if (null? s)
-                ;; not there, make a new one
-                (entity-init&save! db "stream" "mate-guard"
-                                   (list
-                                    (ktv "name" "varchar" "")
-                                    (ktv "id-escort" "varchar" "none")
-                                    (ktv "accurate" "varchar" "")
-                                    (ktv "strength" "varchar" "")
-                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
-                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
-                (entity-init! db "stream" "mate-guard" (car s)))
-            (append
-             ;; rebuild the selector to clear it...
-             (list
-              (populate-grid-selector
-               "gc-oestrus-guard" "toggle"
-               (db-mongooses-by-pack-adults) #t
-               (lambda (individuals)
-                 (msg "setting id-escort")
-                 (entity-update-single-value! (ktv "id-escort" "varchar" (assemble-array individuals)))
-                 (list))
-               (get-grid-select-init-state "id-escort")))
-             (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-present '()))
-             (update-grid-selector-checked "gc-oestrus-guard" "id-escort")
-             (update-selector-colours "gc-oestrus-female" "mate-guard" (list "id-escort" "varchar" "!=" "none")))))))
+        (lambda (pup-individual)
+          (append
+           (list
+            (populate-grid-selector
+             "gc-oestrus-guard" "single"
+             (db-mongooses-by-pack-adults) #t
+             (lambda (escort-individual)
+               (let ((s (db-filter
+                         db "stream" "mate-guard"
+                         (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
+                               (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
+                               (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
+                 (if (null? s)
+                     ;; not there, make a new one
+                     (entity-init&save! db "stream" "mate-guard"
+                                        (list
+                                         (ktv "name" "varchar" "")
+                                         (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
+                                         (ktv "accurate" "varchar" "medium")
+                                         (ktv "strength" "varchar" "medium")
+                                         (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                         (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
+                     (entity-init! db "stream" "mate-guard" (car s)))
+                 (append
+                  (list
+                   (update-widget 'spinner (get-id "gc-oestrus-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
+                   (update-widget 'spinner (get-id "gc-oestrus-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate"))))
 
+                  (update-selector-colours2 "gc-oestrus-guard" "mate-guard" (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))))
+
+                 ))))
+           (update-selector-colours2 "gc-oestrus-guard" "mate-guard" (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id")))
+           (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+           (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-present '()))
+           ))))
+      (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-present '()))
       (update-grid-selector-enabled "gc-oestrus-female" (get-current 'gc-present '()))
-      (update-selector-colours "gc-oestrus-female" "mate-guard" (list "id-escort" "varchar" "!=" "none"))))
+      (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+      ))
 
    (lambda (fragment) '())
    (lambda (fragment) '())
