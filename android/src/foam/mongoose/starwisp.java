@@ -110,6 +110,7 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("eavdb/entity-csv.ss");
         m_Scheme.Load("eavdb/eavdb.ss");
         m_Scheme.Load("dbsync.scm");
+        m_Scheme.Load("mongoose.scm");
 
 
         m_Builder = new StarwispBuilder(m_Scheme);

@@ -669,7 +669,7 @@
 (define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
 (define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
 (define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
-(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent 1 'left 10))
 
 (define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
 
