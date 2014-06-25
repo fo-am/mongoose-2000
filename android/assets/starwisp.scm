@@ -503,15 +503,17 @@
      (mtitle "title" "Start")
      (horiz
       (mtoggle-button "gc-start-main-obs" "I'm the main observer"
-                      (lambda (v) (entity-set-value! "main-observer" "varchar" v) '()))
+                      (lambda (v) (entity-update-single-value!
+                                   (ktv "main-observer" "varchar" v)) '()))
       (vert
        (mtext "" "Code")
        (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
-                  (lambda (v) (entity-set-value! "group-comp-code" "varchar" v) '()))))
+                  (lambda (v) (entity-update-values!
+                               (ktv "group-comp-code" "varchar" v)) '()))))
      (build-grid-selector "gc-start-present" "toggle" "Who's present?")
      (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
                   (lambda ()
-                    (set-current! 'gc-not-present (dbg (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,))))
+                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
                     (entity-update-values!)
                     '()))
      ))
@@ -520,6 +522,7 @@
      (activity-layout fragment))
    (lambda (fragment arg)
      ;; in case we come back from weights...
+     (msg "frag start:" (get-current 'group-composition-id #f))
      (entity-init! db "stream" "group-composition"
                    (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
 
@@ -531,7 +534,9 @@
         (lambda (individuals)
           (entity-set-value! "present" "varchar" (assemble-array individuals))
           (list))
-        (get-current 'gc-not-present '())))
+        ;; need to invert, but not () if there are none set yet...
+        (let ((r (get-current 'gc-not-present #f)))
+          (if (not r) '() (invert-mongoose-selection r)))))
       (update-grid-selector-checked "gc-start-present" "present"))
      )
    (lambda (fragment) '())
@@ -592,7 +597,7 @@
              (list
               (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
                              (if (null? s) "" (ktv-get (car s) "weight")))
-              (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'selected
+              (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'checked
                              (if (null? s) 0 (ktv-get (car s) "accurate"))))
              (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0)))))))
       (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-not-present '()))
@@ -753,7 +758,14 @@
                  (lambda (v)
                    (msg "updating acc")
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
-                   '()))))
+                   '())))
+
+      (mtoggle-button "gc-oestrus-pester" "Pestering?"
+                      (lambda (v)
+                        (entity-update-single-value! (ktv "pester" "int" (if v 1 0)))
+                        '()))
+
+      )
      (build-grid-selector "gc-oestrus-guard" "toggle" "Choose mate guard")
      (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
                   (lambda () '()))))
@@ -793,13 +805,15 @@
                                          (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
                                          (ktv "accurate" "varchar" "none")
                                          (ktv "strength" "varchar" "none")
+                                         (ktv "pester" "int" 0)
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                          (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
                      (entity-init! db "stream" "mate-guard" (car s)))
                  (append
                   (list
                    (update-widget 'spinner (get-id "gc-oestrus-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
-                   (update-widget 'spinner (get-id "gc-oestrus-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate"))))
+                   (update-widget 'spinner (get-id "gc-oestrus-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate")))
+                   (update-widget 'toggle-button (get-id "gc-oestrus-pester") 'checked (entity-get-value "pester")))
 
                   (update-selector-colours2
                    "gc-oestrus-guard" "mate-guard"
@@ -875,7 +889,11 @@
     (list
      (mtitle "" "Finish group composition")
      (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-babysitting" "gc-end"
-                  (lambda () (list (finish-activity 0))))))
+                  (lambda ()
+                    ;; clean up...
+                    (get-current 'gc-not-present '())
+                    (set-current! 'group-composition-id #f)
+                    (list (finish-activity 0))))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -1012,13 +1030,18 @@
              ((eq? (get-current 'observation "none") obs-gp)
               (list (start-activity "group-events" 2 "")))
              (else
-              ;; create a new gc entity
-              ;; initialise it to the current memory entity
-              (set-current!
-               'group-composition-id
-               (entity-init&save!
-                db "stream" "group-composition"
-                (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id")))))
+              ;; check if there is currently a gc activity active
+              (msg "gc id = " (get-current 'group-composition-id #f))
+
+              (when (not (get-current 'group-composition-id #f))
+                    (msg "making new gc")
+                    ;; create a new gc entity
+                    ;; initialise it to the current memory entity
+                    (set-current!
+                     'group-composition-id
+                     (entity-init&save!
+                      db "stream" "group-composition"
+                      (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))))))
               (list
                (start-activity "group-composition" 2 ""))))
             (list
@@ -1035,7 +1058,13 @@
        "choose-obs-pack-selector" "single"
        (db-all-sort-normal db "sync" "pack") #f
        (lambda (pack)
-         (msg "in selector" pack)
+         (when (and
+                (get-current 'pack #f) ;; if we have a current pack...
+                (not (equal? (ktv-get pack "unique_id")
+                             (ktv-get (get-current 'pack '()) "unique_id"))))
+               ;; need to clear the current group comp
+               ;; id here if we are changing the pack
+               (set-current! 'group-composition-id #f))
          (set-current! 'pack pack)
          '()))))
    (lambda (activity) '())

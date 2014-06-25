@@ -713,7 +713,6 @@
 
     (mbutton (string-append id "-nextb") "Next"
              (lambda ()
-               (msg "update from next button")
                (entity-update-values!)
                (append
                 (fn)
@@ -729,7 +728,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (update-selector-colours id entity-type where)
-  (msg "update-selector-colours")
   (update-grid-selector-colours
    id "id-mongoose"
    (db-filter
@@ -739,7 +737,6 @@
      where))))
 
 (define (update-selector-colours2 id entity-type where)
-  (msg "update-selector-colours 2")
   (update-grid-selector-colours
    id "id-escort"
    (db-filter
@@ -749,7 +746,6 @@
      where))))
 
 (define (update-selector-colours3 id entity-type)
-  (msg "update-selector-colours 3")
   (update-grid-selector-colours
    id "id-mongoose"
    (db-filter
@@ -758,10 +754,7 @@
      (list "parent" "varchar" "=" (get-current 'group-composition-id 0))))))
 
 (define (invert-mongoose-selection individuals)
-  (msg "invert-mongoose-selection")
-  (msg individuals)
   (filter
    (lambda (m)
-     (msg m)
-     (dbg (not (in-list? m individuals))))
+     (not (in-list? m individuals)))
    (map (lambda (m) (ktv-get m "unique_id")) (db-mongooses-by-pack))))
