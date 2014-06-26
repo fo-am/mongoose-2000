@@ -528,6 +528,11 @@
 
      (append
       (list
+       (update-widget 'edit-text (get-id "gc-start-code") 'text
+                      (entity-get-value "group-comp-code"))
+       (update-widget 'toggle-button (get-id "gc-start-main-obs") 'checked
+                      (entity-get-value "main-observer"))
+
        (populate-grid-selector
         "gc-start-present" "toggle"
         (db-mongooses-by-pack) #f
@@ -661,7 +666,11 @@
                    '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
      (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
-                  (lambda () '()))))
+                  (lambda ()
+                    ;; reset main entity
+                    (entity-init! db "stream" "group-composition"
+                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+                    '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -768,7 +777,11 @@
       )
      (build-grid-selector "gc-oestrus-guard" "toggle" "Choose mate guard")
      (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
-                  (lambda () '()))))
+                  (lambda ()
+                    ;; reset main entity
+                    (entity-init! db "stream" "group-composition"
+                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+                    '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -941,8 +954,7 @@
     (spacer 10)
     (horiz
      (mbutton2 "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
-     (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 ""))))
-     (mbutton2 "main-tag" "Tag Location" (lambda () (list (start-activity "tag-location" 2 "")))))
+     (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 "")))))
 
     (image-view 0 "mongooses" fillwrap)
     (mtext "foo" "Your ID")
@@ -1041,7 +1053,8 @@
                      'group-composition-id
                      (entity-init&save!
                       db "stream" "group-composition"
-                      (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))))))
+                      (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
+                            (ktv "group-comp-code" "varchar" "")))))
               (list
                (start-activity "group-composition" 2 ""))))
             (list
@@ -1085,7 +1098,19 @@
       (list 0 0 0 0)
       (horiz
        (text-view (make-id "obs-title") "" 40 fillwrap)
-       (mbutton-small "gc-done" "Exit" (lambda () (list (finish-activity 0))))))
+       (mbutton-small "gc-done" "Exit"
+                      (lambda ()
+                        (list
+                         (alert-dialog
+                          "gc-end-done"
+                          "Finish group composition: are you sure?"
+                          (lambda (v)
+                            (cond
+                             ((eqv? v 1)
+                              (list (finish-activity 1)))
+                             (else
+                              (list))))))))))
+
 
      (build-fragment "gc-start" (make-id "gc-top") (layout 'fill-parent 'wrap-content -1 'left 0))
 

@@ -450,6 +450,13 @@
                                   "\n" token ": " value))))))
   (string-append "{" (_ l "") "\n" "}"))
 
+;; save text to the sdcard (for csv etc)
+(define (save-data filename d)
+  (let ((f (open-output-file (string-append dirname filename))))
+    (display d f)
+    (close-output-port f))
+  d)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; android ui
 

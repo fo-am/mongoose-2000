@@ -27,7 +27,12 @@
    "pup-focal-pupaggr"
    "group-interaction"
    "group-alarm"
-   "group-move"))
+   "group-move"
+   "group-composition"
+   "weight"
+   "pup-assoc"
+   "mate-guard"
+   ))
 
 (define pup-focal-export
   (list
@@ -707,17 +712,17 @@
   (vert
    (spacer 30)
    (horiz
-    (mbutton (string-append id "-backb") "Back"
-             (lambda ()
-               (list (replace-fragment (get-id "gc-top") last-frag))))
+    (button (make-id (string-append id "-backb")) "Back" 30 (layout 'fill-parent 'wrap-content 1 'centre 5)
+            (lambda ()
+              (list (replace-fragment (get-id "gc-top") last-frag))))
 
-    (mbutton (string-append id "-nextb") "Next"
-             (lambda ()
-               (entity-update-values!)
-               (append
-                (fn)
-                (list
-                 (replace-fragment (get-id "gc-top") next-frag))))))))
+    (button (make-id (string-append id "-nextb")) "Next" 30 (layout 'fill-parent 'wrap-content 1 'centre 5)
+            (lambda ()
+              (entity-update-values!)
+              (append
+               (fn)
+               (list
+                (replace-fragment (get-id "gc-top") next-frag))))))))
 
 (define (force-pause)
   (list
