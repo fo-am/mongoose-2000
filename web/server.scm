@@ -1,4 +1,4 @@
-#!/usr//bin/env mzscheme
+#!/usr//bin/env racket
 #lang scheme/base
 ;; Naked on Pluto Copyright (C) 2010 Aymeric Mansoux, Marloes de Valk, Dave Griffiths
 ;;
@@ -51,18 +51,24 @@
 
 (define sema (make-semaphore 1))
 
-(define (syncro fn)
-  (fn))
+(define (syncro-try fn)
+  (msg "s-start")
+  (if (semaphore-try-wait? sema)
+      (let ((r (fn)))
+	(msg "s-end")
+	(semaphore-post sema)
+	r)
+    (begin
+	(msg "couldn't get lock")
+	(pluto-response (scheme->txt '("fail"))))))
 
-;  (msg "s-start")
-;  (if (semaphore-try-wait? sema)
-;      (let ((r (fn)))
-;	(msg "s-end")
-;	(semaphore-post sema)
-;	r)
- ;     (begin
-;	(msg "couldn't get lock")
-;	(pluto-response (scheme->txt '("fail"))))))
+(define (syncro fn)
+  (msg "s-start")
+  (semaphore-wait sema)
+  (let ((r (fn)))
+    (msg "s-end")
+    (semaphore-post sema)
+    r))
 
 (define registered-requests
   (list
@@ -101,14 +107,14 @@
        (lambda ()
 	 (msg "sync")
 	 (pluto-response
-	  (scheme->txt
+	  (dbg (scheme->txt
 	   (check-for-sync
 	    db
 	    table
 	    entity-type
 	    unique-id
 	    (string->number dirty)
-	    (string->number version) (dbg data))))))))
+	    (string->number version) (dbg data)))))))))
 
    ;; returns a table of all entities and their corresponding versions
    (register

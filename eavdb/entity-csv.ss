@@ -33,39 +33,83 @@
    "id "
    (get-attribute-ids/types db table entity-type)))
 
-(define (csv db table entity-type)
-  (foldl
-   (lambda (res r)
-     (let ((entity (get-entity-for-csv db table (vector-ref res 0))))
-       (string-append
-        r "\n"
-        (foldl
-         (lambda (ktv r)
-           (cond
-            ((equal? (ktv-key ktv) "unique_id") r)
-            ((null? (ktv-value ktv))
-             (msg "value not found in csv for " (ktv-key ktv))
-             (string-append r ", NULL"))
-            ;; dereferences lists of ids
-            ((and
-              (> (string-length (ktv-key ktv)) 8)
-              (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
-             (string-append r ", \"" (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))) "\""))
-            ;; look for unique ids and dereference them
-            ((and
-              (> (string-length (ktv-key ktv)) 3)
-              (equal? (substring (ktv-key ktv) 0 3) "id-")
-	      (not (equal? (ktv-value ktv) "none")))
-	     (let ((name (get-entity-name db "sync" (ktv-value ktv))))
-	       (if (null? name)
-		   "\"nobody\""
-		   (string-append r ", \"" name "\""))))
-            (else
-             (string-append r ", \"" (stringify-value-url ktv) "\""))))
-         (vector-ref res 1) ;; unique_id
-         entity))))
-   (csv-titles db table entity-type)
-   (cdr (db-select
+(define (csv-old db table entity-type)
+  (let ((s (db-select
          db (string-append
              "select entity_id, unique_id from "
-             table "_entity where entity_type = ?") entity-type))))
+             table "_entity where entity_type = ?") entity-type)))
+    (msg "CSV ------------------------------>" entity-type)
+    (msg s)
+    (if (null? s)
+	;; nothing here, just return titles
+	(csv-titles db table entity-type)
+	(foldl
+	 (lambda (res r)
+	   (msg res)
+	   (let ((entity (get-entity-for-csv db table (vector-ref res 0))))
+	     (string-append
+	      r "\n"
+	      (foldl
+	       (lambda (ktv r)
+		 (msg ktv)
+		 (cond
+		  ((equal? (ktv-key ktv) "unique_id") r)
+		  ((null? (ktv-value ktv))
+		   (msg "value not found in csv for " (ktv-key ktv))
+		   (string-append r ", NULL"))
+		  ;; dereferences lists of ids
+		  ((and
+		    (> (string-length (ktv-key ktv)) 8)
+		    (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
+		   (let ((ids (string-split (ktv-value ktv) '(#\,))))
+		     (if (null? ids)
+			 (string-append r ", \"\"")
+			 (string-append r ", \"" (get-entity-names db "sync"  "\"")))))
+		  ;; look for unique ids and dereference them
+		  ((and
+		    (> (string-length (ktv-key ktv)) 3)
+		    (equal? (substring (ktv-key ktv) 0 3) "id-")
+		    (not (equal? (ktv-value ktv) "none")))
+		   (msg "looking up name")
+		   (msg ktv)
+		   (let ((name (get-entity-name db "sync" (ktv-value ktv))))
+		     (if (null? name)
+			 "\"nobody\""
+			 (string-append r ", \"" name "\""))))
+		  (else
+		   (string-append r ", \"" (stringify-value-url ktv) "\""))))
+	       (vector-ref res 1) ;; unique_id
+	       entity))))
+	 (csv-titles db table entity-type)
+	 (cdr s)))))
+
+(define (csv db table entity-type)
+  (let ((s (db-select
+         db (string-append
+             "select entity_id, unique_id from "
+             table "_entity where entity_type = ?") entity-type)))
+    (msg "CSV ------------------------------>" entity-type)
+    (msg s)
+    (if (null? s)
+	;; nothing here, just return titles
+	(csv-titles db table entity-type)
+	(foldl
+	 (lambda (res r)
+	   (let ((entity (get-entity-for-csv db table (vector-ref res 0))))
+	     (string-append
+	      r "\n"
+	      (foldl
+	       (lambda (ktv r)
+		 (msg ktv)
+		 (cond
+		  ((equal? (ktv-key ktv) "unique_id") r)
+		  ((null? (ktv-value ktv))
+		   (msg "value not found in csv for " (ktv-key ktv))
+		   (string-append r ", NULL"))
+		  ;; dereferences lists of ids
+		  (else
+		   (string-append r ", \"" (stringify-value-url ktv) "\""))))
+	       (vector-ref res 1) ;; unique_id
+	       entity))))
+	 (csv-titles db table entity-type)
+	 (cdr s)))))

@@ -23,7 +23,10 @@
 ;(define db-select db-exec)
 
 ;; racket
-(define db-exec exec/ignore)
+(define (db-exec . args) 
+  (with-handlers (((lambda (x) #t) (lambda (x) (msg "error:" x))))
+		 (apply exec/ignore args)))
+
 (define db-select select)
 (define db-insert insert)
 (define (db-status db) (errmsg db))
@@ -35,7 +38,11 @@
   (cond
     ((file-exists? (string->path db-name))
      (display "open existing db")(newline)
-     (open (string->path db-name)))
+     (let ((db (open (string->path db-name))))
+       ;; upgrade...
+       (setup-fn db "sync")
+       (setup-fn db "stream")
+       db))
     (else
      (display "making new db")(newline)
      (let ((db (open (string->path db-name))))
