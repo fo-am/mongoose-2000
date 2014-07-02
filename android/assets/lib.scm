@@ -718,7 +718,7 @@
 
 (define (relative rules colour . l)
   (relative-layout
-   0 (rlayout 'fill-parent 'wrap-content 20 rules)
+   0 (rlayout 'fill-parent 'wrap-content (list 20 20 20 20) rules)
    colour
    l))
 
