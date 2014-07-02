@@ -179,7 +179,7 @@
      (unique-id
       (update-entity db table (entity-id-from-unique db table unique-id) (list ktv)))
      (else
-      (msg "no values or no id to update as entity:" unique-id "values:" value)))))
+      (msg "no values or no id to update as entity:" unique-id "values:" ktv)))))
 
 
 (define (entity-reset!)
@@ -197,19 +197,21 @@
    entities))
 
 (define (string-split-simple str delim)
-  (let ((r (foldl
-            (lambda (c r)
-              (cond
-                ((eqv? c delim)
-                 (list "" (append (cadr r) (list (car r)))))
-                (else
-                 (list (string-append (car r) (string c))
-                       (cadr r)))))
-            (list "" '())
-            (string->list str))))
-    (if (equal? (car r) "")
-        (cadr r)
-        (append (cadr r) (list (car r))))))
+  (string-split str (list delim)))
+
+;  (let ((r (foldl
+;            (lambda (c r)
+;              (cond
+;                ((eqv? c delim)
+;                 (list "" (append (cadr r) (list (car r)))))
+;                (else
+;                 (list (string-append (car r) (string c))
+;                       (cadr r)))))
+;            (list "" '())
+;            (string->list str))))
+;    (if (equal? (car r) "")
+;        (cadr r)
+;        (append (cadr r) (list (car r))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; syncing code
@@ -461,8 +463,9 @@
      "Stream data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
 
 (define (upload-dirty db)
+  (msg "upload-dirty called")
   (let ((r (append
-            (spit db "sync" (dirty-entities db "sync"))
+            (spit db "sync" (dbg (dirty-entities db "sync")))
             (spit db "stream" (dirty-entities db "stream")))))
     (append (cond
              ((> (length r) 0)
@@ -698,10 +701,33 @@
                          (string-append dirname "files/" image-name)))))
    (else (msg "mupdate-widget unhandled widget type" widget-type))))
 
+;(define (spinner-choice l i)
+;  (if (number? i)
+;      (symbol->string (list-ref l i))
+;      i))
+
+;; spinner options are (list 'id-sym "Name") ...
+
 (define (spinner-choice l i)
   (if (number? i)
-      (symbol->string (list-ref l i))
+      (symbol->string (car (list-ref l i)))
       i))
+
+(define (spinner-index l s)
+  (define (_ l n s)
+    (cond
+     ((null? l) 0)
+     ((eq? (car (car l)) s) n)
+     ((_ (cdr l) (+ n 1) s))))
+  (_ l 0 (string->symbol s)))
+
+(define (spinner-index->name l i)
+  (define (_ l n)
+    (cond
+     ((null? l) "Unknown")
+     ((zero? n) (cadr (car l)))
+     ((_ (cdr l) (- n 1)))))
+  (_ l i))
 
 (define (mupdate-spinner id-symbol key choices)
   (let* ((val (entity-get-value key)))
@@ -887,186 +913,6 @@
      ((equal? unique-id (cadr (car l))) i)
      (else (_ (cdr l) (+ i 1)))))
   (_ arr 0))
-
-
-
-
-(define (simpsons-village db table default-ktvlist)
-  (entity-create! db table "village"
-                  (ktvlist-merge
-                   default-ktvlist
-                   (list
-                    (ktv "name" "varchar" (string-append "Village-" (number->string (random 1000))))
-                    (ktv "block" "varchar" (word-gen))
-                    (ktv "district" "varchar" (word-gen))
-                    (ktv "car" "int" (random 2))))))
-
-(define (simpsons-household db table parent default-ktvlist)
-  (entity-create! db table "household"
-                  (ktvlist-merge
-                   default-ktvlist
-                   (list
-                    (ktv "name" "varchar" (string-append "Household-" (number->string (random 1000))))
-                    (ktv "num-pots" "int" (random 10))
-                    (ktv "parent" "varchar" parent)))))
-
-(define (simpsons-individual db table parent default-ktvlist)
-  (let ((n (random 1000)))
-  (entity-create! db table "individual"
-                  (ktvlist-merge
-                   default-ktvlist
-                   (append
-                    (list (ktv "parent" "varchar" parent))
-  (choose
-   (list
-   (list
-    (ktv "name" "varchar"
-                (string-append "Abe-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "abe.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Akira-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "akira.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Apu-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "apu.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Barney-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "barney.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Bart-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "bartsimpson.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Billy-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "billy.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Carl-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "carl.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Cletus-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "cletus.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "ComicBookGuy-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "comicbookguy.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Homer-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "homersimpson.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Jasper-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "jasper.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Kent-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "kentbrockman.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Kodos-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "kodos.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Lenny-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "lenny.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Lisa-" (number->string n)))
-    (ktv "gender" "varchar" "female")
-    (ktv "photo" "file" "lisasimpson.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Marge-" (number->string n)))
-    (ktv "gender" "varchar" "female")
-    (ktv "photo" "file" "margesimpson.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Martin-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "martinprince.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Milhouse-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "milhouse.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "MrBurns-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "mrburns.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Ned-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "nedflanders.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Nelson-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "nelson.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Otto-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "otto.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Ralph-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "ralphwiggum.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "Santaslittlehelper-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "santaslittlehelper.jpg"))
-   (list
-    (ktv
-     "name" "varchar" (string-append "SideshowBob-" (number->string n)))
-    (ktv "gender" "varchar" "male")
-    (ktv "photo" "file" "sideshowbob.jpg")))))))))
-
-(define (looper! n fn)
-  (when (not (zero? n))
-        (fn n)
-        (looper! (- n 1) fn)))
-
-(define (build-test! db table village-ktvlist household-ktvlist individual-ktvlist)
-  (looper!
-   1
-   (lambda (i)
-     (msg "making village" i)
-     (let ((village (simpsons-village db table village-ktvlist)))
-       (looper!
-        3
-        (lambda (i)
-          (alog "household")
-          (msg "making household" i)
-          (let ((household (simpsons-household db table village household-ktvlist)))
-            (looper!
-             (random 10)
-             (lambda (i)
-               (msg "making individual" i)
-               (simpsons-individual db table household individual-ktvlist))))))))))
 
 
 (define (mangle-test! db table entities)
@@ -1290,6 +1136,26 @@
            (vector-ref i 0))
          (cdr s)))))
 
+(define (all-entities-in-date-range db table type start end)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_varchar "
+                "as t on t.entity_id = e.entity_id "
+                "where entity_type = ? and t.attribute_id = ? "
+                "and t.value > DateTime(?) and t.value <= DateTime(?) "
+                "order by t.value desc")
+            type "time" start end
+            )))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+
 
 
 (define (db-all-sort-normal db table type)
@@ -1362,4 +1228,13 @@
               (get-entity db table i))
             (all-entities-where-older db table type ktv ktv2))))
     (prof-end "db-all-where older")
+    r))
+
+(define (db-all-with-parent db table type parent)
+  (prof-start "db-all")
+  (let ((r (map
+   (lambda (i)
+     (get-entity db table i))
+   (all-entities-with-parent db table type parent))))
+    (prof-end "db-all")
     r))

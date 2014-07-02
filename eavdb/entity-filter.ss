@@ -60,7 +60,7 @@
        (else c)))
     (string->list var))))
 
-(define (build-query table filter)
+(define (build-query table filter typed)
   (string-append
    (foldl
     (lambda (i r)
@@ -78,12 +78,13 @@
      ;; order by name
      "join " table "_value_varchar "
      "as n on n.entity_id = e.entity_id and n.attribute_id = 'name' "
-     ;; ignore deleted
-     "join " table "_value_int "
+     ;; ignore deleted (if exists)
+     "left join " table "_value_int "
      "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' and "
-     "d.value = 0 ")
+     "d.value = 0 or d.value = NULL ")
     filter)
-   "where e.entity_type = ? order by n.value"))
+   (if typed "where e.entity_type = ? order by n.value"
+       "order by n.value")))
 
 (define (build-args filter)
   (map
@@ -95,9 +96,9 @@
   (let ((s (apply
             db-select
             (append
-             (list db (build-query table filter))
+             (list db (build-query table filter (not (equal? type "*"))))
              (build-args filter)
-             (list type)))))
+             (if (equal? type "*") '() (list type))))))
     (msg (db-status db))
     (if (null? s)
         '()

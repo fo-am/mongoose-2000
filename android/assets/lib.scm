@@ -338,6 +338,16 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define (string-remove-whitespace str)
+  (define (_ i)
+    (cond
+     ((>= i (string-length str)) "")
+     ((char-whitespace? (string-ref str i))
+      (_ (+ i 1)))
+     (else (string-append (string (string-ref str i))
+                          (_ (+ i 1))))))
+  (_ 0))
+
 (define (string-split str . rest)
 		; maxsplit is a positive number
   (define (split-by-whitespace str maxsplit)
@@ -439,6 +449,13 @@
         (_ (cdr l) (string-append s (if (not (string=? s "")) "," "")
                                   "\n" token ": " value))))))
   (string-append "{" (_ l "") "\n" "}"))
+
+;; save text to the sdcard (for csv etc)
+(define (save-data filename d)
+  (let ((f (open-output-file (string-append dirname filename))))
+    (display d f)
+    (close-output-port f))
+  d)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; android ui
@@ -659,7 +676,7 @@
 (define wrap (layout 'wrap-content 'wrap-content 1 'left 0))
 (define fillwrap (layout 'fill-parent 'wrap-content 1 'left 0))
 (define wrapfill (layout 'wrap-content 'fill-parent 1 'left 0))
-(define fill (layout 'fill-parent 'fill-parent 1 'left 0))
+(define fill (layout 'fill-parent 'fill-parent 1 'left 10))
 
 (define (spacer size) (space (layout 'fill-parent size 1 'left 0)))
 
@@ -701,7 +718,7 @@
 
 (define (relative rules colour . l)
   (relative-layout
-   0 (rlayout 'fill-parent 'wrap-content 20 rules)
+   0 (rlayout 'fill-parent 'wrap-content (list 20 20 20 20) rules)
    colour
    l))
 
