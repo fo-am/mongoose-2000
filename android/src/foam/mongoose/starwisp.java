@@ -94,6 +94,9 @@ public class starwisp extends StarwispActivity
         File appdir = new File(m_AppDir);
         appdir.mkdirs();
 
+        File backupdir = new File(m_AppDir+"/backup/");
+        backupdir.mkdirs();
+
         // build static things
         m_Scheme = new Scheme(this);
 

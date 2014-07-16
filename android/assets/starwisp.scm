@@ -1567,6 +1567,16 @@
                     "getting-db"
                     "http://192.168.2.1:8888/mongoose.db"
                     (string-append "/sdcard/mongoose/mongoose.db"))
+                   ;; save paranoid backup
+                   (http-download
+                    "getting-db"
+                    "http://192.168.2.1:8889/symbai.db"
+                    (string-append "/sdcard/symbai/backup/symbai-" (date-time->string (date-time)) ".db"))
+                   (http-download
+                    "getting-log"
+                    "http://192.168.2.1:8889/log.txt"
+                    (string-append "/sdcard/symbai/server-log.txt"))
+
                    )
                   entity-types)
                  (list))))
@@ -1583,9 +1593,6 @@
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
                      entity-types))))))
-     (mbutton2 "sync-export2" "Export"
-               (lambda ()
-                 (list (start-activity "export" 0 ""))))
      (mbutton2 "sync-export" "Email local data"
                (lambda ()
                  (debug! "Sending mail")
