@@ -89,7 +89,6 @@
              "select entity_id, unique_id from "
              table "_entity where entity_type = ?") entity-type)))
     (msg "CSV ------------------------------>" entity-type)
-    (msg s)
     (if (null? s)
 	;; nothing here, just return titles
 	(csv-titles db table entity-type)
@@ -100,7 +99,6 @@
 	      r "\n"
 	      (foldl
 	       (lambda (ktv r)
-		 (msg ktv)
 		 (cond
 		  ((equal? (ktv-key ktv) "unique_id") r)
 		  ((null? (ktv-value ktv))
@@ -116,7 +114,7 @@
 
 ;; exporting human editable reports
 
-(define (deref-entity entity)
+(define (deref-entity db entity)
   (foldl
    (lambda (ktv r)
      (append
@@ -160,37 +158,51 @@
                      (string-append r ", " converted))))
              "" row)))
        (msg row-text)
-       (dbg (string-append r row-text "\n"))))
+       (string-append r row-text "\n")))
    "" l))
 
+
+(define (ktv-filter ktv-list key)
+  (filter
+   (lambda (ktv)
+     (not (equal? (ktv-key ktv) key)))
+   ktv-list))
+
+(define (ktv-filter-many ktv-list key-list)
+  (foldl
+   (lambda (key r)
+     (ktv-filter r key))
+   ktv-list
+   key-list))
+
 ;; meant to be general, but made for pup focal reports
-(define (export-csv db table parent-entity entity-types)
-  (let* ((focal (get-entity db "sync" (get-entity-id db "sync" (ktv-get parent-entity "id-focal-subject"))))
-         (pack (get-entity db "sync" (get-entity-id db "sync" (ktv-get focal "pack-id")))))
-    (csvify
-     (cons
-      '("time" "user" "pack" "subject" "observation type" "key" "value" "key" "value")
-      (sort
-       (foldl
-        (lambda (entity-type r)
-          (append
-           r (map
-              (lambda (entity)
-                (append
-                 (list
-                  (ktv-get entity "time")
-                  (ktv-get entity "user")
-                 (ktv-get pack "name")
-                 (ktv-get focal "name")
-                 entity-type)
-                 (deref-entity
-                  (ktv-filter-many
-                   entity (list "user" "unique_id" "parent" "time")))))
-              (db-all-with-parent
-               db table entity-type
-               (ktv-get parent-entity "unique_id")))))
-        '()
-        entity-types)
-      (lambda (a b)
-        (string<? (car a) (car b))))))))
+;(define (export-csv db table parent-entity entity-types)
+;  (let* ((focal (get-entity db "sync" (get-entity-id db "sync" (ktv-get parent-entity "id-focal-subject"))))
+;         (pack (get-entity db "sync" (get-entity-id db "sync" (ktv-get focal "pack-id")))))
+;    (csvify
+;     (cons
+;      '("time" "user" "pack" "subject" "observation type" "key" "value" "key" "value")
+;      (sort
+;       (foldl
+;        (lambda (entity-type r)
+;          (append
+;           r (map
+;              (lambda (entity)
+;                (append
+;                 (list
+;                  (ktv-get entity "time")
+;                  (ktv-get entity "user")
+;                 (ktv-get pack "name")
+;                 (ktv-get focal "name")
+;                 entity-type)
+;                 (deref-entity 
+;		  db (ktv-filter-many
+;		      entity (list "user" "unique_id" "parent" "time")))))
+;              (db-all-with-parent
+;               db table entity-type
+;               (ktv-get parent-entity "unique_id")))))
+;        '()
+;        entity-types)
+;      (lambda (a b)
+;        (string<? (car a) (car b))))))))
 

@@ -88,7 +88,7 @@
     ;;(msg ktv)
     ;;(msg entity-id)
     (if (null? s)
-        (insert-value db table entity-id ktv #t)
+        (insert-value db table entity-id ktv #t) ;; <- don't make dirty!?
         (db-exec
          db (string-append "update " table "_value_" (ktv-type ktv)
                            " set value=?, dirty=0 where entity_id = ? and attribute_id = ?")
@@ -114,8 +114,8 @@
                               " where entity_id = ? and attribute_id = ?")
             entity-id (ktv-key kt))))
     (if (null? s) '()
-	(list (vector-ref (cadr s) 0)
-	      (vector-ref (cadr s) 1)))))
+        (list (vector-ref (cadr s) 0)
+              (vector-ref (cadr s) 1)))))
 
 (define (clean-value db table entity-id kt)
   (db-exec db (string-append "update " table "_value_" (ktv-type kt)

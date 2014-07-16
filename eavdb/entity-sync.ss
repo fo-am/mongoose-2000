@@ -68,7 +68,8 @@
 (define (dirty-entities db table)
   (let ((de (db-select
              db (string-append
-                 "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;"))))
+                 "select entity_id, entity_type, unique_id, dirty, version from "
+                 table "_entity where dirty=1 limit 5;"))))
     (if (null? de)
         '()
         (map

@@ -25,6 +25,13 @@
     (ktv-value (car ktv-list)))
    (else (ktv-get (cdr ktv-list) key))))
 
+(define (ktv-get-whole ktv-list key)
+  (cond
+   ((null? ktv-list) #f)
+   ((equal? (ktv-key (car ktv-list)) key)
+    (car ktv-list))
+   (else (ktv-get-whole (cdr ktv-list) key))))
+
 (define (ktv-get-type ktv-list key)
   (cond
    ((null? ktv-list) #f)
