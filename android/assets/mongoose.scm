@@ -28,15 +28,10 @@
    "group-interaction"
    "group-alarm"
    "group-move"
-   "group-composition"
-   "weight"
-   "pup-assoc"
-   "mate-guard"
-   ))
-
-(define download-entity-types
-  (list
-   "pup-focal"
+   "group-comp"
+   "group-comp-weight"
+   "group-comp-pup-assoc"
+   "group-comp-mate-guard"
    ))
 
 (define pup-focal-export
