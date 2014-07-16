@@ -363,6 +363,13 @@
           (else (split-by-charset str charset maxsplit))))))
   )
 
+;; save text to the sdcard (for csv etc)
+(define (save-data filename d)
+  (let ((f (open-output-file (string-append dirname filename))))
+    (display d f)
+    (close-output-port f))
+  d)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; convert scheme values into equivilent json strings
 

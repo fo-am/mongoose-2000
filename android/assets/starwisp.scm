@@ -2068,9 +2068,12 @@
                  (string-append "export-" (ktv-get f "unique_id"))
                  (ktv-get f "time")
                  (lambda ()
-                   (msg (string-append "export-" (ktv-get f "unique_id")))
-                   (msg (export-csv main-db "stream" f pup-focal-export))
-                   '())))
+                   (save-data "pup-focal-export.csv" (export-csv main-db "stream" f pup-focal-export))
+                   (list
+                    (send-mail
+                     ""
+                     "From Mongoose2000" "Please find attached your mongoose data"
+                     (list "/sdcard/mongoose/pup-focal-export.csv"))))))
               (db-all-in-date-range
                main-db "stream" "pup-focal"
                (get-current 'from-date (date->string (date-minus-months (date-time) 6)))
@@ -2115,6 +2118,7 @@
      (activity-layout activity))
    (lambda (activity arg)
      ;; open the main database
+     (db-close main-db)
      (db-open main-db)
      (msg "opened main database")
      (msg (db-status db))

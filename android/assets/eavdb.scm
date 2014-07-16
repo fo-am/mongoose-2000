@@ -819,8 +819,7 @@
              "select entity_id, unique_id from "
              table "_entity where entity_type = ?") entity-type))))
 
-
-
+;; exporting human editable reports
 
 (define (deref-entity entity)
   (foldl
@@ -846,46 +845,56 @@
    entity))
 
 
+(define (csv-convert col)
+  (if (number? col) (number->string col)
+      (if (string? col) col
+          (begin
+            (msg "csvify found:" col) "oops"))))
+
+;; convert list of lists into comma seperated columns
+;; and newline seperated rows
 (define (csvify l)
   (foldl
    (lambda (row r)
-     (string-append
-      (foldl
-       (lambda (col r)
-         (string-append
-          r ", "
-          (if (number? col) (number->string col)
-              (if (string? col) col
-                  (begin
-                    (msg "csvify found:" col) "oops")))))
-       r
-       row) "\n"))
+     (let ((row-text
+            (foldl
+             (lambda (col r)
+               (let ((converted (csv-convert col)))
+                 (if (equal? r "")
+                     converted
+                     (string-append r ", " converted))))
+             "" row)))
+       (msg row-text)
+       (dbg (string-append r row-text "\n"))))
    "" l))
 
-
-
-
+;; meant to be general, but made for pup focal reports
 (define (export-csv db table parent-entity entity-types)
   (let* ((focal (get-entity db "sync" (get-entity-id db "sync" (ktv-get parent-entity "id-focal-subject"))))
          (pack (get-entity db "sync" (get-entity-id db "sync" (ktv-get focal "pack-id")))))
     (csvify
-    (foldl
-     (lambda (entity-type r)
-       (append
-        r
-        (map
-         (lambda (entity)
-           (append
-            (list
-             (ktv-get entity "time")
-             (ktv-get pack "name")
-             (ktv-get focal "name")
-             entity-type)
-            (deref-entity
-             (ktv-filter-many
-              entity (list "unique_id" "parent" "time")))))
-         (db-all-with-parent
-          db table entity-type
-          (ktv-get parent-entity "unique_id")))))
-     '()
-     entity-types))))
+     (cons
+      '("time" "user" "pack" "subject" "observation type" "key" "value" "key" "value")
+      (sort
+       (foldl
+        (lambda (entity-type r)
+          (append
+           r (map
+              (lambda (entity)
+                (append
+                 (list
+                  (ktv-get entity "time")
+                  (ktv-get entity "user")
+                 (ktv-get pack "name")
+                 (ktv-get focal "name")
+                 entity-type)
+                 (deref-entity
+                  (ktv-filter-many
+                   entity (list "user" "unique_id" "parent" "time")))))
+              (db-all-with-parent
+               db table entity-type
+               (ktv-get parent-entity "unique_id")))))
+        '()
+        entity-types)
+      (lambda (a b)
+        (string<? (car a) (car b))))))))
