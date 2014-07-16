@@ -17,7 +17,12 @@
 
 (require (planet jaymccarthy/sqlite:5:1/sqlite))
 (require "utils.ss")
-(require "eavdb.ss")
+(require "sql.ss")
+(require "../../eavdb/ktv.ss")
+(require "../../eavdb/ktv-list.ss")
+(require "../../eavdb/eavdb.ss")
+(require "../../eavdb/entity-get.ss")
+(require "../../eavdb/entity-insert.ss")
 (provide (all-defined-out))
 (require (planet neil/csv:1:=7) net/url)
 
@@ -36,12 +41,40 @@
         (cons row (loop))))
   (loop))
 
+(define (all-entities-where db table type ktv)
+  (let ((s (db-select
+            db (string-append
+                "select e.entity_id from " table "_entity as e "
+                "join " table "_value_" (ktv-type ktv) " "
+                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
+                "join " table "_value_varchar "
+                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                "left join " table "_value_int "
+                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
+                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
+                "order by substr(n.value,3)")
+            (ktv-key ktv) (ktv-value ktv)
+            "name" "deleted" type)))
+    (msg (db-status db))
+    (if (null? s)
+        '()
+        (map
+         (lambda (i)
+           (vector-ref i 0))
+         (cdr s)))))
+
+(define (db-all-where db table type ktv)
+  (let ((r (map
+            (lambda (i)
+              (get-entity db table i))
+            (all-entities-where db table type ktv))))
+    r))
 
 
 (define (insert-mongooses db table l)
   (map
    (lambda (i)
-     (let ((pack (car (db-all-where db table "pack" (list "name" (list-ref i 2)))))
+     (let ((pack (car (db-all-where db table "pack" (list "name" "varchar" (list-ref i 2)))))
            (date (string-split (list-ref i 3) '(#\/))))
        (msg i)
        (insert-entity db table "mongoose" "sys"
