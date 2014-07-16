@@ -34,6 +34,11 @@
    "mate-guard"
    ))
 
+(define download-entity-types
+  (list
+   "pup-focal"
+   ))
+
 (define pup-focal-export
   (list
    "pup-focal-nearest"
@@ -658,7 +663,7 @@
       (lambda ()
         (msg "connected, going in...")
         (append
-         (list (toast "sync-cb"))
+         (list (toast "Syncing..."))
          (upload-dirty db)
          ;; important - don't receive until all are sent...
          (if (or (have-dirty? db "sync")

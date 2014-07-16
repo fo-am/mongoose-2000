@@ -523,7 +523,7 @@
    (lambda (fragment arg)
      ;; in case we come back from weights...
      (msg "frag start:" (get-current 'group-composition-id #f))
-     (entity-init! db "stream" "group-composition"
+     (entity-init! db "stream" "group-comp"
                    (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
 
      (append
@@ -569,14 +569,14 @@
      (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
                   (lambda ()
                     ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
+                    (entity-init! db "stream" "group-comp"
                                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
                     '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-init! db "stream" "weight" '())
+     (entity-init! db "stream" "group-comp-weight" '())
      (append
       (list
        (populate-grid-selector
@@ -585,28 +585,28 @@
         (lambda (individual)
           ;; search for a weight for this individual...
           (let ((s (db-filter
-                    db "stream" "weight"
+                    db "stream" "group-comp-weight"
                     (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                           (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
             (if (null? s)
                 ;; not there, make a new one
-                (entity-init&save! db "stream" "weight"
+                (entity-init&save! db "stream" "group-comp-weight"
                                    (list
                                     (ktv "name" "varchar" "")
                                     (ktv "weight" "real" 0)
                                     (ktv "accurate" "int" 0)
                                     (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                     (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
-                (entity-init! db "stream" "weight" (car s)))
+                (entity-init! db "stream" "group-comp-weight" (car s)))
             (append
              (list
               (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
                              (if (null? s) "" (ktv-get (car s) "weight")))
               (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'checked
                              (if (null? s) 0 (ktv-get (car s) "accurate"))))
-             (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0)))))))
+             (update-selector-colours "gc-weigh-choose" "group-comp-weight" (list "weight" "real" "!=" 0)))))))
       (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-not-present '()))
-      (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0))))
+      (update-selector-colours "gc-weigh-choose" "group-comp-weight" (list "weight" "real" "!=" 0))))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -668,14 +668,14 @@
      (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
                   (lambda ()
                     ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
+                    (entity-init! db "stream" "group-comp"
                                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
                     '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-init! db "stream" "pup-assoc" '())
+     (entity-init! db "stream" "group-comp-pup-assoc" '())
      (append
       (list
        (populate-grid-selector
@@ -697,13 +697,13 @@
              (lambda (escort-individual)
                (msg "escort-individual clicked")
                (let ((s (db-filter
-                         db "stream" "pup-assoc"
+                         db "stream" "group-comp-pup-assoc"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                                (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
-                     (entity-init&save! db "stream" "pup-assoc"
+                     (entity-init&save! db "stream" "group-comp-pup-assoc"
                                         (list
                                          (ktv "name" "varchar" "")
                                          (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
@@ -711,14 +711,14 @@
                                          (ktv "strength" "varchar" "none")
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                          (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
-                     (entity-init! db "stream" "pup-assoc" (car s)))
+                     (entity-init! db "stream" "group-comp-pup-assoc" (car s)))
                  (append
                   (list
                    (update-widget 'spinner (get-id "gc-pup-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
                    (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate"))))
 
                   (update-selector-colours2
-                   "gc-pup-escort" "pup-assoc"
+                   "gc-pup-escort" "group-comp-pup-assoc"
                    (list
                     (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
                     (list "strength" "varchar" "!=" "none")
@@ -726,17 +726,17 @@
 
                  ))))
            (update-selector-colours2
-            "gc-pup-escort" "pup-assoc"
+            "gc-pup-escort" "group-comp-pup-assoc"
             (list
              (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
              (list "strength" "varchar" "!=" "none")
              (list "accurate" "varchar" "!=" "none")))
-           (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+           (update-selector-colours3 "gc-pup-choose" "group-comp-pup-assoc")
            (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-not-present '()))
            ))))
       (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-not-present '()))
       (update-grid-selector-enabled "gc-pup-choose" (get-current 'gc-not-present '()))
-      (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+      (update-selector-colours3 "gc-pup-choose" "group-comp-pup-assoc")
       ))
 
    (lambda (fragment) '())
@@ -779,13 +779,13 @@
      (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
                   (lambda ()
                     ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
+                    (entity-init! db "stream" "group-comp"
                                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
                     '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-init! db "stream" "mate-guard" '())
+     (entity-init! db "stream" "group-comp-mate-guard" '())
      (append
       (list
        (populate-grid-selector
@@ -806,13 +806,13 @@
              (db-mongooses-by-pack-adults) #t
              (lambda (escort-individual)
                (let ((s (db-filter
-                         db "stream" "mate-guard"
+                         db "stream" "group-comp-mate-guard"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                                (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
-                     (entity-init&save! db "stream" "mate-guard"
+                     (entity-init&save! db "stream" "group-comp-mate-guard"
                                         (list
                                          (ktv "name" "varchar" "")
                                          (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
@@ -821,7 +821,7 @@
                                          (ktv "pester" "int" 0)
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                          (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
-                     (entity-init! db "stream" "mate-guard" (car s)))
+                     (entity-init! db "stream" "group-comp-mate-guard" (car s)))
                  (append
                   (list
                    (update-widget 'spinner (get-id "gc-oestrus-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
@@ -829,24 +829,24 @@
                    (update-widget 'toggle-button (get-id "gc-oestrus-pester") 'checked (entity-get-value "pester")))
 
                   (update-selector-colours2
-                   "gc-oestrus-guard" "mate-guard"
+                   "gc-oestrus-guard" "group-comp-mate-guard"
                    (list
                     (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
                     (list "strength" "varchar" "!=" "none")
                     (list "accurate" "varchar" "!=" "none"))))
                  ))))
            (update-selector-colours2
-            "gc-oestrus-guard" "mate-guard"
+            "gc-oestrus-guard" "group-comp-mate-guard"
             (list
              (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
              (list "strength" "varchar" "!=" "none")
              (list "accurate" "varchar" "!=" "none")))
-           (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+           (update-selector-colours3 "gc-oestrus-female" "group-comp-mate-guard")
            (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-not-present '()))
            ))))
       (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-not-present '()))
       (update-grid-selector-enabled "gc-oestrus-female" (get-current 'gc-not-present '()))
-      (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+      (update-selector-colours3 "gc-oestrus-female" "group-comp-mate-guard")
       ))
 
    (lambda (fragment) '())
@@ -1052,7 +1052,7 @@
                     (set-current!
                      'group-composition-id
                      (entity-init&save!
-                      db "stream" "group-composition"
+                      db "stream" "group-comp"
                       (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                             (ktv "group-comp-code" "varchar" "")))))
               (list
@@ -1553,15 +1553,16 @@
                (lambda ()
                  (debug! (string-append "Downloading whole db"))
                  (append
-                 (foldl
-                  (lambda (e r)
-                    (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
-                    (cons
-                     (http-download
-                      (string-append "getting-" e)
-                      (string-append url "fn=entity-csv&table=stream&type=" e)
-                      (string-append "/sdcard/mongoose/" e ".csv"))
-                     r))
+                  (foldl
+                   (lambda (e r)
+                     (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
+                     (append r
+                             (list
+                              (http-download
+                               (string-append "getting-" e)
+                               (string-append url "fn=entity-csv&table=stream&type=" e)
+                               (string-append "/sdcard/mongoose/" e ".csv"))
+                              )))
                   (list
                    (http-download
                     "getting-db"
@@ -1569,17 +1570,17 @@
                     (string-append "/sdcard/mongoose/mongoose.db"))
                    ;; save paranoid backup
                    (http-download
-                    "getting-db"
-                    "http://192.168.2.1:8889/symbai.db"
-                    (string-append "/sdcard/symbai/backup/symbai-" (date-time->string (date-time)) ".db"))
+                    "getting-backup-db"
+                    "http://192.168.2.1:8888/mongoose.db"
+                    (string-append "/sdcard/mongoose/backup/mongoose-" (date-time->string (date-time)) ".db"))
                    (http-download
                     "getting-log"
-                    "http://192.168.2.1:8889/log.txt"
-                    (string-append "/sdcard/symbai/server-log.txt"))
+                    "http://192.168.2.1:8888/log.txt"
+                    (string-append "/sdcard/mongoose/server-log.txt"))
 
                    )
                   entity-types)
-                 (list))))
+                  (list))))
      (mbutton2 "sync-export" "Email"
                (lambda ()
                  (debug! "Sending mail")
@@ -1587,8 +1588,10 @@
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
-                   (cons
-                    "/sdcard/mongoose/mongoose.db"
+                   (append
+                    (list
+                     "/sdcard/mongoose/mongoose.db"
+                     "/sdcard/mongoose/server-log.txt")
                     (map
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
