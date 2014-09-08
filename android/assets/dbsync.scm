@@ -196,6 +196,15 @@
    ""
    entities))
 
+(define (assemble-array-with-ids ids)
+  (foldl
+   (lambda (i r)
+     (if (equal? r "") i
+         (string-append r "," i)))
+   ""
+   ids))
+
+
 (define (string-split-simple str delim)
   (string-split str (list delim)))
 
@@ -298,9 +307,12 @@
     (string-append url "fn=file-list")
     (lambda (file-list)
       (let ((r (sync-files file-list)))
-        (when (not (null? r))
-              (set-current! 'upload 0)
-              (debug! "Found a mismatch with files on raspberry pi - fixing..."))
+        (cond
+         ((not (null? r))
+          (set-current! 'mismatch 0)
+          (debug! "Found a mismatch with files on raspberry pi - fixing..."))
+         (else
+          (set-current! 'mismatch 1)))
         r)))))
 
 
@@ -434,17 +446,19 @@
     (lambda (data)
       (let ((new-entity-requests (build-entity-requests db table data)))
         (alog "suck-new: marking dirty")
-        (mark-unlisted-entities-dirty! db table data)
+        ;; now doing this first!...
+        ;; (mark-unlisted-entities-dirty! db table data)
         (alog "suck-new: done marking dirty")
         (cond
          ((null? new-entity-requests)
           (debug! "No new data to download")
           (set-current! 'download 1)
-          (append
-           (if (eqv? (get-current 'upload 0) 1)
-               (list (play-sound "ping")) '())
-           (list
-            (toast "No new data to download"))))
+          (if (and
+;;               (eqv? (get-current 'upload 0) 1) won't have got here if uploading still
+               (eqv? (get-current 'mismatch 0) 1))
+              (list
+               (play-sound "ping")
+               (toast "I'm synced with the Raspberry Pi"))))
          (else
           (debug! (string-append
                    "Requesting "
@@ -463,24 +477,33 @@
      "Stream data: " (number->string (car stream)) "/" (number->string (cadr stream)))))
 
 (define (upload-dirty db)
-  (msg "upload-dirty called")
-  (let ((r (append
-            (spit db "sync" (dbg (dirty-entities db "sync")))
-            (spit db "stream" (dirty-entities db "stream")))))
-    (append (cond
-             ((> (length r) 0)
-              (debug! (string-append "Uploading " (number->string (length r)) " items..."))
-              (list
-               (toast "Uploading data...")
-               (play-sound "active")))
-             (else
-              (debug! "No data changed to upload")
-              (set-current! 'upload 1)
-              (append
-               (if (eqv? (get-current 'download 0) 1)
-                   (list (play-sound "ping")) '())
-               (list
-                (toast "No data changed to upload"))))) r)))
+  (list
+   ;; first check server for entities it doesn't have at all
+   ;; (they need all attr marked as dirty
+   (http-request
+    "upload-precheck-req"
+    (string-append url "fn=entity-versions&table=sync")
+    (lambda (data)
+
+      ;; todo - this is really slow and we're doing it all the time
+      ;; if there are loads to do it's bad
+      (msg "checking for unlisted")
+      (mark-unlisted-entities-dirty! db "sync" data)
+
+      (let ((r (append
+                (spit db "sync" (dirty-entities db "sync"))
+                (spit db "stream" (dirty-entities db "stream")))))
+        (append (cond
+                 ((> (length r) 0)
+                  (debug! (string-append "Uploading " (number->string (length r)) " items..."))
+                  (list
+                   (toast "Uploading data...")
+                   (play-sound "active")))
+                 (else
+                  (debug! "No data changed to upload")
+                  (set-current! 'upload 1)
+                  (list
+                   (toast "No data changed to upload"))))) r)))))
 
 (define (connect-to-net fn)
   (list
@@ -948,293 +971,3 @@
                         )))))
           (_ (- n 1))))
   (_ (random 10)))
-
-
-;;;;;;;;;; m2000 cruft
-
-;; todo, sort these out... use new filter system...
-
-(define (all-entities-sort-normal db table type)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id "
-                "where entity_type = ? and n.attribute_id = ? "
-                "order by n.value")
-            type "name")))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-where-ignore-delete db table type ktv)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "where e.entity_type = ? order by substr(n.value,3)")
-            (ktv-key ktv) (ktv-value ktv)
-            "name" type)))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-
-(define (all-entities-where db table type ktv)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "left join " table "_value_int "
-                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)")
-            (ktv-key ktv) (ktv-value ktv)
-            "name" "deleted" type)))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-where2 db table type ktv ktv2)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
-                "join " table "_value_" (ktv-type ktv2) " "
-                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and b.value = ? "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "left join " table "_value_int "
-                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)")
-            (ktv-key ktv) (ktv-value ktv)
-            (ktv-key ktv2) (ktv-value ktv2)
-            "name" "deleted" type)))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-where2or db table type ktv ktv2 or-value)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ? "
-                "join " table "_value_" (ktv-type ktv2) " "
-                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value = ? or b.value = ?) "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "left join " table "_value_int "
-                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)")
-            (ktv-key ktv) (ktv-value ktv)
-            (ktv-key ktv2) (ktv-value ktv2) or-value
-            "name" "deleted" type)))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-where-newer db table type ktv ktv2)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id,d.value,b.value from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ?"
-                "join " table "_value_" (ktv-type ktv2) " "
-                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value > DateTime(?) and b.value != ?) "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "left join " table "_value_int "
-                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)"
-                )
-            (ktv-key ktv) (ktv-value ktv)
-            (ktv-key ktv2) (ktv-value ktv2) "Unknown"
-            "name" "deleted"
-            type)))
-    (msg "where newer" (ktv-value ktv2) s)
-    (msg "date select" (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-where-older db table type ktv ktv2)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv) " "
-                "as a on a.entity_id = e.entity_id and a.attribute_id = ? and a.value = ?"
-                "join " table "_value_" (ktv-type ktv2) " "
-                "as b on b.entity_id = e.entity_id and b.attribute_id = ? and (b.value < DateTime(?) and b.value != ?) "
-                "join " table "_value_varchar "
-                "as n on n.entity_id = e.entity_id and n.attribute_id = ? "
-                "left join " table "_value_int "
-                "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
-                "where e.entity_type = ? and (d.value='NULL' or d.value is NULL or d.value = 0) "
-                "order by substr(n.value,3)")
-            (ktv-key ktv) (ktv-value ktv)
-            (ktv-key ktv2) (ktv-value ktv2) "Unknown"
-            "name" "deleted" type)))
-    (msg "date select" (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (update-entities-where2 db table type ktv ktv2)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_" (ktv-type ktv)
-                " as a on a.entity_id = e.entity_id "
-                "join " table "_value_" (ktv-type ktv2)
-                " as b on b.entity_id = e.entity_id "
-                "where e.entity_type = ? and a.attribute_id = ? and b.attribute_id =? and a.value = ? and b.value = ?")
-            type
-            (ktv-key ktv) (ktv-key ktv2)
-            (ktv-value ktv) (ktv-value ktv2))))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-(define (all-entities-in-date-range db table type start end)
-  (let ((s (db-select
-            db (string-append
-                "select e.entity_id from " table "_entity as e "
-                "join " table "_value_varchar "
-                "as t on t.entity_id = e.entity_id "
-                "where entity_type = ? and t.attribute_id = ? "
-                "and t.value > DateTime(?) and t.value <= DateTime(?) "
-                "order by t.value desc")
-            type "time" start end
-            )))
-    (msg (db-status db))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-
-
-
-(define (db-all-sort-normal db table type)
-  (prof-start "db-all")
-  (let ((r (map
-   (lambda (i)
-     (get-entity db table i))
-   (all-entities-sort-normal db table type))))
-    (prof-end "db-all")
-    r))
-
-(define (db-all-in-date-range db table type start end)
-  (prof-start "db-all")
-  (let ((r (map
-   (lambda (i)
-     (get-entity db table i))
-   (all-entities-in-date-range db table type start end))))
-    (prof-end "db-all")
-    r))
-
-(define (db-all-where-ignore-delete db table type ktv)
-  (prof-start "db-all-where")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where-ignore-delete db table type ktv))))
-    (prof-end "db-all-where")
-    r))
-
-(define (db-all-where db table type ktv)
-  (prof-start "db-all-where")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where db table type ktv))))
-    (prof-end "db-all-where")
-    r))
-
-(define (db-all-where2 db table type ktv ktv2)
-  (prof-start "db-all-where2")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where2 db table type ktv ktv2))))
-    (prof-end "db-all-where2")
-    r))
-
-(define (db-all-where2or db table type ktv ktv2 or-value)
-  (prof-start "db-all-where2or")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where2or db table type ktv ktv2 or-value))))
-    (prof-end "db-all-where2or")
-    r))
-
-(define (db-all-newer db table type ktv ktv2)
-  (prof-start "db-all-where newer")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where-newer db table type ktv ktv2))))
-    (prof-end "db-all-where newer")
-    r))
-
-(define (db-all-older db table type ktv ktv2)
-  (prof-start "db-all-where older")
-  (let ((r (map
-            (lambda (i)
-              (get-entity db table i))
-            (all-entities-where-older db table type ktv ktv2))))
-    (prof-end "db-all-where older")
-    r))
-
-(define (db-all-with-parent db table type parent)
-  (prof-start "db-all")
-  (let ((r (map
-   (lambda (i)
-     (get-entity db table i))
-   (all-entities-with-parent db table type parent))))
-    (prof-end "db-all")
-    r))

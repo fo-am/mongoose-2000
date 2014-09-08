@@ -81,14 +81,13 @@ public class starwisp extends StarwispActivity
         ActivityManager.RegisterActivity("export",ExportActivity.class);
         ActivityManager.RegisterActivity("review",ReviewActivity.class);
         ActivityManager.RegisterActivity("review-item",ReviewItemActivity.class);
+        ActivityManager.RegisterActivity("review-collection",ReviewCollectionActivity.class);
     };
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        setContentView(R.layout.main);
-
         String dirname = "mongoose/";
         m_AppDir = "/sdcard/"+dirname;
         File appdir = new File(m_AppDir);

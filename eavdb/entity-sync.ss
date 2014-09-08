@@ -82,10 +82,12 @@
          (cdr de)))))
 
 ;; include all the ktvs
+;; only certian entities - todo - fix!
 (define (dirty-entities-for-review db table)
   (let ((de (db-select
              db (string-append
-                 "select entity_id, entity_type, unique_id, dirty, version from " table "_entity where dirty=1;"))))
+                 "select entity_id, entity_type, unique_id, dirty, version from " table
+                 "_entity where dirty=1 and entity_type = 'pup-focal' or entity_type = 'group-comp';"))))
     (if (null? de)
         '()
         (map
@@ -96,6 +98,27 @@
             (cdr (vector->list i))
             (get-entity-plain db table (vector-ref i 0))))
          (cdr de)))))
+
+;; include all the ktvs
+(define (dirty-entities-for-review-parent db table parent)
+  (let ((de (db-select
+             db (dbg (string-append
+                 "select e.entity_id, e.entity_type, e.unique_id, e.dirty, e.version from " table "_entity as e "
+                 "join stream_value_varchar "
+                 "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' and "
+                 "p.value = ?"
+                 "where e.dirty=1;")) parent)))
+    (if (null? de)
+        '()
+        (map
+         (lambda (i)
+           ;;(msg "dirty-entities")
+           (list
+            ;; build according to url ([table] entity-type unique-id dirty version)
+            (cdr (vector->list i))
+            (get-entity-plain db table (vector-ref i 0))))
+         (cdr de)))))
+
 
 
 ;; todo: BROKEN...

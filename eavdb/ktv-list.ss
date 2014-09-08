@@ -25,6 +25,10 @@
     (ktv-value (car ktv-list)))
    (else (ktv-get (cdr ktv-list) key))))
 
+;(define (ktv-get ktv-list key)
+;  (let ((k (assoc-string-fast key ktv-list)))
+;    (if k (ktv-value k) #f)))
+
 (define (ktv-get-whole ktv-list key)
   (cond
    ((null? ktv-list) #f)
@@ -32,12 +36,19 @@
     (car ktv-list))
    (else (ktv-get-whole (cdr ktv-list) key))))
 
+;(define (ktv-get-whole ktv-list key)
+;  (assoc-string-fast key ktv-list))
+
 (define (ktv-get-type ktv-list key)
   (cond
    ((null? ktv-list) #f)
    ((equal? (ktv-key (car ktv-list)) key)
     (ktv-type (car ktv-list)))
    (else (ktv-get-type (cdr ktv-list) key))))
+
+;(define (ktv-get-type ktv-list key)
+;  (let ((k (assoc-string-fast key ktv-list)))
+;    (if k (ktv-type k) #f)))
 
 (define (ktv-set ktv-list ktv)
   (cond

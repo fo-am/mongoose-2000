@@ -66,6 +66,8 @@
 
 (define (dirtify-entity-values db table entity-id)
   ;;(msg "clean-entity-values")
+  (semaphore-wait entity-sema)
+  (db-exec db "begin transaction")
   (let* ((entity-type (get-entity-type db table entity-id)))
     (cond
      ((null? entity-type)
@@ -74,7 +76,9 @@
       (for-each
        (lambda (kt)
          (dirtify-value db table entity-id (list (ktv-key kt) (ktv-type kt))))
-       (get-attribute-ids/types db table entity-type))))))
+       (get-attribute-ids/types db table entity-type)))))
+  (db-exec db "end transaction")
+  (semaphore-post entity-sema))
 
 ;; update an entity, via a (possibly partial) list of key/value pairs
 ;; if dirty is not true, this is coming from a sync

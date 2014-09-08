@@ -241,10 +241,10 @@
     (make-id "") 'vertical fillwrap pf-col
     (list
      (mtitle "title" "Event: Pup aggression")
-     (build-grid-selector "pf-pupaggr-partner" "single" "Aggressive mongoose")
+     (build-grid-selector "pf-pupaggr-partner" "single" "Other aggressive mongoose")
 
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Fighting over")
@@ -266,7 +266,7 @@
 
        (tri-state "pf-pupaggr-win" "Win?" "win")))
 
-     (spacer 20)
+     (spacer 10)
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
@@ -336,7 +336,7 @@
       (list
        (populate-grid-selector
         "gp-int-pack" "single"
-        (db-all-sort-normal db "sync" "pack") #f
+        (db-mongoose-packs) #f
         (lambda (pack)
           (entity-set-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
@@ -510,11 +510,50 @@
        (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
                   (lambda (v) (entity-update-values!
                                (ktv "group-comp-code" "varchar" v)) '()))))
-     (build-grid-selector "gc-start-present" "toggle" "Who's present?")
-     (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
+
+     (mtitle "title" "Weights")
+     (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
+     (spacer 20)
+     (horiz
+      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
+                 (lambda (v)
+                   (entity-update-single-value! (ktv "weight" "real" (string->number v)))
+                   '()))
+      (mtoggle-button "gc-weigh-accurate" "Accurate?"
+                      (lambda (v)
+                        (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
+                        '()))
+      (mtoggle-button "gc-weigh-present" "Present but not weighed"
+                      (lambda (v)
+                        (entity-update-single-value! (ktv "present" "int" (if v 1 0)))
+                        '()))
+      )
+
+
+     (next-button "gc-start-" "Go to pregnant females, have you finished here?" "gc-start" "gc-preg"
                   (lambda ()
-                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
                     (entity-update-values!)
+
+                    ;; reset main entity
+                    (entity-init! db "stream" "group-comp"
+                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+
+                    (entity-set-value!
+                     "present" "varchar"
+                     (dbg (assemble-array-with-ids
+                           (foldl
+                            (lambda (m r)
+                              (if (or (> (ktv-get m "weight") 0)
+                                      (not (eqv? (ktv-get m "present") 0)))
+                                  (cons (ktv-get m "id-mongoose") r) r))
+                            '()
+                            (db-filter
+                             db "stream" "group-comp-weight"
+                             (list (list "parent" "varchar" "=" (get-current 'group-composition-id #f)))))
+                           )))
+
+                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
+
                     '()))
      ))
 
@@ -534,52 +573,6 @@
                       (entity-get-value "main-observer"))
 
        (populate-grid-selector
-        "gc-start-present" "toggle"
-        (db-mongooses-by-pack) #f
-        (lambda (individuals)
-          (entity-set-value! "present" "varchar" (assemble-array individuals))
-          (list))
-        ;; need to invert, but not () if there are none set yet...
-        (let ((r (get-current 'gc-not-present #f)))
-          (if (not r) '() (invert-mongoose-selection r)))))
-      (update-grid-selector-checked "gc-start-present" "present"))
-     )
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '()))
-
-  (fragment
-   "gc-weights"
-   (linear-layout
-    (make-id "") 'vertical fill gc-col
-    (list
-     (mtitle "title" "Weights")
-     (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
-     (spacer 20)
-     (horiz
-      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
-                 (lambda (v)
-                   (entity-update-single-value! (ktv "weight" "real" (string->number v)))
-                   '()))
-      (mtoggle-button "gc-weigh-accurate" "Accurate?"
-                      (lambda (v)
-                        (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
-                        '())))
-     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
-                  (lambda ()
-                    ;; reset main entity
-                    (entity-init! db "stream" "group-comp"
-                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
-                    '()))))
-
-   (lambda (fragment arg)
-     (activity-layout fragment))
-   (lambda (fragment arg)
-     (entity-init! db "stream" "group-comp-weight" '())
-     (append
-      (list
-       (populate-grid-selector
         "gc-weigh-choose" "single"
         (db-mongooses-by-pack) #f
         (lambda (individual)
@@ -595,6 +588,7 @@
                                     (ktv "name" "varchar" "")
                                     (ktv "weight" "real" 0)
                                     (ktv "accurate" "int" 0)
+                                    (ktv "present" "int" 0)
                                     (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                     (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
                 (entity-init! db "stream" "group-comp-weight" (car s)))
@@ -603,14 +597,67 @@
               (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
                              (if (null? s) "" (ktv-get (car s) "weight")))
               (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'checked
-                             (if (null? s) 0 (ktv-get (car s) "accurate"))))
-             (update-selector-colours "gc-weigh-choose" "group-comp-weight" (list "weight" "real" "!=" 0)))))))
-      (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-not-present '()))
-      (update-selector-colours "gc-weigh-choose" "group-comp-weight" (list "weight" "real" "!=" 0))))
+                             (if (null? s) 0 (ktv-get (car s) "accurate")))
+              (update-widget 'toggle-button (get-id "gc-weigh-present") 'checked
+                             (if (null? s) 0 (ktv-get (car s) "present"))))
+             (update-selector-colours2-or "gc-weigh-choose" "group-comp-weight"
+                                          (list
+                                           (list "weight" "real" "!=" 0)
+                                           (list "present" "int" "!=" 0)))))))
+       )
+      (update-selector-colours2-or "gc-weigh-choose" "group-comp-weight"
+                                   (list
+                                    (list "weight" "real" "!=" 0)
+                                    (list "present" "int" "!=" 0)))
+
+      ))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '()))
+
+;  (fragment
+;   "gc-weights"
+;   (linear-layout
+;    (make-id "") 'vertical fill gc-col
+;    (list
+;     (build-grid-selector "gc-start-present" "toggle" "Who's present?")
+;
+;     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
+;                  (lambda ()
+;                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
+;                    '()))))
+;
+;   (lambda (fragment arg)
+;     (activity-layout fragment))
+;   (lambda (fragment arg)
+;     (entity-init! db "stream" "group-comp-weight" '())
+;     (append
+;      (list
+;
+;       (populate-grid-selector
+;        "gc-start-present" "toggle"
+;        (db-mongooses-by-pack) #f
+;        (lambda (individuals)
+;          (entity-set-value! "present" "varchar" (assemble-array individuals))
+;          (list))
+;        ;; need to invert, but not () if there are none set yet...
+;        (let ((r (get-current 'gc-not-present #f)))
+;          (if (not r) '() (invert-mongoose-selection r))))
+;       )
+;      (update-grid-selector-checked "gc-start-present" "present")
+;      ))
+;   (lambda (fragment) '())
+;   (lambda (fragment) '())
+;   (lambda (fragment) '())
+;   (lambda (fragment) '()))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
 
   (fragment
    "gc-preg"
@@ -619,7 +666,7 @@
     (list
      (mtitle "title" "Pregnant females")
      (build-grid-selector "gc-preg-choose" "toggle" "Choose")
-     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-weights" "gc-pup-assoc"
+     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-start" "gc-pup-assoc"
                   (lambda () '()))))
 
    (lambda (fragment arg)
@@ -803,7 +850,7 @@
            (list
             (populate-grid-selector
              "gc-oestrus-guard" "single"
-             (db-mongooses-by-pack-adults) #t
+             (db-mongooses-by-pack-male) #t
              (lambda (escort-individual)
                (let ((s (db-filter
                          db "stream" "group-comp-mate-guard"
@@ -828,12 +875,14 @@
                    (update-widget 'spinner (get-id "gc-oestrus-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate")))
                    (update-widget 'toggle-button (get-id "gc-oestrus-pester") 'checked (entity-get-value "pester")))
 
-                  (update-selector-colours2
+                  (update-selector-colours3-or
                    "gc-oestrus-guard" "group-comp-mate-guard"
+                   (ktv-get pup-individual "unique_id")
                    (list
-                    (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
                     (list "strength" "varchar" "!=" "none")
-                    (list "accurate" "varchar" "!=" "none"))))
+                    (list "accurate" "varchar" "!=" "none")
+                    (list "pester" "int" "!=" 0)
+                    )))
                  ))))
            (update-selector-colours2
             "gc-oestrus-guard" "group-comp-mate-guard"
@@ -1069,7 +1118,7 @@
      (list
       (populate-grid-selector
        "choose-obs-pack-selector" "single"
-       (db-all-sort-normal db "sync" "pack") #f
+       (db-mongoose-packs) #f
        (lambda (pack)
          (when (and
                 (get-current 'pack #f) ;; if we have a current pack...
@@ -1289,7 +1338,7 @@
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-packs-list" "button" (db-all-sort-normal db "sync" "pack") #f
+       "manage-packs-list" "button" (db-mongoose-packs) #f
        (lambda (pack)
          (set-current! 'pack pack)
          (list (start-activity "manage-individual" 2 ""))))
@@ -1345,7 +1394,7 @@
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
-       (db-mongooses-by-pack-ignore-delete) #f
+       (db-mongooses-by-pack) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
@@ -1409,7 +1458,7 @@
      (entity-init! db "sync" "mongoose" '())
      ;; make sure all fields exist
      (entity-set-value! "name" "varchar" "noname")
-     (entity-set-value! "gender" "varchar" "Female")
+     (entity-set-value! "gender" "varchar" "female")
      (entity-set-value! "dob" "varchar" "00-00-00")
      (entity-set-value! "litter-code" "varchar" "")
      (entity-set-value! "chip-code" "varchar" "")
@@ -1632,91 +1681,13 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-  (let ((update-list
-         (lambda ()
-           (list
-            (update-widget
-             'linear-layout (get-id "focal-list") 'contents
-             (map
-              (lambda (f)
-                (mbutton
-                 (string-append "export-" (ktv-get f "unique_id"))
-                 (ktv-get f "time")
-                 (lambda ()
-                   (save-data "pup-focal-export.csv" (export-csv main-db "stream" f pup-focal-export))
-                   (list
-                    (send-mail
-                     ""
-                     "From Mongoose2000" "Please find attached your mongoose data"
-                     (list "/sdcard/mongoose/pup-focal-export.csv"))))))
-              (db-all-in-date-range
-               main-db "stream" "pup-focal"
-               (get-current 'from-date (date->string (date-minus-months (date-time) 6)))
-               (get-current 'to-date (date->string (date-time))))))))))
-  (activity
-   "export"
-   (vert
-    (text-view (make-id "title") "Export" 40 fillwrap)
-    (text-view (make-id "title") "Date range" 20 fillwrap)
-
-    (horiz
-     (button (make-id "date-from") "From" 30 fillwrap
-             (lambda ()
-               (list (date-picker-dialog
-                      "export-from-date"
-                      (lambda (day month year)
-                        (let ((datestring (date->string (list year (+ month 1) day))))
-                          (msg "setting current from to" datestring)
-                          (set-current! 'from-date datestring)
-                          (update-list)))))))
-
-     (button (make-id "date-to") "To" 30 fillwrap
-             (lambda ()
-               (list (date-picker-dialog
-                      "export-to-date"
-                      (lambda (day month year)
-                        (let ((datestring (date->string (list year (+ month 1) day))))
-                          (msg "setting current to to" datestring)
-                          (set-current! 'to-date datestring)
-                          (update-list))))))))
-
-    (text-view (make-id "title") "Focals" 40 fillwrap)
-
-    (linear-layout
-     (make-id "focal-list")
-     'vertical
-     (layout 'fill-parent 'wrap-content 1 'left 0)
-     (list 0 0 0 0)
-     (list))
-    )
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg)
-     ;; open the main database
-     (db-close main-db)
-     (db-open main-db)
-     (msg "opened main database")
-     (msg (db-status db))
-     ;;(msg (db-select db "select * from stream_entity where entity_type = 'pup-focal';"))
-     ;;(msg (all-entities-in-date-range
-     ;;      db "stream" "pup-focal"
-     ;;      (date->string (date-minus-months (date-time) 3))
-     ;;      (date->string (date-time))
-     ;;      ))
-     (update-list))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '())))
-
 
   (activity
    "review"
    (vert
     (text-view 0 "Review changes" 40 fillwrap)
     (scroll-view-vert
-     0 (layout 'fill-parent 'wrap-content 1 'left 0)
+     0 (layout 'fill-parent 'fill-parent 1 'left 0)
      (list
       (linear-layout
        (make-id "review-list")
@@ -1724,7 +1695,8 @@
        (layout 'fill-parent 'fill-parent 1 'left 0)
        (list 0 0 0 0)
        (list))
-      )))
+      ))
+    (mbutton2 "review-back" "Back" (lambda () (list (finish-activity 1)))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1734,6 +1706,32 @@
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
+  (activity
+   "review-collection"
+   (vert
+    (text-view 0 "Review changes" 40 fillwrap)
+    (scroll-view-vert
+     0 (layout 'fill-parent 'fill-parent 1 'left 0)
+     (list
+      (linear-layout
+       (make-id "review-list")
+       'vertical
+       (layout 'fill-parent 'fill-parent 1 'left 0)
+       (list 0 0 0 0)
+       (list))
+      ))
+    (mbutton2 "review-back" "Back" (lambda () (list (finish-activity 1)))))
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (review-update-collection (get-current 'review-collection #f)))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
+
 
   (activity
    "review-item"

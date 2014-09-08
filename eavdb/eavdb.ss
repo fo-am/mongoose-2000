@@ -80,6 +80,12 @@
      (get-entity db table i))
    (filter-entities db table type filter)))
 
+(define (db-filter-inc-deleted db table type filter)
+  (map
+   (lambda (i)
+     (get-entity db table i))
+   (filter-entities-inc-deleted db table type filter)))
+
 ;; only return (eg. name and photo)
 (define (db-filter-only db table type filter kt-list)
   (map

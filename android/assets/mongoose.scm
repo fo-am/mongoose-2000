@@ -95,9 +95,9 @@
 (define list-strength
   (list
    (list 'none "None")
-   (list 'weak "Weak")
-   (list 'medium "Medium")
-   (list 'strong "Strong")))
+   (list 'strength-3 "Weak")
+   (list 'strength-2 "Medium")
+   (list 'strength-1 "Strong")))
 
 (define list-gender
   (list (list 'male "Male")
@@ -159,8 +159,7 @@
   (insert-entity-if-not-exists
    db "local" "app-settings" "null" 1
    (list
-    (ktv "user-id" "varchar" "No name yet...")))
-  (msg (db-all-sort-normal db "local" "app-settings")))
+    (ktv "user-id" "varchar" "No name yet..."))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user interface abstraction
@@ -346,28 +345,37 @@
         (string-split-simple v #\,)
         '())))
 
+(define (db-mongoose-packs)
+  (msg "db-mongooses-by-pack")
+  (db-filter db "sync" "pack" '()))
+
+
 (define (db-mongooses-by-pack)
-  (db-all-where
+  (msg "db-mongooses-by-pack")
+  (db-filter
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
+   (list (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id")))))
 
 (define (db-mongooses-by-pack-ignore-delete)
-  (db-all-where-ignore-delete
+  (db-filter-inc-deleted
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))))
+   (list (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id")))))
 
 
 (define (db-mongooses-by-pack-male)
-  (db-all-where2or
+  (db-filter
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "gender" "varchar" "Male") "Unknown"))
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "gender" "varchar" "not like" "female"))))
 
 (define (db-mongooses-by-pack-female)
-  (db-all-where2or
+  (db-filter
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "gender" "varchar" "Female") "Unknown"))
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "gender" "varchar" "not like" "male"))))
+
 
 
 ;; (y m d h m s)
@@ -384,17 +392,38 @@
        (list-ref d 5)))))
 
 (define (db-mongooses-by-pack-pups)
-  (db-all-newer
+  (db-filter
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "dob" "varchar" "t>"
+          (date->string (date-minus-months (date-time) 6))))))
 
 (define (db-mongooses-by-pack-adults)
-  (db-all-older
+  (db-filter
    db "sync" "mongoose"
-   (ktv "pack-id" "varchar" (ktv-get (get-current 'pack '()) "unique_id"))
-   (ktv "dob" "varchar" (date->string (date-minus-months (date-time) 6)))))
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "dob" "varchar" "t<"
+          (date->string (date-minus-months (date-time) 6))))))
 
+(define (db-mongooses-by-pack-adult-males)
+  (db-filter
+   db "sync" "mongoose"
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "gender" "varchar" "!=" "female")
+    (list "dob" "varchar" "t<"
+          (date->string (date-minus-months (date-time) 6))))))
+
+(define (db-mongooses-by-pack-adult-females)
+  (db-filter
+   db "sync" "mongoose"
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "gender" "varchar" "!=" "male")
+    (list "dob" "varchar" "t<"
+          (date->string (date-minus-months (date-time) 6))))))
 
 
 (define (tri-state id text key)
@@ -622,21 +651,54 @@
   (list
    (update-widget
     'linear-layout (get-id "review-list") 'contents
-    (map
-     (lambda (dirty-entity)
+    (foldl
+     (lambda (dirty-entity r)
        ;; consists of ((type,uid,dirty,version) (ktvlist))
        (let* ((data (car dirty-entity))
               (entity (cadr dirty-entity))
               (time (ktv-get entity "time"))
               (type (list-ref data 0))
               (uid (list-ref data 1)))
-         (mbutton
-          (string-append "review-" uid)
-          (string-append type (if time (string-append "-" time) ""))
-          (lambda ()
-            (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
-            (list (start-activity "review-item" 0 ""))))))
+         (if (or (equal? type "group-comp")
+                 (equal? type "pup-focal"))
+             (cons
+              (mbutton
+               (string-append "review-" uid)
+               (string-append type (if time (string-append "-" time) ""))
+               (lambda ()
+                 (set-current! 'review-collection uid)
+                 (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+                 (list (start-activity "review-collection" 0 ""))))
+              r) r)))
+     '()
      (dirty-entities-for-review db "stream")))))
+
+
+(define (review-update-collection parent-uid)
+  (list
+   (update-widget
+    'linear-layout (get-id "review-list") 'contents
+    (foldl
+     (lambda (dirty-entity r)
+       ;; consists of ((type,uid,dirty,version) (ktvlist))
+       (let* ((data (car dirty-entity))
+              (entity (cadr dirty-entity))
+              (time (ktv-get entity "time"))
+              (type (list-ref data 0))
+              (uid (list-ref data 1)))
+         (if (equal? (ktv-get entity "parent") parent-uid)
+             (cons
+              (mbutton
+               (string-append "review-" uid)
+               (string-append type (if time (string-append "-" time) ""))
+               (lambda ()
+                 (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+                 (list (start-activity "review-item" 0 ""))))
+              r) r)))
+     '()
+     (dirty-entities-for-review-parent db "stream" parent-uid)))))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
@@ -758,8 +820,135 @@
     (list
      (list "parent" "varchar" "=" (get-current 'group-composition-id 0))))))
 
+
+;; hack
+(define (update-selector-colours2-or id entity-type where)
+  (msg "----------------------------------------------**")
+  (update-grid-selector-colours
+   id "id-mongoose"
+   (map
+    (lambda (i)
+      (msg "found:" i)
+      (get-entity db "stream" i))
+    (let ((s (apply
+              db-select
+              (append
+               (list
+                db
+                (string-append
+                 "select e.entity_id from stream_entity as e "
+                 ;; order by name
+                 "join stream_value_varchar "
+                 "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' "
+                 (foldl
+                  (lambda (i r)
+                    (let ((var (mangle (string-append (filter-key i) "_var"))))
+                      (string-append
+                       r "join stream_value_" (filter-type i) " "
+                       "as " var " on "
+                       var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' ")))
+                  ""
+                  where)
+                 "where p.value = ? "
+                 "and ( "
+                 (foldl
+                  (lambda (i r)
+                    (let ((var (mangle (string-append (filter-key i) "_var"))))
+                      (string-append
+                       r (if (equal? r "") "" "or ")
+                       var ".value " (filter-op i) " ? ")))
+                  ""
+                  where)
+                 " ) "
+                 ))
+               (cons
+                (get-current 'group-composition-id 0)
+                (build-args where)))
+              )))
+      (msg (db-status db))
+      (if (null? s)
+          '()
+          (map
+           (lambda (i)
+             (vector-ref i 0))
+           (cdr s)))))))
+
+
+;; hack
+(define (update-selector-colours3-or id entity-type mongoose where)
+  (msg "----------------------------------------------**")
+  (update-grid-selector-colours
+   id "id-escort"
+   (map
+    (lambda (i)
+      (msg "found:" i)
+      (get-entity db "stream" i))
+    (let ((s (apply
+              db-select
+              (append
+               (list
+                db
+                (string-append
+                 "select e.entity_id from stream_entity as e "
+                 ;; order by name
+                 "join stream_value_varchar "
+                 "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' "
+                 "join stream_value_varchar "
+                 "as id on id.entity_id = e.entity_id and id.attribute_id = 'id-mongoose' "
+                 (foldl
+                  (lambda (i r)
+                    (let ((var (mangle (string-append (filter-key i) "_var"))))
+                      (string-append
+                       r "join stream_value_" (filter-type i) " "
+                       "as " var " on "
+                       var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' ")))
+                  ""
+                  where)
+                 "where p.value = ? and id.value = ? "
+                 "and ( "
+                 (foldl
+                  (lambda (i r)
+                    (let ((var (mangle (string-append (filter-key i) "_var"))))
+                      (string-append
+                       r (if (equal? r "") "" "or ")
+                       var ".value " (filter-op i) " ? ")))
+                  ""
+                  where)
+                 " ) "
+                 ))
+               (append
+                (list
+                 (get-current 'group-composition-id 0)
+                 mongoose)
+                (build-args where)))
+              )))
+      (msg (db-status db))
+      (if (null? s)
+          '()
+          (map
+           (lambda (i)
+             (vector-ref i 0))
+           (cdr s)))))))
+
+
 (define (invert-mongoose-selection individuals)
   (filter
    (lambda (m)
      (not (in-list? m individuals)))
    (map (lambda (m) (ktv-get m "unique_id")) (db-mongooses-by-pack))))
+
+;; if there is a weight for the mongoose, remove it from the no-present list
+(define (update-mongoose-selection-from-weights)
+  ;; get the current weights
+  (let ((s (db-filter
+            db "stream" "group-comp-weight"
+            (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))))))
+
+
+  (filter
+   (lambda (m)
+     (not (in-list? m individuals)))
+   (map (lambda (m) (ktv-get m "unique_id")) (db-mongooses-by-pack))))
+
+
+  )

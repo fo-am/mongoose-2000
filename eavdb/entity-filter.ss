@@ -60,44 +60,48 @@
        (else c)))
     (string->list var))))
 
-(define (build-query table filter typed)
-  (string-append
-   (foldl
-    (lambda (i r)
-      (let ((var (mangle (string-append (filter-key i) "_var"))))
-        ;; add a query chunk
+(define (build-query-chunk i r table)
+  (let ((var (mangle (string-append (filter-key i) "_var"))))
+    ;; add a query chunk
+    (if (equal? (substring (filter-op i) 0 1) "t")
+        ;; time version
+        (string-append
+         r "join " table "_value_" (filter-type i) " "
+         "as " var " on "
+         var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and ( "
+         var ".value "  (substring (filter-op i) 1 (string-length (filter-op i))) " DateTime(?) "
+         "or " var ".value like 'unknown') ")
+        ;; normal version
         (string-append
          r "join " table "_value_" (filter-type i) " "
          "as " var " on "
          var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and "
-         var ".value " (filter-op i) " ? ")))
+         var ".value " (filter-op i) " ? "))))
 
+
+(define (build-query table filter typed)
+  (string-append
+   (foldl
+    (lambda (i r)
+      (build-query-chunk i r table))
     ;; boilerplate query start
     (string-append
      "select e.entity_id from " table "_entity as e "
      ;; order by name
      "join " table "_value_varchar "
      "as n on n.entity_id = e.entity_id and n.attribute_id = 'name' "
-     ;; ignore deleted (if exists)
+     ;; ignore deleted (if not present - (readding))
      "left join " table "_value_int "
-     "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' and "
-     "d.value = 0 or d.value = NULL ")
+     "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' ")
     filter)
-   (if typed "where e.entity_type = ? order by n.value"
+   (if typed "where e.entity_type = ? and (d.value = 0 or d.value is NULL) order by n.value"
        "order by n.value")))
 
 (define (build-query-inc-deleted table filter)
   (string-append
    (foldl
     (lambda (i r)
-      (let ((var (string-append (filter-key i) "_var")))
-        ;; add a query chunk
-        (string-append
-         r "join " table "_value_" (filter-type i) " "
-         "as " var " on "
-         var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and "
-         var ".value " (filter-op i) " ? ")))
-
+      (build-query-chunk i r table))
     ;; boilerplate query start
     (string-append
      "select e.entity_id from " table "_entity as e "
@@ -117,18 +121,21 @@
 (define (filter-entities db table type filter)
   (let ((q (build-query table filter (not (equal? type "*")))))
     (let ((s (apply
-	      db-select
-	      (append
-	       (list db q)
-	       (build-args filter)
-	       (list type)))))
-      (msg (db-status db))
+              db-select
+              (dbg (append
+               (list db q)
+               (build-args filter)
+               (list type))))))
+    (msg (db-status db))
       (if (null? s)
 	  '()
 	  (map
 	   (lambda (i)
 	     (vector-ref i 0))
 	   (cdr s))))))
+
+
+
 
 (define (filter-entities-inc-deleted db table type filter)
   (let ((q (build-query-inc-deleted table filter)))
