@@ -426,7 +426,7 @@
           (date->string (date-minus-months (date-time) 6))))))
 
 
-(define (tri-state id text key)
+(define (tri-state entity-type id text key)
   (linear-layout
    (make-id "") 'vertical (layout 'fill-parent 'wrap-content '1 'centre 0) trans-col
    (list
@@ -438,6 +438,7 @@
        (lambda (v)
          (cond
           (v
+           (set-current! 'entity-type entity-type)
            (entity-set-value! key "varchar" "yes")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-n")) 'checked 0)
@@ -451,6 +452,7 @@
        (lambda (v)
          (cond
           (v
+           (set-current! 'entity-type entity-type)
            (entity-set-value! key "varchar" "maybe")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
@@ -465,6 +467,7 @@
        (lambda (v)
          (cond
           (v
+           (set-current! 'entity-type entity-type)
            (entity-set-value! key "varchar" "no")
            (list
             (update-widget 'toggle-button (get-id (string-append id "-y")) 'checked 0)
@@ -619,12 +622,14 @@
      (mbutton "review-item-cancel" "Cancel" (lambda () (list (finish-activity 0))))
      (mbutton (string-append uid "-save") "Save"
               (lambda ()
-                (let ((new-entity (review-validate-contents uid (get-current 'entity-values '()))))
+                (let* ((values (es-ktv-list))
+                       (new-entity (review-validate-contents uid values)))
                   (cond
                    ((list? new-entity)
                     ;; replace with converted ids
-                    (set-current! 'entity-values new-entity)
-                    ;;(entity-update-values!)
+                    (set! es (es-add-entity es (get-current 'entity-type #f) new-entity))
+                    ;;(set-current! 'entity-values new-entity)
+                    (entity-update-values!)
                     (list (finish-activity 0)))
                    (else
                     (list
@@ -645,7 +650,7 @@
       (get-id "review-item-container")
       'contents
       (review-build-contents
-       uid (get-current 'entity-values '()))))))
+       uid (es-ktv-list))))))
 
 (define (review-update-list)
   (list
@@ -659,17 +664,32 @@
               (time (ktv-get entity "time"))
               (type (list-ref data 0))
               (uid (list-ref data 1)))
-         (if (or (equal? type "group-comp")
-                 (equal? type "pup-focal"))
-             (cons
-              (mbutton
-               (string-append "review-" uid)
-               (string-append type (if time (string-append "-" time) ""))
-               (lambda ()
-                 (set-current! 'review-collection uid)
-                 (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
-                 (list (start-activity "review-collection" 0 ""))))
-              r) r)))
+         (cond
+          ((or (equal? type "group-comp")
+               (equal? type "pup-focal"))
+           (cons
+            (mbutton
+             (string-append "review-" uid)
+             (string-append type (if time (string-append "-" time) ""))
+             (lambda ()
+               (set-current! 'review-collection uid)
+               (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+               (list (start-activity "review-collection" 0 ""))))
+            r))
+          ((or (equal? type "group-interaction")
+               (equal? type "group-alarm")
+               (equal? type "group-move")
+               (equal? type "note"))
+           (cons
+            (mbutton
+             (string-append "review-" uid)
+             (string-append type (if time (string-append "-" time) ""))
+             (lambda ()
+               (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+               (list (start-activity "review-item" 0 ""))))
+            r))
+          (else r))
+         ))
      '()
      (dirty-entities-for-review db "stream")))))
 
@@ -678,24 +698,21 @@
   (list
    (update-widget
     'linear-layout (get-id "review-list") 'contents
-    (foldl
-     (lambda (dirty-entity r)
+    (map
+     (lambda (dirty-entity)
        ;; consists of ((type,uid,dirty,version) (ktvlist))
        (let* ((data (car dirty-entity))
               (entity (cadr dirty-entity))
               (time (ktv-get entity "time"))
               (type (list-ref data 0))
               (uid (list-ref data 1)))
-         (if (equal? (ktv-get entity "parent") parent-uid)
-             (cons
-              (mbutton
-               (string-append "review-" uid)
-               (string-append type (if time (string-append "-" time) ""))
-               (lambda ()
-                 (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
-                 (list (start-activity "review-item" 0 ""))))
-              r) r)))
-     '()
+         (mbutton
+          (string-append "review-" uid)
+          (string-append type (if time (string-append "-" time) ""))
+          (lambda ()
+            (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
+            (list (start-activity "review-item" 0 ""))))
+         ))
      (dirty-entities-for-review-parent db "stream" parent-uid)))))
 
 

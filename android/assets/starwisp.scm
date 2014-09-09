@@ -89,6 +89,7 @@
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done"
               (lambda ()
+                (set-current! 'entity-type "pup-focal-nearest")
                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                 (entity-record-values!)
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
@@ -105,12 +106,14 @@
        "pf-scan-nearest" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-nearest")
          (entity-set-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
        (db-mongooses-by-pack-adults) #t
        (lambda (individuals)
+         (set-current! 'entity-type "pup-focal-nearest")
          (entity-set-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
       ))
@@ -132,11 +135,13 @@
       (mtext "text" "Food size")
       (mspinner "pf-pupfeed-size" list-sizes
                 (lambda (v)
+                  (set-current! 'entity-type "pup-focal-pupfeed")
                   (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupfeed")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -153,6 +158,7 @@
        "pf-pupfeed-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupfeed")
          (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -170,11 +176,14 @@
      (horiz
       (mtext "text" "Food size")
       (mspinner "pf-pupfind-size" list-sizes
-                (lambda (v) (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
+                (lambda (v)
+                  (set-current! 'entity-type "pup-focal-pupfind")
+                  (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupfind")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -206,11 +215,13 @@
       (mtext "text" "Type of care")
       (mspinner "pf-pupcare-type" list-pupcare-type
                (lambda (v)
+                 (set-current! 'entity-type "pup-focal-pupcare")
                  (entity-set-value! "type" "varchar" (spinner-choice list-pupcare-type v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupcare")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -227,6 +238,7 @@
        "pf-pupcare-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupcare")
          (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -250,26 +262,29 @@
         (mtext "" "Fighting over")
         (mspinner "pf-pupaggr-over" list-aggression-over
                   (lambda (v)
+                    (set-current! 'entity-type "pup-focal-pupaggr")
                     (entity-set-value! "over" "varchar" (spinner-choice list-aggression-over v)) '())))
        (vert
         (mtext "" "Level")
         (mspinner "pf-pupaggr-level" list-aggression-level
                   (lambda (v)
+                    (set-current! 'entity-type "pup-focal-pupaggr")
                     (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
 
-       (tri-state "pf-pupaggr-in" "Initiate?" "initiate")
+       (tri-state "pup-focal-pupaggr" "pf-pupaggr-in" "Initiate?" "initiate")
 
        ;(mtoggle-button "pf-pupaggr-in" "Initiate?"
        ;                (lambda (v)
        ;                  (entity-set-value! "initiate" "varchar" (if v "yes" "no")) '()))
 
 
-       (tri-state "pf-pupaggr-win" "Win?" "win")))
+       (tri-state "pup-focal-pupaggr" "pf-pupaggr-win" "Win?" "win")))
 
      (spacer 10)
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupaggr")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -287,6 +302,7 @@
        "pf-pupaggr-partner" "single"
        (db-mongooses-by-pack) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupaggr")
          (entity-set-value! "id-with" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -310,16 +326,20 @@
         (mtext "text" "Outcome")
         (mspinner "gp-int-out" list-interaction-outcome
                   (lambda (v)
+                    (set-current! 'entity-type "group-interaction")
                     (entity-set-value! "outcome" "varchar" (spinner-choice list-interaction-outcome v)) '()))
         (mtext "text" "Duration")
         (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
-                   (lambda (v) (entity-set-value! "duration" "int" (string->number v)) '()))))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-interaction")
+                     (entity-set-value! "duration" "int" (string->number v)) '()))))
       (build-grid-selector "gp-int-pack" "single" "Other pack"))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
+                  (set-current! 'entity-type "group-interaction")
                   (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
@@ -338,12 +358,14 @@
         "gp-int-pack" "single"
         (db-mongoose-packs) #f
         (lambda (pack)
+          (set-current! 'entity-type "group-interaction")
           (entity-set-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
        (populate-grid-selector
         "gp-int-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-interaction")
           (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
@@ -368,13 +390,15 @@
         (mtext "text" "Cause")
         (mspinner "gp-alarm-cause" list-alarm-cause
                   (lambda (v)
+                    (set-current! 'entity-type "group-alarm")
                     (entity-set-value! "cause" "varchar" (spinner-choice list-alarm-cause v)) '())))
 
-       (tri-state "gp-alarm-join" "Did the others join in?" "others-join")))
+       (tri-state "group-alarm" "gp-alarm-join" "Did the others join in?" "others-join")))
 
      (horiz
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "group-alarm")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -392,6 +416,7 @@
         "gp-alarm-caller" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-alarm")
           (entity-set-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
           (list))))
       ))
@@ -410,28 +435,39 @@
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (medit-text "gp-mov-w" "Pack width" "numeric"
-                   (lambda (v) (entity-set-value! "pack-width" "int" (string->number v)) '()))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-width" "int" (string->number v)) '()))
        (medit-text "gp-mov-l" "Pack depth" "numeric"
-                   (lambda (v) (entity-set-value! "pack-depth" "int" (string->number v)) '()))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-depth" "int" (string->number v)) '()))
        (medit-text "gp-mov-c" "How many?" "numeric"
-                   (lambda (v) (entity-set-value! "pack-count" "int" (string->number v)) '()))))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Direction")
         (mspinner "gp-mov-dir" list-move-direction
-                  (lambda (v) (entity-set-value! "direction" "varchar" (spinner-choice list-move-direction v))  '())))
+                  (lambda (v)
+                    (set-current! 'entity-type "group-move")
+                    (entity-set-value! "direction" "varchar" (spinner-choice list-move-direction v))  '())))
 
        (vert
         (mtext "" "Where to")
         (mspinner "gp-mov-to" list-move-to
-                  (lambda (v) (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
+                  (lambda (v)
+                    (set-current! 'entity-type "group-move")
+                    (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
 
      (spacer 20)
      (horiz
       (mbutton "pf-grpmov-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "group-move")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -449,6 +485,7 @@
         "gp-mov-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-move")
           (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
@@ -465,11 +502,13 @@
      (mtitle "title" "Make a note")
      (edit-text (make-id "note-text") "" 30 "text" fillwrap
                 (lambda (v)
+                  (set-current! 'entity-type "note")
                   (entity-set-value! "text" "varchar" v)
                   '()))
      (horiz
       (mbutton "note-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "note")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
@@ -503,13 +542,17 @@
      (mtitle "title" "Start")
      (horiz
       (mtoggle-button "gc-start-main-obs" "I'm the main observer"
-                      (lambda (v) (entity-update-single-value!
-                                   (ktv "main-observer" "varchar" v)) '()))
+                      (lambda (v)
+                        (set-current! 'entity-type "group-comp")
+                        (entity-update-single-value!
+                         (ktv "main-observer" "varchar" v)) '()))
       (vert
        (mtext "" "Code")
        (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
-                  (lambda (v) (entity-update-values!
-                               (ktv "group-comp-code" "varchar" v)) '()))))
+                  (lambda (v)
+                    (set-current! 'entity-type "group-comp")
+                    (entity-update-values!
+                     (ktv "group-comp-code" "varchar" v)) '()))))
 
      (mtitle "title" "Weights")
      (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
@@ -517,14 +560,17 @@
      (horiz
       (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
                  (lambda (v)
+                   (set-current! 'entity-type "group-comp-weight")
                    (entity-update-single-value! (ktv "weight" "real" (string->number v)))
                    '()))
       (mtoggle-button "gc-weigh-accurate" "Accurate?"
                       (lambda (v)
+                        (set-current! 'entity-type "group-comp-weight")
                         (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
                         '()))
       (mtoggle-button "gc-weigh-present" "Present but not weighed"
                       (lambda (v)
+                        (set-current! 'entity-type "group-comp-weight")
                         (entity-update-single-value! (ktv "present" "int" (if v 1 0)))
                         '()))
       )
@@ -532,6 +578,7 @@
 
      (next-button "gc-start-" "Go to pregnant females, have you finished here?" "gc-start" "gc-preg"
                   (lambda ()
+                    (set-current! 'entity-type "group-comp")
                     (entity-update-values!)
 
                     ;; reset main entity
@@ -552,7 +599,11 @@
                              (list (list "parent" "varchar" "=" (get-current 'group-composition-id #f)))))
                            )))
 
-                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
+                    (set-current!
+                     'gc-not-present
+                     (invert-mongoose-selection
+                      (string-split-simple
+                       (entity-get-value "present") #\,)))
 
                     '()))
      ))
@@ -678,6 +729,7 @@
         "gc-preg-choose" "toggle"
         (db-mongooses-by-pack-female) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "pregnant" "varchar" (assemble-array individuals)))
           (list)))
        )
@@ -701,14 +753,14 @@
        (mtext "" "Strength")
        (mspinner "gc-pup-strength" list-strength
                  (lambda (v)
-                   (msg "updating stren" (spinner-choice list-strength v))
+                   (set-current! 'entity-type "group-comp-pup-assoc")
                    (entity-update-single-value! (ktv "strength" "varchar" (spinner-choice list-strength v)))
                    '())))
       (vert
        (mtext "" "Accuracy")
        (mspinner "gc-pup-accuracy" list-strength
                  (lambda (v)
-                   (msg "updating acc")
+                   (set-current! 'entity-type "group-comp-pup-assoc")
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
                    '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
@@ -805,19 +857,20 @@
        (mtext "" "Strength")
        (mspinner "gc-oestrus-strength" list-strength
                  (lambda (v)
-                   (msg "updating stren" (spinner-choice list-strength v))
+                   (set-current! 'entity-type "group-comp-mate-guard")
                    (entity-update-single-value! (ktv "strength" "varchar" (spinner-choice list-strength v)))
                    '())))
       (vert
        (mtext "" "Accuracy")
        (mspinner "gc-oestrus-accuracy" list-strength
                  (lambda (v)
-                   (msg "updating acc")
+                   (set-current! 'entity-type "group-comp-mate-guard")
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
                    '())))
 
       (mtoggle-button "gc-oestrus-pester" "Pestering?"
                       (lambda (v)
+                        (set-current! 'entity-type "group-comp-mate-guard")
                         (entity-update-single-value! (ktv "pester" "int" (if v 1 0)))
                         '()))
 
@@ -924,6 +977,7 @@
         "gc-baby-seen" "toggle"
         (db-mongooses-by-pack-adults) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "baby-seen" "varchar" (assemble-array individuals)))
           (list)))
        )
@@ -934,6 +988,7 @@
         "gc-baby-byelim" "toggle"
         (db-mongooses-by-pack-adults) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "baby-byelim" "varchar" (assemble-array individuals)))
           (list)))
        )

@@ -59,60 +59,56 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; db abstraction
 
+;; entity set - for storing and adding to multiple entities in memory
+
+(define (es-search es type)
+  (cond
+    ((null? es) #f)
+    ((equal? (car (car es)) type) (car es))
+    (else (es-search (cdr es) type))))
+
+(define (es-add-entity es type ktv-list)
+  (cond
+    ((null? es) (list (list type ktv-list)))
+    ((equal? (car (car es)) type) (cons (list type ktv-list) (cdr es)))
+    (else (cons (car es) (es-add-entity (cdr es) type ktv-list)))))
+
+(define es '())
+
+(define (es-ktv-list)
+  (let ((type (get-current 'entity-type #f)))
+    (cond
+     ((not type) (msg "es-ktv-list: no current entity type") '())
+     (else
+      (let ((s (es-search es type)))
+        (cond
+         ((not s) (msg "es-ktv-list: no entity for type " type) '())
+         (else (cadr s))))))))
+
+;; initialise the entity in memory - ktv-list can be empty for a new one
 (define (entity-init! db table entity-type ktv-list)
-  (entity-reset!)
-  (entity-set! ktv-list)
+  (set! es (es-add-entity es entity-type ktv-list))
   (set-current! 'db db)
   (set-current! 'table table)
   (set-current! 'entity-type entity-type))
 
+;; init and immediately save the entity to the db
+;; means it gets a unique_id
 (define (entity-init&save! db table entity-type ktv-list)
   (entity-init! db table entity-type ktv-list)
   (let ((id (entity-create! db table entity-type ktv-list)))
-    (msg "1")
     (entity-set-value! "unique_id" "varchar" id)
-    (msg "2")
     id))
 
-;; store a ktv, replaces existing with same key
-;;(define (entity-add-value! key type value)
-;;  (set-current!
-;;   'entity-values
-;;   (ktv-set
-;;    (get-current 'entity-values '())
-;;    (ktv key type value))))
-
-(define (entity-add-value-create! key type value)
-  (msg "entity-add-value-create!" key type value)
-  (set-current!
-   'entity-values
-   (ktv-set
-    (get-current 'entity-values '())
-    (ktv key type value))))
-
-(define (entity-set! ktv-list)
-  (set-current! 'entity-values ktv-list))
-
+;; get value from current memory entity
 (define (entity-get-value key)
-  (ktv-get (get-current 'entity-values '()) key))
+  (ktv-get (es-ktv-list) key))
 
-;; version to check the entity has the key
+;; write value to memory entity
 (define (entity-set-value! key type value)
-;  (let ((existing-type (ktv-get-type (get-current 'entity-values '()) key)))
-;    (if (equal? existing-type type)
-        (set-current!
-         'entity-values
-         (ktv-set
-          (get-current 'entity-values '())
-          (ktv key type value)))
-        ;;
-;        (begin
-;          (msg "entity-set-value! - adding new " key "of type" type "to entity")
-;          (entity-add-value-create! key type value)))
-    ;; save straight to local db every time
-    ;;(entity-update-single-value! (list key type value))
-        ;;       )
-        )
+  (set! es (es-add-entity
+            es (get-current 'entity-type #f)
+            (ktv-set (es-ktv-list) (ktv key type value)))))
 
 (define (date-time->string dt)
   (string-append
@@ -123,16 +119,15 @@
    (substring (number->string (+ (list-ref dt 4) 100)) 1 3) ":"
    (substring (number->string (+ (list-ref dt 5) 100)) 1 3)))
 
-;; build entity from all ktvs, insert to db, return unique_id
+;; build new entity from all memory ktvs, insert to db, return unique_id
 (define (entity-record-values!)
   (let ((db (get-current 'db #f))
         (table (get-current 'table #f))
         (type (get-current 'entity-type #f)))
     ;; standard bits
-    (let ((r (entity-create! db table type (get-current 'entity-values '()))))
-      (entity-reset!) r)))
+    (entity-create! db table type (es-ktv-list))))
 
-
+;; used internally
 (define (entity-create! db table entity-type ktv-list)
   (msg "creating:" entity-type ktv-list)
   (let ((values
@@ -151,15 +146,13 @@
       (msg "entity-create: " entity-type)
       r)))
 
-
+;; updates existing db entity from memory values
 (define (entity-update-values!)
   (let ((db (get-current 'db #f))
         (table (get-current 'table #f)))
-    (msg "entity-update-values" db table)
-    (msg (get-current 'entity-values '()))
     ;; standard bits
-    (let ((values (get-current 'entity-values '()))
-          (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
+    (let* ((values (es-ktv-list))
+           (unique-id (ktv-get values "unique_id")))
       (cond
        ((and unique-id (not (null? values)))
         (msg "entity-update-values inner" values)
@@ -170,23 +163,18 @@
        (else
         (msg "no values or no id to update as entity:" unique-id "values:" values))))))
 
+;; updates memory and writes a single value to the db
 (define (entity-update-single-value! ktv)
   (entity-set-value! (ktv-key ktv) (ktv-type ktv) (ktv-value ktv))
   (let ((db (get-current 'db #f))
         (table (get-current 'table #f))
-        (unique-id (ktv-get (get-current 'entity-values '()) "unique_id")))
+        (unique-id (ktv-get (es-ktv-list) "unique_id")))
     (cond
      (unique-id
       (update-entity db table (entity-id-from-unique db table unique-id) (list ktv)))
      (else
       (msg "no values or no id to update as entity:" unique-id "values:" ktv)))))
 
-
-(define (entity-reset!)
-  (set-current! 'entity-values '())
-  (set-current! 'db "reset")
-  (set-current! 'table "reset")
-  (set-current! 'entity-type "reset"))
 
 (define (assemble-array entities)
   (foldl
