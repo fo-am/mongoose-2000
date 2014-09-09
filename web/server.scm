@@ -51,24 +51,26 @@
 
 (define sema (make-semaphore 1))
 
-(define (syncro-try fn)
-  (msg "s-start")
-  (if (semaphore-try-wait? sema)
-      (let ((r (fn)))
-	(msg "s-end")
-	(semaphore-post sema)
-	r)
-    (begin
-	(msg "couldn't get lock")
-	(pluto-response (scheme->txt '("fail"))))))
-
 (define (syncro fn)
-  (msg "s-start")
-  (semaphore-wait sema)
-  (let ((r (fn)))
-    (msg "s-end")
-    (semaphore-post sema)
-    r))
+  (fn))
+
+;  (msg "s-start")
+;  (if (semaphore-try-wait? sema)
+;      (let ((r (fn)))
+;	(msg "s-end")
+;	(semaphore-post sema)
+;	r)
+ ;     (begin
+;	(msg "couldn't get lock")
+;	(pluto-response (scheme->txt '("fail"))))))
+
+(define (syncro-new fn)
+   (msg "s-start")
+   (semaphore-wait sema)
+   (let ((r (fn)))
+     (msg "s-end")
+     (semaphore-post sema)
+     r))
 
 (define registered-requests
   (list
