@@ -65,11 +65,13 @@
    ((zero? n) '())
    (else (cons (car l) (crop (cdr l) (- n 1))))))
 
-(define (in-list? n l)
-  (cond
-    ((null? l) #f)
-    ((equal? n (car l)) #t)
-    (else (in-list? n (cdr l)))))
+;(define (in-list? n l)
+;  (cond
+;    ((null? l) #f)
+;    ((equal? n (car l)) #t)
+;    (else (in-list? n (cdr l)))))
+
+(define in-list? string-in-list-fast) ;; optimisation
 
 (define (find n l)
   (cond

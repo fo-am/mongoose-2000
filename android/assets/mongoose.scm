@@ -511,15 +511,12 @@
 
 ;; replace entity with names -> uids, or name of not found
 (define (review-validate-contents uid entity)
-  (msg "validate....")
   (foldl
    (lambda (ktv r)
      (msg ktv)
      (cond
       ((string? r) r) ;; we have already found an error
       ((ktv-key-is-id? ktv)
-       (msg "it's an id...")
-       (msg "is list=" (ktv-value-is-list? ktv))
        (let ((replacement
               (if (ktv-value-is-list? ktv)
                   (convert-id-list db (ktv-value ktv))
@@ -688,6 +685,7 @@
                  (get-current 'debug-text "")))
 
 (define (debug-timer-cb)
+  (alog "debug timer callback...")
   (append
    (cond
     ((get-current 'sync-on #f)
@@ -708,7 +706,8 @@
     (else '()))
    (list
     (delayed "debug-timer" (+ 10000 (random 5000)) debug-timer-cb)
-    (update-debug))))
+    (update-debug)
+    )))
 
 
 (define pf-length 20) ;; minutes...

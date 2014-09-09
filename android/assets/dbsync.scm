@@ -432,6 +432,7 @@
     "new-entities-req"
     (string-append url "fn=entity-versions&table=" table)
     (lambda (data)
+      (alog "suck-new: building entity requests")
       (let ((new-entity-requests (build-entity-requests db table data)))
         (alog "suck-new: marking dirty")
         ;; now doing this first!...
@@ -475,8 +476,10 @@
 
       ;; todo - this is really slow and we're doing it all the time
       ;; if there are loads to do it's bad
+      (alog "unlist check start")
       (msg "checking for unlisted")
       (mark-unlisted-entities-dirty! db "sync" data)
+      (alog "unlist check end")
 
       (let ((r (append
                 (spit db "sync" (dirty-entities db "sync"))
