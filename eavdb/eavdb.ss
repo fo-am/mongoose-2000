@@ -63,11 +63,10 @@
 ;; helpers
 
 (define (db-all db table type)
-  (msg "db-all")
   (map
    (lambda (i)
      (get-entity db table i))
-   (dbg (all-entities db table type))))
+   (all-entities db table type)))
 
 (define (db-with-parent db table type parent)
   (map
@@ -81,10 +80,22 @@
      (get-entity db table i))
    (filter-entities db table type filter)))
 
+(define (db-filter-inc-deleted db table type filter)
+  (map
+   (lambda (i)
+     (get-entity db table i))
+   (filter-entities-inc-deleted db table type filter)))
+
 ;; only return (eg. name and photo)
 (define (db-filter-only db table type filter kt-list)
-  (msg "db-filter-only")
   (map
    (lambda (i)
      (get-entity-only db table i kt-list))
-   (dbg (filter-entities db table type filter))))
+   (filter-entities db table type filter)))
+
+;; only return (eg. name and photo)
+(define (db-filter-only-inc-deleted db table type filter kt-list)
+  (map
+   (lambda (i)
+     (get-entity-only db table i kt-list))
+   (filter-entities-inc-deleted db table type filter)))

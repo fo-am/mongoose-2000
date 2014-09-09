@@ -89,6 +89,7 @@
      (build-grid-selector "pf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "pf-scan-done" "Done"
               (lambda ()
+                (set-current! 'entity-type "pup-focal-nearest")
                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                 (entity-record-values!)
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
@@ -105,12 +106,14 @@
        "pf-scan-nearest" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-nearest")
          (entity-set-value! "id-nearest" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "pf-scan-close" "toggle"
        (db-mongooses-by-pack-adults) #t
        (lambda (individuals)
+         (set-current! 'entity-type "pup-focal-nearest")
          (entity-set-value! "id-list-close" "varchar" (assemble-array individuals))
          (list)))
       ))
@@ -132,11 +135,13 @@
       (mtext "text" "Food size")
       (mspinner "pf-pupfeed-size" list-sizes
                 (lambda (v)
+                  (set-current! 'entity-type "pup-focal-pupfeed")
                   (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupfeed")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -153,6 +158,7 @@
        "pf-pupfeed-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupfeed")
          (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -170,11 +176,14 @@
      (horiz
       (mtext "text" "Food size")
       (mspinner "pf-pupfind-size" list-sizes
-                (lambda (v) (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
+                (lambda (v)
+                  (set-current! 'entity-type "pup-focal-pupfind")
+                  (entity-set-value! "size" "varchar" (spinner-choice list-sizes v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupfind")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -206,11 +215,13 @@
       (mtext "text" "Type of care")
       (mspinner "pf-pupcare-type" list-pupcare-type
                (lambda (v)
+                 (set-current! 'entity-type "pup-focal-pupcare")
                  (entity-set-value! "type" "varchar" (spinner-choice list-pupcare-type v)) '())))
      (spacer 20)
      (horiz
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupcare")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -227,6 +238,7 @@
        "pf-pupcare-who" "single"
        (db-mongooses-by-pack-adults) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupcare")
          (entity-set-value! "id-who" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -241,35 +253,38 @@
     (make-id "") 'vertical fillwrap pf-col
     (list
      (mtitle "title" "Event: Pup aggression")
-     (build-grid-selector "pf-pupaggr-partner" "single" "Aggressive mongoose")
+     (build-grid-selector "pf-pupaggr-partner" "single" "Other aggressive mongoose")
 
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 100 '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Fighting over")
         (mspinner "pf-pupaggr-over" list-aggression-over
                   (lambda (v)
+                    (set-current! 'entity-type "pup-focal-pupaggr")
                     (entity-set-value! "over" "varchar" (spinner-choice list-aggression-over v)) '())))
        (vert
         (mtext "" "Level")
         (mspinner "pf-pupaggr-level" list-aggression-level
                   (lambda (v)
+                    (set-current! 'entity-type "pup-focal-pupaggr")
                     (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
 
-       (tri-state "pf-pupaggr-in" "Initiate?" "initiate")
+       (tri-state "pup-focal-pupaggr" "pf-pupaggr-in" "Initiate?" "initiate")
 
        ;(mtoggle-button "pf-pupaggr-in" "Initiate?"
        ;                (lambda (v)
        ;                  (entity-set-value! "initiate" "varchar" (if v "yes" "no")) '()))
 
 
-       (tri-state "pf-pupaggr-win" "Win?" "win")))
+       (tri-state "pup-focal-pupaggr" "pf-pupaggr-win" "Win?" "win")))
 
-     (spacer 20)
+     (spacer 10)
      (horiz
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "pup-focal-pupaggr")
                  (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
@@ -287,6 +302,7 @@
        "pf-pupaggr-partner" "single"
        (db-mongooses-by-pack) #t
        (lambda (individual)
+         (set-current! 'entity-type "pup-focal-pupaggr")
          (entity-set-value! "id-with" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
@@ -310,16 +326,20 @@
         (mtext "text" "Outcome")
         (mspinner "gp-int-out" list-interaction-outcome
                   (lambda (v)
+                    (set-current! 'entity-type "group-interaction")
                     (entity-set-value! "outcome" "varchar" (spinner-choice list-interaction-outcome v)) '()))
         (mtext "text" "Duration")
         (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
-                   (lambda (v) (entity-set-value! "duration" "int" (string->number v)) '()))))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-interaction")
+                     (entity-set-value! "duration" "int" (string->number v)) '()))))
       (build-grid-selector "gp-int-pack" "single" "Other pack"))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 80 '1 'left 0) trans-col
       (list
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
+                  (set-current! 'entity-type "group-interaction")
                   (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
@@ -336,14 +356,16 @@
       (list
        (populate-grid-selector
         "gp-int-pack" "single"
-        (db-all-sort-normal db "sync" "pack") #f
+        (db-mongoose-packs) #f
         (lambda (pack)
+          (set-current! 'entity-type "group-interaction")
           (entity-set-value! "id-other-pack" "varchar" (ktv-get pack "unique_id"))
           (list)))
        (populate-grid-selector
         "gp-int-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-interaction")
           (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
@@ -368,13 +390,15 @@
         (mtext "text" "Cause")
         (mspinner "gp-alarm-cause" list-alarm-cause
                   (lambda (v)
+                    (set-current! 'entity-type "group-alarm")
                     (entity-set-value! "cause" "varchar" (spinner-choice list-alarm-cause v)) '())))
 
-       (tri-state "gp-alarm-join" "Did the others join in?" "others-join")))
+       (tri-state "group-alarm" "gp-alarm-join" "Did the others join in?" "others-join")))
 
      (horiz
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "group-alarm")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -392,6 +416,7 @@
         "gp-alarm-caller" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-alarm")
           (entity-set-value! "id-caller" "varchar" (ktv-get individual "unique_id"))
           (list))))
       ))
@@ -410,28 +435,39 @@
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (medit-text "gp-mov-w" "Pack width" "numeric"
-                   (lambda (v) (entity-set-value! "pack-width" "int" (string->number v)) '()))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-width" "int" (string->number v)) '()))
        (medit-text "gp-mov-l" "Pack depth" "numeric"
-                   (lambda (v) (entity-set-value! "pack-depth" "int" (string->number v)) '()))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-depth" "int" (string->number v)) '()))
        (medit-text "gp-mov-c" "How many?" "numeric"
-                   (lambda (v) (entity-set-value! "pack-count" "int" (string->number v)) '()))))
+                   (lambda (v)
+                     (set-current! 'entity-type "group-move")
+                     (entity-set-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Direction")
         (mspinner "gp-mov-dir" list-move-direction
-                  (lambda (v) (entity-set-value! "direction" "varchar" (spinner-choice list-move-direction v))  '())))
+                  (lambda (v)
+                    (set-current! 'entity-type "group-move")
+                    (entity-set-value! "direction" "varchar" (spinner-choice list-move-direction v))  '())))
 
        (vert
         (mtext "" "Where to")
         (mspinner "gp-mov-to" list-move-to
-                  (lambda (v) (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
+                  (lambda (v)
+                    (set-current! 'entity-type "group-move")
+                    (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
 
      (spacer 20)
      (horiz
       (mbutton "pf-grpmov-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "group-move")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -449,6 +485,7 @@
         "gp-mov-leader" "single"
         (db-mongooses-by-pack) #t
         (lambda (individual)
+          (set-current! 'entity-type "group-move")
           (entity-set-value! "id-leader" "varchar" (ktv-get individual "unique_id"))
           (list)))
        )))
@@ -465,11 +502,13 @@
      (mtitle "title" "Make a note")
      (edit-text (make-id "note-text") "" 30 "text" fillwrap
                 (lambda (v)
+                  (set-current! 'entity-type "note")
                   (entity-set-value! "text" "varchar" v)
                   '()))
      (horiz
       (mbutton "note-done" "Done"
                (lambda ()
+                 (set-current! 'entity-type "note")
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
@@ -503,18 +542,69 @@
      (mtitle "title" "Start")
      (horiz
       (mtoggle-button "gc-start-main-obs" "I'm the main observer"
-                      (lambda (v) (entity-update-single-value!
-                                   (ktv "main-observer" "varchar" v)) '()))
+                      (lambda (v)
+                        (set-current! 'entity-type "group-comp")
+                        (entity-update-single-value!
+                         (ktv "main-observer" "varchar" v)) '()))
       (vert
        (mtext "" "Code")
        (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
-                  (lambda (v) (entity-update-values!
-                               (ktv "group-comp-code" "varchar" v)) '()))))
-     (build-grid-selector "gc-start-present" "toggle" "Who's present?")
-     (next-button "gc-start-" "Go to weighing, have you finished here?" "gc-start" "gc-weights"
+                  (lambda (v)
+                    (set-current! 'entity-type "group-comp")
+                    (entity-update-values!
+                     (ktv "group-comp-code" "varchar" v)) '()))))
+
+     (mtitle "title" "Weights")
+     (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
+     (spacer 20)
+     (horiz
+      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
+                 (lambda (v)
+                   (set-current! 'entity-type "group-comp-weight")
+                   (entity-update-single-value! (ktv "weight" "real" (string->number v)))
+                   '()))
+      (mtoggle-button "gc-weigh-accurate" "Accurate?"
+                      (lambda (v)
+                        (set-current! 'entity-type "group-comp-weight")
+                        (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
+                        '()))
+      (mtoggle-button "gc-weigh-present" "Present but not weighed"
+                      (lambda (v)
+                        (set-current! 'entity-type "group-comp-weight")
+                        (entity-update-single-value! (ktv "present" "int" (if v 1 0)))
+                        '()))
+      )
+
+
+     (next-button "gc-start-" "Go to pregnant females, have you finished here?" "gc-start" "gc-preg"
                   (lambda ()
-                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
+                    (set-current! 'entity-type "group-comp")
                     (entity-update-values!)
+
+                    ;; reset main entity
+                    (entity-init! db "stream" "group-comp"
+                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+
+                    (entity-set-value!
+                     "present" "varchar"
+                     (dbg (assemble-array-with-ids
+                           (foldl
+                            (lambda (m r)
+                              (if (or (> (ktv-get m "weight") 0)
+                                      (not (eqv? (ktv-get m "present") 0)))
+                                  (cons (ktv-get m "id-mongoose") r) r))
+                            '()
+                            (db-filter
+                             db "stream" "group-comp-weight"
+                             (list (list "parent" "varchar" "=" (get-current 'group-composition-id #f)))))
+                           )))
+
+                    (set-current!
+                     'gc-not-present
+                     (invert-mongoose-selection
+                      (string-split-simple
+                       (entity-get-value "present") #\,)))
+
                     '()))
      ))
 
@@ -523,7 +613,7 @@
    (lambda (fragment arg)
      ;; in case we come back from weights...
      (msg "frag start:" (get-current 'group-composition-id #f))
-     (entity-init! db "stream" "group-composition"
+     (entity-init! db "stream" "group-comp"
                    (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
 
      (append
@@ -534,83 +624,91 @@
                       (entity-get-value "main-observer"))
 
        (populate-grid-selector
-        "gc-start-present" "toggle"
-        (db-mongooses-by-pack) #f
-        (lambda (individuals)
-          (entity-set-value! "present" "varchar" (assemble-array individuals))
-          (list))
-        ;; need to invert, but not () if there are none set yet...
-        (let ((r (get-current 'gc-not-present #f)))
-          (if (not r) '() (invert-mongoose-selection r)))))
-      (update-grid-selector-checked "gc-start-present" "present"))
-     )
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '()))
-
-  (fragment
-   "gc-weights"
-   (linear-layout
-    (make-id "") 'vertical fill gc-col
-    (list
-     (mtitle "title" "Weights")
-     (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
-     (spacer 20)
-     (horiz
-      (edit-text (make-id "gc-weigh-weight") "" 30 "numeric" fillwrap
-                 (lambda (v)
-                   (entity-update-single-value! (ktv "weight" "real" (string->number v)))
-                   '()))
-      (mtoggle-button "gc-weigh-accurate" "Accurate?"
-                      (lambda (v)
-                        (entity-update-single-value! (ktv "accurate" "int" (if v 1 0)))
-                        '())))
-     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
-                  (lambda ()
-                    ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
-                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
-                    '()))))
-
-   (lambda (fragment arg)
-     (activity-layout fragment))
-   (lambda (fragment arg)
-     (entity-init! db "stream" "weight" '())
-     (append
-      (list
-       (populate-grid-selector
         "gc-weigh-choose" "single"
         (db-mongooses-by-pack) #f
         (lambda (individual)
           ;; search for a weight for this individual...
           (let ((s (db-filter
-                    db "stream" "weight"
+                    db "stream" "group-comp-weight"
                     (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                           (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
             (if (null? s)
                 ;; not there, make a new one
-                (entity-init&save! db "stream" "weight"
+                (entity-init&save! db "stream" "group-comp-weight"
                                    (list
                                     (ktv "name" "varchar" "")
                                     (ktv "weight" "real" 0)
                                     (ktv "accurate" "int" 0)
+                                    (ktv "present" "int" 0)
                                     (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                     (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
-                (entity-init! db "stream" "weight" (car s)))
+                (entity-init! db "stream" "group-comp-weight" (car s)))
             (append
              (list
               (update-widget 'edit-text (get-id "gc-weigh-weight") 'text
                              (if (null? s) "" (ktv-get (car s) "weight")))
               (update-widget 'toggle-button (get-id "gc-weigh-accurate") 'checked
-                             (if (null? s) 0 (ktv-get (car s) "accurate"))))
-             (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0)))))))
-      (update-grid-selector-enabled "gc-weigh-choose" (get-current 'gc-not-present '()))
-      (update-selector-colours "gc-weigh-choose" "weight" (list "weight" "real" "!=" 0))))
+                             (if (null? s) 0 (ktv-get (car s) "accurate")))
+              (update-widget 'toggle-button (get-id "gc-weigh-present") 'checked
+                             (if (null? s) 0 (ktv-get (car s) "present"))))
+             (update-selector-colours2-or "gc-weigh-choose" "group-comp-weight"
+                                          (list
+                                           (list "weight" "real" "!=" 0)
+                                           (list "present" "int" "!=" 0)))))))
+       )
+      (update-selector-colours2-or "gc-weigh-choose" "group-comp-weight"
+                                   (list
+                                    (list "weight" "real" "!=" 0)
+                                    (list "present" "int" "!=" 0)))
+
+      ))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '()))
+
+;  (fragment
+;   "gc-weights"
+;   (linear-layout
+;    (make-id "") 'vertical fill gc-col
+;    (list
+;     (build-grid-selector "gc-start-present" "toggle" "Who's present?")
+;
+;     (next-button "gc-weigh-" "Go to pregnancies, have you finished here?" "gc-start" "gc-preg"
+;                  (lambda ()
+;                    (set-current! 'gc-not-present (invert-mongoose-selection (string-split-simple (entity-get-value "present") #\,)))
+;                    '()))))
+;
+;   (lambda (fragment arg)
+;     (activity-layout fragment))
+;   (lambda (fragment arg)
+;     (entity-init! db "stream" "group-comp-weight" '())
+;     (append
+;      (list
+;
+;       (populate-grid-selector
+;        "gc-start-present" "toggle"
+;        (db-mongooses-by-pack) #f
+;        (lambda (individuals)
+;          (entity-set-value! "present" "varchar" (assemble-array individuals))
+;          (list))
+;        ;; need to invert, but not () if there are none set yet...
+;        (let ((r (get-current 'gc-not-present #f)))
+;          (if (not r) '() (invert-mongoose-selection r))))
+;       )
+;      (update-grid-selector-checked "gc-start-present" "present")
+;      ))
+;   (lambda (fragment) '())
+;   (lambda (fragment) '())
+;   (lambda (fragment) '())
+;   (lambda (fragment) '()))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+
+
 
   (fragment
    "gc-preg"
@@ -619,7 +717,7 @@
     (list
      (mtitle "title" "Pregnant females")
      (build-grid-selector "gc-preg-choose" "toggle" "Choose")
-     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-weights" "gc-pup-assoc"
+     (next-button "gc-preg-" "Going to pup associations, have you finished here?" "gc-start" "gc-pup-assoc"
                   (lambda () '()))))
 
    (lambda (fragment arg)
@@ -631,6 +729,7 @@
         "gc-preg-choose" "toggle"
         (db-mongooses-by-pack-female) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "pregnant" "varchar" (assemble-array individuals)))
           (list)))
        )
@@ -654,28 +753,28 @@
        (mtext "" "Strength")
        (mspinner "gc-pup-strength" list-strength
                  (lambda (v)
-                   (msg "updating stren" (spinner-choice list-strength v))
+                   (set-current! 'entity-type "group-comp-pup-assoc")
                    (entity-update-single-value! (ktv "strength" "varchar" (spinner-choice list-strength v)))
                    '())))
       (vert
        (mtext "" "Accuracy")
        (mspinner "gc-pup-accuracy" list-strength
                  (lambda (v)
-                   (msg "updating acc")
+                   (set-current! 'entity-type "group-comp-pup-assoc")
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
                    '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
      (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
                   (lambda ()
                     ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
+                    (entity-init! db "stream" "group-comp"
                                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
                     '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-init! db "stream" "pup-assoc" '())
+     (entity-init! db "stream" "group-comp-pup-assoc" '())
      (append
       (list
        (populate-grid-selector
@@ -697,13 +796,13 @@
              (lambda (escort-individual)
                (msg "escort-individual clicked")
                (let ((s (db-filter
-                         db "stream" "pup-assoc"
+                         db "stream" "group-comp-pup-assoc"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                                (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
-                     (entity-init&save! db "stream" "pup-assoc"
+                     (entity-init&save! db "stream" "group-comp-pup-assoc"
                                         (list
                                          (ktv "name" "varchar" "")
                                          (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
@@ -711,14 +810,14 @@
                                          (ktv "strength" "varchar" "none")
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                          (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
-                     (entity-init! db "stream" "pup-assoc" (car s)))
+                     (entity-init! db "stream" "group-comp-pup-assoc" (car s)))
                  (append
                   (list
                    (update-widget 'spinner (get-id "gc-pup-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
                    (update-widget 'spinner (get-id "gc-pup-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate"))))
 
                   (update-selector-colours2
-                   "gc-pup-escort" "pup-assoc"
+                   "gc-pup-escort" "group-comp-pup-assoc"
                    (list
                     (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
                     (list "strength" "varchar" "!=" "none")
@@ -726,17 +825,17 @@
 
                  ))))
            (update-selector-colours2
-            "gc-pup-escort" "pup-assoc"
+            "gc-pup-escort" "group-comp-pup-assoc"
             (list
              (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
              (list "strength" "varchar" "!=" "none")
              (list "accurate" "varchar" "!=" "none")))
-           (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+           (update-selector-colours3 "gc-pup-choose" "group-comp-pup-assoc")
            (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-not-present '()))
            ))))
       (update-grid-selector-enabled "gc-pup-escort" (get-current 'gc-not-present '()))
       (update-grid-selector-enabled "gc-pup-choose" (get-current 'gc-not-present '()))
-      (update-selector-colours3 "gc-pup-choose" "pup-assoc")
+      (update-selector-colours3 "gc-pup-choose" "group-comp-pup-assoc")
       ))
 
    (lambda (fragment) '())
@@ -758,19 +857,20 @@
        (mtext "" "Strength")
        (mspinner "gc-oestrus-strength" list-strength
                  (lambda (v)
-                   (msg "updating stren" (spinner-choice list-strength v))
+                   (set-current! 'entity-type "group-comp-mate-guard")
                    (entity-update-single-value! (ktv "strength" "varchar" (spinner-choice list-strength v)))
                    '())))
       (vert
        (mtext "" "Accuracy")
        (mspinner "gc-oestrus-accuracy" list-strength
                  (lambda (v)
-                   (msg "updating acc")
+                   (set-current! 'entity-type "group-comp-mate-guard")
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
                    '())))
 
       (mtoggle-button "gc-oestrus-pester" "Pestering?"
                       (lambda (v)
+                        (set-current! 'entity-type "group-comp-mate-guard")
                         (entity-update-single-value! (ktv "pester" "int" (if v 1 0)))
                         '()))
 
@@ -779,13 +879,13 @@
      (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
                   (lambda ()
                     ;; reset main entity
-                    (entity-init! db "stream" "group-composition"
+                    (entity-init! db "stream" "group-comp"
                                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
                     '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
-     (entity-init! db "stream" "mate-guard" '())
+     (entity-init! db "stream" "group-comp-mate-guard" '())
      (append
       (list
        (populate-grid-selector
@@ -803,16 +903,16 @@
            (list
             (populate-grid-selector
              "gc-oestrus-guard" "single"
-             (db-mongooses-by-pack-adults) #t
+             (db-mongooses-by-pack-male) #t
              (lambda (escort-individual)
                (let ((s (db-filter
-                         db "stream" "mate-guard"
+                         db "stream" "group-comp-mate-guard"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
                                (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
-                     (entity-init&save! db "stream" "mate-guard"
+                     (entity-init&save! db "stream" "group-comp-mate-guard"
                                         (list
                                          (ktv "name" "varchar" "")
                                          (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
@@ -821,32 +921,36 @@
                                          (ktv "pester" "int" 0)
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
                                          (ktv "id-mongoose" "varchar" (ktv-get pup-individual "unique_id"))))
-                     (entity-init! db "stream" "mate-guard" (car s)))
+                     (entity-init! db "stream" "group-comp-mate-guard" (car s)))
                  (append
                   (list
                    (update-widget 'spinner (get-id "gc-oestrus-strength") 'selection (spinner-index list-strength (entity-get-value "strength")))
                    (update-widget 'spinner (get-id "gc-oestrus-accuracy") 'selection (spinner-index list-strength (entity-get-value "accurate")))
                    (update-widget 'toggle-button (get-id "gc-oestrus-pester") 'checked (entity-get-value "pester")))
 
-                  (update-selector-colours2
-                   "gc-oestrus-guard" "mate-guard"
+                  (update-selector-colours3-or
+                   "gc-oestrus-guard" "group-comp-mate-guard"
+                   (ktv-get pup-individual "unique_id")
                    (list
-                    (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
                     (list "strength" "varchar" "!=" "none")
-                    (list "accurate" "varchar" "!=" "none"))))
+                    (list "accurate" "varchar" "!=" "none")
+                    (list "pester" "int" "!=" 0)
+                    )))
                  ))))
-           (update-selector-colours2
-            "gc-oestrus-guard" "mate-guard"
+           (update-selector-colours3-or
+            "gc-oestrus-guard" "group-comp-mate-guard"
+            (ktv-get pup-individual "unique_id")
             (list
-             (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
              (list "strength" "varchar" "!=" "none")
-             (list "accurate" "varchar" "!=" "none")))
-           (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+             (list "accurate" "varchar" "!=" "none")
+             (list "pester" "int" "!=" 0)
+             ))
+           (update-selector-colours3 "gc-oestrus-female" "group-comp-mate-guard")
            (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-not-present '()))
            ))))
       (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-not-present '()))
       (update-grid-selector-enabled "gc-oestrus-female" (get-current 'gc-not-present '()))
-      (update-selector-colours3 "gc-oestrus-female" "mate-guard")
+      (update-selector-colours3 "gc-oestrus-female" "group-comp-mate-guard")
       ))
 
    (lambda (fragment) '())
@@ -875,6 +979,7 @@
         "gc-baby-seen" "toggle"
         (db-mongooses-by-pack-adults) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "baby-seen" "varchar" (assemble-array individuals)))
           (list)))
        )
@@ -885,6 +990,7 @@
         "gc-baby-byelim" "toggle"
         (db-mongooses-by-pack-adults) #f
         (lambda (individuals)
+          (set-current! 'entity-type "group-comp")
           (entity-update-single-value! (ktv "baby-byelim" "varchar" (assemble-array individuals)))
           (list)))
        )
@@ -1052,7 +1158,7 @@
                     (set-current!
                      'group-composition-id
                      (entity-init&save!
-                      db "stream" "group-composition"
+                      db "stream" "group-comp"
                       (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                             (ktv "group-comp-code" "varchar" "")))))
               (list
@@ -1069,7 +1175,7 @@
      (list
       (populate-grid-selector
        "choose-obs-pack-selector" "single"
-       (db-all-sort-normal db "sync" "pack") #f
+       (db-mongoose-packs) #f
        (lambda (pack)
          (when (and
                 (get-current 'pack #f) ;; if we have a current pack...
@@ -1289,7 +1395,7 @@
    (lambda (activity arg)
      (list
       (populate-grid-selector
-       "manage-packs-list" "button" (db-all-sort-normal db "sync" "pack") #f
+       "manage-packs-list" "button" (db-mongoose-packs) #f
        (lambda (pack)
          (set-current! 'pack pack)
          (list (start-activity "manage-individual" 2 ""))))
@@ -1345,7 +1451,7 @@
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
-       (db-mongooses-by-pack-ignore-delete) #f
+       (db-mongooses-by-pack) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
@@ -1409,7 +1515,7 @@
      (entity-init! db "sync" "mongoose" '())
      ;; make sure all fields exist
      (entity-set-value! "name" "varchar" "noname")
-     (entity-set-value! "gender" "varchar" "Female")
+     (entity-set-value! "gender" "varchar" "female")
      (entity-set-value! "dob" "varchar" "00-00-00")
      (entity-set-value! "litter-code" "varchar" "")
      (entity-set-value! "chip-code" "varchar" "")
@@ -1553,23 +1659,34 @@
                (lambda ()
                  (debug! (string-append "Downloading whole db"))
                  (append
-                 (foldl
-                  (lambda (e r)
-                    (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
-                    (cons
-                     (http-download
-                      (string-append "getting-" e)
-                      (string-append url "fn=entity-csv&table=stream&type=" e)
-                      (string-append "/sdcard/mongoose/" e ".csv"))
-                     r))
+                  (foldl
+                   (lambda (e r)
+                     (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
+                     (append r
+                             (list
+                              (http-download
+                               (string-append "getting-" e)
+                               (string-append url "fn=entity-csv&table=stream&type=" e)
+                               (string-append "/sdcard/mongoose/" e ".csv"))
+                              )))
                   (list
                    (http-download
                     "getting-db"
                     "http://192.168.2.1:8888/mongoose.db"
                     (string-append "/sdcard/mongoose/mongoose.db"))
+                   ;; save paranoid backup
+                   (http-download
+                    "getting-backup-db"
+                    "http://192.168.2.1:8888/mongoose.db"
+                    (string-append "/sdcard/mongoose/backup/mongoose-" (date-time->string (date-time)) ".db"))
+                   (http-download
+                    "getting-log"
+                    "http://192.168.2.1:8888/log.txt"
+                    (string-append "/sdcard/mongoose/server-log.txt"))
+
                    )
                   entity-types)
-                 (list))))
+                  (list))))
      (mbutton2 "sync-export" "Email"
                (lambda ()
                  (debug! "Sending mail")
@@ -1577,15 +1694,14 @@
                   (send-mail
                    ""
                    "From Mongoose2000" "Please find attached your mongoose data"
-                   (cons
-                    "/sdcard/mongoose/mongoose.db"
+                   (append
+                    (list
+                     "/sdcard/mongoose/mongoose.db"
+                     "/sdcard/mongoose/server-log.txt")
                     (map
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
                      entity-types))))))
-     (mbutton2 "sync-export2" "Export"
-               (lambda ()
-                 (list (start-activity "export" 0 ""))))
      (mbutton2 "sync-export" "Email local data"
                (lambda ()
                  (debug! "Sending mail")
@@ -1622,91 +1738,13 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-  (let ((update-list
-         (lambda ()
-           (list
-            (update-widget
-             'linear-layout (get-id "focal-list") 'contents
-             (map
-              (lambda (f)
-                (mbutton
-                 (string-append "export-" (ktv-get f "unique_id"))
-                 (ktv-get f "time")
-                 (lambda ()
-                   (save-data "pup-focal-export.csv" (export-csv main-db "stream" f pup-focal-export))
-                   (list
-                    (send-mail
-                     ""
-                     "From Mongoose2000" "Please find attached your mongoose data"
-                     (list "/sdcard/mongoose/pup-focal-export.csv"))))))
-              (db-all-in-date-range
-               main-db "stream" "pup-focal"
-               (get-current 'from-date (date->string (date-minus-months (date-time) 6)))
-               (get-current 'to-date (date->string (date-time))))))))))
-  (activity
-   "export"
-   (vert
-    (text-view (make-id "title") "Export" 40 fillwrap)
-    (text-view (make-id "title") "Date range" 20 fillwrap)
-
-    (horiz
-     (button (make-id "date-from") "From" 30 fillwrap
-             (lambda ()
-               (list (date-picker-dialog
-                      "export-from-date"
-                      (lambda (day month year)
-                        (let ((datestring (date->string (list year (+ month 1) day))))
-                          (msg "setting current from to" datestring)
-                          (set-current! 'from-date datestring)
-                          (update-list)))))))
-
-     (button (make-id "date-to") "To" 30 fillwrap
-             (lambda ()
-               (list (date-picker-dialog
-                      "export-to-date"
-                      (lambda (day month year)
-                        (let ((datestring (date->string (list year (+ month 1) day))))
-                          (msg "setting current to to" datestring)
-                          (set-current! 'to-date datestring)
-                          (update-list))))))))
-
-    (text-view (make-id "title") "Focals" 40 fillwrap)
-
-    (linear-layout
-     (make-id "focal-list")
-     'vertical
-     (layout 'fill-parent 'wrap-content 1 'left 0)
-     (list 0 0 0 0)
-     (list))
-    )
-   (lambda (activity arg)
-     (activity-layout activity))
-   (lambda (activity arg)
-     ;; open the main database
-     (db-close main-db)
-     (db-open main-db)
-     (msg "opened main database")
-     (msg (db-status db))
-     ;;(msg (db-select db "select * from stream_entity where entity_type = 'pup-focal';"))
-     ;;(msg (all-entities-in-date-range
-     ;;      db "stream" "pup-focal"
-     ;;      (date->string (date-minus-months (date-time) 3))
-     ;;      (date->string (date-time))
-     ;;      ))
-     (update-list))
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity) '())
-   (lambda (activity requestcode resultcode) '())))
-
 
   (activity
    "review"
    (vert
     (text-view 0 "Review changes" 40 fillwrap)
     (scroll-view-vert
-     0 (layout 'fill-parent 'wrap-content 1 'left 0)
+     0 (layout 'fill-parent 'fill-parent 1 'left 0)
      (list
       (linear-layout
        (make-id "review-list")
@@ -1714,7 +1752,8 @@
        (layout 'fill-parent 'fill-parent 1 'left 0)
        (list 0 0 0 0)
        (list))
-      )))
+      ))
+    (mbutton2 "review-back" "Back" (lambda () (list (finish-activity 1)))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -1724,6 +1763,32 @@
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
+
+  (activity
+   "review-collection"
+   (vert
+    (text-view 0 "Review changes" 40 fillwrap)
+    (scroll-view-vert
+     0 (layout 'fill-parent 'fill-parent 1 'left 0)
+     (list
+      (linear-layout
+       (make-id "review-list")
+       'vertical
+       (layout 'fill-parent 'fill-parent 1 'left 0)
+       (list 0 0 0 0)
+       (list))
+      ))
+    (mbutton2 "review-back" "Back" (lambda () (list (finish-activity 1)))))
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (review-update-collection (get-current 'review-collection #f)))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
+
 
   (activity
    "review-item"

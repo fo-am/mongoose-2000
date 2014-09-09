@@ -176,6 +176,10 @@
    db (string-append "select version from " table "_entity where unique_id = ?")
    unique-id))
 
+(define (entity-type-from-unique db table unique-id)
+  (select-first
+   db (string-append "select entity_type from " table "_entity where unique_id = ?")
+   unique-id))
 
 (define (get-unique-id db table entity-id)
   (select-first

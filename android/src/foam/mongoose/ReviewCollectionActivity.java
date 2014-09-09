@@ -19,16 +19,12 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
 
-public class PupFocalActivity extends foam.starwisp.StarwispActivity
+public class ReviewCollectionActivity extends foam.starwisp.StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "pup-focal";
+        m_Name = "review-collection";
         super.onCreate(savedInstanceState);
-    }
-
-    @Override
-    public void onBackPressed() {
     }
 }

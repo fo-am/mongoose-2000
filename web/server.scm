@@ -33,7 +33,7 @@
          "../eavdb/eavdb.ss"
          "scripts/txt.ss"
          "scripts/server-sync.ss"
-;         "scripts/input.ss"
+         "scripts/input.ss"
 	 )
 
 ; a utility to change the process owner,
@@ -45,24 +45,12 @@
 (define db (db-open db-name setup))
 (open-log "log.txt")
 
-;(write-db db "sync" "/home/dave/code/mongoose-web/web/input.csv")
+;(write-db db "sync" "/var/www/mongoose-web/web/input.csv")
+
 
 ;(msg (csv db "sync" "individual"))
 
 (define sema (make-semaphore 1))
-
-(define (syncro fn)
-  (fn))
-
-;  (msg "s-start")
-;  (if (semaphore-try-wait? sema)
-;      (let ((r (fn)))
-;	(msg "s-end")
-;	(semaphore-post sema)
-;	r)
- ;     (begin
-;	(msg "couldn't get lock")
-;	(pluto-response (scheme->txt '("fail"))))))
 
 (define (syncro-new fn)
    (msg "s-start")
@@ -71,6 +59,9 @@
      (msg "s-end")
      (semaphore-post sema)
      r))
+
+(define (syncro fn)
+  (fn))
 
 (define registered-requests
   (list
@@ -157,7 +148,7 @@
       (syncro
        (lambda ()
 	 (msg "entity-csv")
-	 (let ((r (csv db table type)))
+	 (let ((r (csv-pretty db table type)))
 	   (msg "--------------------------------------- csv request for" type "[" r "]")
 	   (pluto-response
 	    r))))))

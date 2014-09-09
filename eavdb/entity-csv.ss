@@ -21,9 +21,84 @@
  "ktv.ss"
  "ktv-list.ss"
  "entity-values.ss"
- "entity-get.ss")
+ "entity-get.ss"
+ "eavdb.ss")
 
 (provide (all-defined-out))
+
+;; prettifications stuff - also used for review on the app
+
+(define (string-remove-whitespace str)
+  (define (_ i)
+    (cond
+     ((>= i (string-length str)) "")
+     ((char-whitespace? (string-ref str i))
+      (_ (+ i 1)))
+     (else (string-append (string (string-ref str i))
+                          (_ (+ i 1))))))
+  (_ 0))
+
+(define (ktv-key-is-id? ktv)
+  (or
+   (equal? (ktv-key ktv) "pack")
+   (and (equal? (ktv-key ktv) "present")
+        (equal? (ktv-type ktv) "varchar"))
+   (equal? (ktv-key ktv) "pregnant")
+   (equal? (ktv-key ktv) "baby-seen")
+   (equal? (ktv-key ktv) "baby-byelim")
+   (equal? (substring (ktv-key ktv) 0 3) "id-")))
+
+;; search for a comma in a list of ids
+(define (ktv-value-is-list? ktv)
+  (foldl
+   (lambda (c r)
+     (if (or r (eqv? c #\,)) #t r))
+   #f
+   (string->list (ktv-value ktv))))
+
+(define (uid->name db uid)
+  (let* ((entity-id (entity-id-from-unique db "sync" uid)))
+    (if (null? entity-id)
+	uid
+	(ktv-get (get-entity-only db "sync" entity-id
+				  (list (list "name" "varchar")))
+		 "name"))))
+
+(define (uid-list->names db str)
+  (let ((ids (string-split str (list #\,))))
+    (foldl
+     (lambda (id r)
+       (if (equal? r "")
+	   (uid->name db id)
+	   (string-append r ", " (uid->name db id))))
+     ""
+     ids)))
+
+(define (convert-id db name)
+  (let ((name (string-remove-whitespace name)))
+    ;; search for unique id first
+    (if (entity-exists? db "sync" name)
+        name
+        (let ((new-entity (db-filter-only
+                           db "sync" "*"
+                           (list (list "name" "varchar" "=" name))
+                           (list))))
+          (if (null? new-entity)
+              #f
+              (ktv-get (car new-entity) "unique_id"))))))
+
+(define (convert-id-list db str)
+  (let ((names (string-split str (list #\,))))
+    (foldl
+     (lambda (name r)
+       (if (string? r)
+           (let ((id (convert-id db name)))
+             (if id
+                 (if (equal? r "") id (string-append r "," id))
+                 #f))
+           #f))
+     "" names)))
+
 
 (define (csv-titles db table entity-type)
   (foldl
@@ -33,63 +108,14 @@
    "id "
    (get-attribute-ids/types db table entity-type)))
 
-(define (csv-old db table entity-type)
-  (let ((s (db-select
-         db (string-append
-             "select entity_id, unique_id from "
-             table "_entity where entity_type = ?") entity-type)))
-    (msg "CSV ------------------------------>" entity-type)
-    (msg s)
-    (if (null? s)
-	;; nothing here, just return titles
-	(csv-titles db table entity-type)
-	(foldl
-	 (lambda (res r)
-	   (msg res)
-	   (let ((entity (get-entity-for-csv db table (vector-ref res 0))))
-	     (string-append
-	      r "\n"
-	      (foldl
-	       (lambda (ktv r)
-		 (msg ktv)
-		 (cond
-		  ((equal? (ktv-key ktv) "unique_id") r)
-		  ((null? (ktv-value ktv))
-		   (msg "value not found in csv for " (ktv-key ktv))
-		   (string-append r ", NULL"))
-		  ;; dereferences lists of ids
-		  ((and
-		    (> (string-length (ktv-key ktv)) 8)
-		    (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
-		   (let ((ids (string-split (ktv-value ktv) '(#\,))))
-		     (if (null? ids)
-			 (string-append r ", \"\"")
-			 (string-append r ", \"" (get-entity-names db "sync"  "\"")))))
-		  ;; look for unique ids and dereference them
-		  ((and
-		    (> (string-length (ktv-key ktv)) 3)
-		    (equal? (substring (ktv-key ktv) 0 3) "id-")
-		    (not (equal? (ktv-value ktv) "none")))
-		   (msg "looking up name")
-		   (msg ktv)
-		   (let ((name (get-entity-name db "sync" (ktv-value ktv))))
-		     (if (null? name)
-			 "\"nobody\""
-			 (string-append r ", \"" name "\""))))
-		  (else
-		   (string-append r ", \"" (stringify-value-url ktv) "\""))))
-	       (vector-ref res 1) ;; unique_id
-	       entity))))
-	 (csv-titles db table entity-type)
-	 (cdr s)))))
 
+; basic csv
 (define (csv db table entity-type)
   (let ((s (db-select
          db (string-append
              "select entity_id, unique_id from "
              table "_entity where entity_type = ?") entity-type)))
     (msg "CSV ------------------------------>" entity-type)
-    (msg s)
     (if (null? s)
 	;; nothing here, just return titles
 	(csv-titles db table entity-type)
@@ -100,7 +126,6 @@
 	      r "\n"
 	      (foldl
 	       (lambda (ktv r)
-		 (msg ktv)
 		 (cond
 		  ((equal? (ktv-key ktv) "unique_id") r)
 		  ((null? (ktv-value ktv))
@@ -114,30 +139,47 @@
 	 (csv-titles db table entity-type)
 	 (cdr s)))))
 
-;; exporting human editable reports
-
-(define (deref-entity db entity)
-  (foldl
-   (lambda (ktv r)
-     (append
-      r
-      (list
-       (ktv-key ktv)
-       (cond
-        ;; dereferences lists of ids
-        ((and
-          (> (string-length (ktv-key ktv)) 8)
-          (equal? (substring (ktv-key ktv) 0 8) "id-list-"))
-         (get-entity-names db "sync" (string-split (ktv-value ktv) '(#\,))))
-        ;; look for unique ids and dereference them
-        ((and
-          (> (string-length (ktv-key ktv)) 3)
-          (equal? (substring (ktv-key ktv) 0 3) "id-"))
-         (get-entity-name db "sync" (ktv-value ktv)))
-        (else
-         (ktv-value ktv))))))
-   '()
-   entity))
+;; convert uids to names
+(define (csv-pretty db table entity-type)
+  (let ((s (db-select
+         db (string-append
+             "select entity_id, unique_id from "
+             table "_entity where entity_type = ?") entity-type)))
+    (msg "CSV ------------------------------>" entity-type)
+    (if (null? s)
+	;; nothing here, just return titles
+	(csv-titles db table entity-type)
+	(foldl
+	 (lambda (res r)
+	   (let ((entity (get-entity-for-csv db table (vector-ref res 0))))
+	     (string-append
+	      r "\n"
+	      (foldl
+	       (lambda (ktv r)
+		 (cond
+		  ((ktv-key-is-id? ktv)
+		   (msg "helllllo")
+		   (msg ktv)
+		   (msg (ktv-value-is-list? ktv))			      
+		   (let ((replacement
+			  (if (ktv-value-is-list? ktv)
+			      (string-append "\"" (uid-list->names db (ktv-value ktv)) "\"")
+			      (uid->name db (ktv-value ktv)))))
+		     (if replacement
+			 (string-append r ", \"" replacement "\"")
+			 ;; ditch the entity and return error
+			 (string-append r ", \"" (ktv-value ktv) "\""))))
+		  
+		  ((null? (ktv-value ktv))
+		   (msg "value not found in csv for " (ktv-key ktv))
+		   (string-append r ", NULL"))
+		  ;; dereferences lists of ids
+		  (else
+		   (string-append r ", \"" (stringify-value-url ktv) "\""))))
+	       (vector-ref res 1) ;; unique_id
+	       entity))))
+	 (csv-titles db table entity-type)
+	 (cdr s)))))
 
 
 (define (csv-convert col)
@@ -160,7 +202,7 @@
                      (string-append r ", " converted))))
              "" row)))
        (msg row-text)
-       (dbg (string-append r row-text "\n"))))
+       (string-append r row-text "\n")))
    "" l))
 
 
@@ -176,35 +218,3 @@
      (ktv-filter r key))
    ktv-list
    key-list))
-
-;; meant to be general, but made for pup focal reports
-;(define (export-csv db table parent-entity entity-types)
-;  (let* ((focal (get-entity db "sync" (get-entity-id db "sync" (ktv-get parent-entity "id-focal-subject"))))
-;         (pack (get-entity db "sync" (get-entity-id db "sync" (ktv-get focal "pack-id")))))
-;    (csvify
-;     (cons
-;      '("time" "user" "pack" "subject" "observation type" "key" "value" "key" "value")
-;      (sort
-;       (foldl
-;        (lambda (entity-type r)
-;          (append
-;           r (map
-;              (lambda (entity)
-;                (append
-;                 (list
-;                  (ktv-get entity "time")
-;                  (ktv-get entity "user")
-;                 (ktv-get pack "name")
-;                 (ktv-get focal "name")
-;                 entity-type)
-;                 (deref-entity 
-;		  db (ktv-filter-many
-;		      entity (list "user" "unique_id" "parent" "time")))))
-;              (db-all-with-parent
-;               db table entity-type
-;               (ktv-get parent-entity "unique_id")))))
-;        '()
-;        entity-types)
-;      (lambda (a b)
-;        (string<? (car a) (car b))))))))
-
