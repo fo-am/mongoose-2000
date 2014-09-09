@@ -27,4 +27,8 @@ public class PupFocalActivity extends foam.starwisp.StarwispActivity
         m_Name = "pup-focal";
         super.onCreate(savedInstanceState);
     }
+
+    @Override
+    public void onBackPressed() {
+    }
 }

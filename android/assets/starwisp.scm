@@ -937,12 +937,14 @@
                     (list "pester" "int" "!=" 0)
                     )))
                  ))))
-           (update-selector-colours2
+           (update-selector-colours3-or
             "gc-oestrus-guard" "group-comp-mate-guard"
+            (ktv-get pup-individual "unique_id")
             (list
-             (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))
              (list "strength" "varchar" "!=" "none")
-             (list "accurate" "varchar" "!=" "none")))
+             (list "accurate" "varchar" "!=" "none")
+             (list "pester" "int" "!=" 0)
+             ))
            (update-selector-colours3 "gc-oestrus-female" "group-comp-mate-guard")
            (update-grid-selector-enabled "gc-oestrus-guard" (get-current 'gc-not-present '()))
            ))))

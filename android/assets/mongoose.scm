@@ -32,6 +32,7 @@
    "group-comp-weight"
    "group-comp-pup-assoc"
    "group-comp-mate-guard"
+   "note"
    ))
 
 (define pup-focal-export
@@ -482,31 +483,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; review
 
-(define (ktv-key-is-id? ktv)
-  (or
-   (equal? (ktv-key ktv) "pack")
-   (equal? (ktv-key ktv) "present")
-   (equal? (substring (ktv-key ktv) 0 3) "id-")))
-
-;; search for a comma in a list of ids
-(define (ktv-value-is-list? ktv)
-  (foldl
-   (lambda (c r)
-     (if (or r (eqv? c #\,)) #t r))
-   #f
-   (string->list (ktv-value ktv))))
-
-(define (uid->name uid)
-  (let* ((entity-id (entity-id-from-unique db "sync" uid)))
-    (ktv-get (get-entity-only db "sync" entity-id
-                              (list (list "name" "varchar")))
-             "name")))
-
 (define (review-build-id ktv)
   (list (medit-text-value
          (string-append (ktv-value ktv) (ktv-key ktv))
          (ktv-key ktv)
-         (uid->name (ktv-value ktv)) "normal"
+         (uid->name db (ktv-value ktv)) "normal"
          (lambda (v)
            (entity-set-value! (ktv-key ktv) (ktv-type ktv) v)
            '()))))
@@ -519,8 +500,8 @@
            (foldl
             (lambda (id r)
               (if (equal? r "")
-                  (uid->name id)
-                  (string-append r ", " (uid->name id))))
+                  (uid->name db id)
+                  (string-append r ", " (uid->name db id))))
             ""
             ids)
            "normal"
@@ -528,43 +509,22 @@
              (entity-set-value! (ktv-key ktv) (ktv-type ktv) v)
              '())))))
 
-
-(define (convert-id name)
-  (let ((name (string-remove-whitespace name)))
-    ;; search for unique id first
-    (if (entity-exists? db "sync" name)
-        name
-        (let ((new-entity (db-filter-only
-                           db "sync" "*"
-                           (list (list "name" "varchar" "=" name))
-                           (list))))
-          (if (null? new-entity)
-              #f
-              (ktv-get (car new-entity) "unique_id"))))))
-
-(define (convert-id-list str)
-  (let ((names (string-split-simple str #\,)))
-    (foldl
-     (lambda (name r)
-       (if (string? r)
-           (let ((id (convert-id name)))
-             (if id
-                 (if (equal? r "") id (string-append r "," id))
-                 #f))
-           #f))
-     "" names)))
-
 ;; replace entity with names -> uids, or name of not found
 (define (review-validate-contents uid entity)
+  (msg "validate....")
   (foldl
    (lambda (ktv r)
+     (msg ktv)
      (cond
       ((string? r) r) ;; we have already found an error
       ((ktv-key-is-id? ktv)
+       (msg "it's an id...")
+       (msg "is list=" (ktv-value-is-list? ktv))
        (let ((replacement
               (if (ktv-value-is-list? ktv)
-                  (convert-id-list (ktv-value ktv))
-                  (convert-id (ktv-value ktv)))))
+                  (convert-id-list db (ktv-value ktv))
+                  (convert-id db (ktv-value ktv)))))
+         (msg replacement)
          (if replacement
              (cons (list (ktv-key ktv) (ktv-type ktv) replacement) r)
              ;; ditch the entity and return error
