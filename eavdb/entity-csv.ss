@@ -158,12 +158,9 @@
 	       (lambda (ktv r)
 		 (cond
 		  ((ktv-key-is-id? ktv)
-		   (msg "helllllo")
-		   (msg ktv)
-		   (msg (ktv-value-is-list? ktv))			      
 		   (let ((replacement
 			  (if (ktv-value-is-list? ktv)
-			      (string-append "\"" (uid-list->names db (ktv-value ktv)) "\"")
+			      (uid-list->names db (ktv-value ktv))
 			      (uid->name db (ktv-value ktv)))))
 		     (if replacement
 			 (string-append r ", \"" replacement "\"")
