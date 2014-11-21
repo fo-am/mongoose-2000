@@ -627,7 +627,18 @@
            (cons
             (mbutton
              (string-append "review-" uid)
-             (string-append type (if time (string-append "-" time) ""))
+
+             (string-append type
+                            (cond
+                             ((equal? type "pup-focal")
+                              (string-append
+                               " on " (uid->name db (ktv-get entity "id-focal-subject"))))
+                             ((equal? type "group-comp")
+                              (string-append
+                               " on pack " (uid->name db (ktv-get entity "pack"))))
+                             (else ""))
+                            (if time (string-append " at " time) "") )
+
              (lambda ()
                (set-current! 'review-collection uid)
                (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
@@ -640,7 +651,7 @@
            (cons
             (mbutton
              (string-append "review-" uid)
-             (string-append type (if time (string-append "-" time) ""))
+             (string-append type (if time (string-append "-" time) "") " ")
              (lambda ()
                (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
                (list (start-activity "review-item" 0 ""))))
@@ -665,7 +676,27 @@
               (uid (list-ref data 1)))
          (mbutton
           (string-append "review-" uid)
-          (string-append type (if time (string-append "-" time) ""))
+          (string-append type
+                         (cond
+                          ((equal? type "group-comp-pup-assoc")
+                           (string-append
+                            " between pup " (uid->name db (ktv-get entity "id-mongoose"))
+                            " and " (uid->name db (ktv-get entity "id-escort"))))
+                          ((equal? type "group-comp-mate-guard")
+                           (string-append
+                            " between female " (uid->name db (ktv-get entity "id-mongoose"))
+                            " and " (uid->name db (ktv-get entity "id-escort"))))
+                          ((equal? type "group-comp-weight")
+                           (string-append
+                            " for " (uid->name db (ktv-get entity "id-mongoose"))))
+                          ((equal? type "pup-focal")
+                           (string-append
+                            " on " (uid->name db (ktv-get entity "id-focal-subject"))))
+                          ((equal? type "group-comp")
+                           (string-append
+                            " on pack " (uid->name db (ktv-get entity "pack"))))
+                          (else ""))
+                         (if time (string-append " at " time) "") )
           (lambda ()
             (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
             (list (start-activity "review-item" 0 ""))))
@@ -729,6 +760,8 @@
               (lambda (v)
                 (cond
                  ((eqv? v 1)
+                  (set-current! 'parent-id #f)
+                  (set-current! 'pup-focal-id #f)
                   (list (finish-activity 1)))
                  (else
                   (set-current! 'timer-minutes 1)

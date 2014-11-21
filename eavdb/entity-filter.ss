@@ -94,7 +94,10 @@
      "left join " table "_value_int "
      "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' ")
     filter)
-   (if typed "where e.entity_type = ? and (d.value = 0 or d.value is NULL) order by n.value"
+   (if (not (equal? typed "*"))
+       (if (equal? typed "mongoose")
+           "where e.entity_type = ? order by substr(n.value,3)"
+           "where e.entity_type = ? order by n.value")
        "order by n.value")))
 
 (define (build-query-inc-deleted table filter)
@@ -119,7 +122,7 @@
    filter))
 
 (define (filter-entities db table type filter)
-  (let ((q (build-query table filter (not (equal? type "*")))))
+  (let ((q (build-query table filter type)))
     (let ((s (apply
               db-select
               (dbg (append
