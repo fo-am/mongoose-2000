@@ -96,8 +96,8 @@
     filter)
    (if (not (equal? typed "*"))
        (if (equal? typed "mongoose")
-           "where e.entity_type = ? order by substr(n.value,3)"
-           "where e.entity_type = ? order by n.value")
+           "where e.entity_type = ? and (d.value = 0 or d.value is NULL) order by substr(n.value,3)"
+           "where e.entity_type = ? and (d.value = 0 or d.value is NULL) order by n.value")
        "order by n.value")))
 
 (define (build-query-inc-deleted table filter)
