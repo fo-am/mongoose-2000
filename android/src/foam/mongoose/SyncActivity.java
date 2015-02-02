@@ -18,6 +18,8 @@ package foam.mongoose;
 import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
+import android.view.WindowManager;
+import android.view.WindowManager.LayoutParams;
 
 public class SyncActivity extends foam.starwisp.StarwispActivity
 {
@@ -26,5 +28,10 @@ public class SyncActivity extends foam.starwisp.StarwispActivity
     {
         m_Name = "sync";
         super.onCreate(savedInstanceState);
+
+        WindowManager.LayoutParams params = getWindow().getAttributes();
+        params.flags |= LayoutParams.FLAG_KEEP_SCREEN_ON;
+        getWindow().setAttributes(params);
+
     }
 }

@@ -1514,6 +1514,9 @@
     (text-view (make-id "new-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
+    (text-view (make-id "new-individual-collar-text") "Collar weight" 30 fillwrap)
+    (edit-text (make-id "new-individual-collar-weight") "" 30 "numeric" fillwrap
+               (lambda (v) (entity-set-value! "collar-weight" "real" (string->number v)) '()))
     (horiz
      (mbutton2 "new-individual-cancel" "Cancel"
                (lambda () (list (finish-activity 2))))
@@ -1533,6 +1536,7 @@
      (entity-set-value! "dob" "varchar" "00-00-00")
      (entity-set-value! "litter-code" "varchar" "")
      (entity-set-value! "chip-code" "varchar" "")
+     (entity-set-value! "collar-weight" "real" "")
      (list
       (update-widget 'text-view (get-id "new-individual-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))))
@@ -1579,6 +1583,9 @@
     (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
+    (text-view (make-id "update-individual-collar-text") "Collar weight" 30 fillwrap)
+    (edit-text (make-id "update-individual-collar-weight") "" 30 "numeric" fillwrap
+               (lambda (v) (entity-set-value! "collar-weight" "real" (string->number v)) '()))
     (spacer 10)
     (horiz
      (mtoggle-button2 "update-individual-delete" "Delete"
@@ -1614,6 +1621,8 @@
                        (ktv-get individual "litter-code"))
         (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
                        (ktv-get individual "chip-code"))
+        (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
+                       (let ((v (ktv-get individual "collar-weight"))) (if v v 0)))
 
         (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
                        (if (eqv? (ktv-get individual "deleted") 1) 1 0))
