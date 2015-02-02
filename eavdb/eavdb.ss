@@ -37,14 +37,7 @@
 
 
 (define (upgrade-table db name)
-  (db-exec db (string-append "alter table " name " add version integer"))
-  (db-exec db (string-append "create index if not exists index_" table "_entity on " table "_entity (unique_id)"))  
-  (db-exec db (string-append "create index if not exists index_" table "_attribute on " table "_attribute (entity_type)"))  
-  (db-exec db (string-append "create index if not exists index_" table "_value_varchar on " table "_value_varchar (entity_id,attribute_id)")) 
-  (db-exec db (string-append "create index if not exists index_" table "_value_int on " table "_value_int (entity_id,attribute_id)")) 
-  (db-exec db (string-append "create index if not exists index_" table "_value_real on " table "_value_real (entity_id,attribute_id)")) 
-  (db-exec db (string-append "create index if not exists index_" table "_value_file on " table "_value_file (entity_id,attribute_id)"))  
-  )
+  (db-exec db (string-append "alter table " name " add version integer")))
 
 
 ;; create eav tables (add types as required)
