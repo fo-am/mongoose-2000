@@ -89,7 +89,7 @@
                  "select e.entity_id, e.entity_type, e.unique_id, e.dirty, e.version from " table "_entity as e "
                  "left join stream_value_varchar "
                  "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' "
-                 "where e.dirty = 1 and p.value is NULL"))))
+                 "where e.dirty = 1 and p.value is NULL or p.value='not-set'"))))
     (if (null? de)
         '()
         (map

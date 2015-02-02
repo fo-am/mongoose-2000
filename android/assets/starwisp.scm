@@ -509,6 +509,11 @@
       (mbutton "note-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "note")
+                 ;; parent is the current pup focal or group comp, or nothing
+                 (let ((parent (get-current 'parent-id #f)))
+                   (if parent
+                       (entity-set-value! "parent" "varchar" parent)
+                       (entity-set-value! "parent" "varchar" "not-set")))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
@@ -994,7 +999,9 @@
           (entity-update-single-value! (ktv "baby-byelim" "varchar" (assemble-array individuals)))
           (list)))
        )
-      (update-grid-selector-enabled "gc-baby-byelim" (get-current 'gc-not-present '()))
+      (update-grid-selector-enabled "gc-baby-byelim"
+                                    (invert-mongoose-selection
+                                     (get-current 'gc-not-present '())))
       (update-grid-selector-checked "gc-baby-byelim" "baby-byelim")))
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -1011,6 +1018,7 @@
                   (lambda ()
                     ;; clean up...
                     (get-current 'gc-not-present '())
+                    (set-current! 'parent-id #f)
                     (set-current! 'group-composition-id #f)
                     (list (finish-activity 0))))))
    (lambda (fragment arg)
@@ -1160,7 +1168,9 @@
                      (entity-init&save!
                       db "stream" "group-comp"
                       (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
-                            (ktv "group-comp-code" "varchar" "")))))
+                            (ktv "group-comp-code" "varchar" ""))))
+                    (set-current! 'parent-id (get-current 'group-composition-id #f))
+                    )
               (list
                (start-activity "group-composition" 2 ""))))
             (list
@@ -1183,6 +1193,7 @@
                              (ktv-get (get-current 'pack '()) "unique_id"))))
                ;; need to clear the current group comp
                ;; id here if we are changing the pack
+               (set-current! 'parent-id #f)
                (set-current! 'group-composition-id #f))
          (set-current! 'pack pack)
          '()))))
@@ -1265,6 +1276,7 @@
                  (cond
                   ((current-exists? 'individual)
                    (set-current! 'pup-focal-id (entity-record-values!))
+                   (set-current! 'parent-id (get-current 'pup-focal-id #f))
                    (set-current! 'timer-minutes pf-length)
                    (set-current! 'timer-seconds 0)
                    (list
@@ -1332,6 +1344,8 @@
                           (lambda (v)
                             (cond
                              ((eqv? v 1)
+                              (set-current! 'parent-id #f)
+                              (set-current! 'pup-focal-id #f)
                               (list (finish-activity 1)))
                              (else
                               (list))))))))))
