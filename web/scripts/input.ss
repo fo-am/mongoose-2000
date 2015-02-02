@@ -74,8 +74,9 @@
 (define (insert-mongooses db table l)
   (map
    (lambda (i)
+     (msg (length i))
      (let ((pack (car (db-all-where db table "pack" (list "name" "varchar" (list-ref i 2)))))
-           (date (string-split (list-ref i 3) '(#\/))))
+           (date (string-split (list-ref i 3) '(#\-))))
        (msg i)
        (insert-entity db table "mongoose" "sys"
                       (list
@@ -83,7 +84,7 @@
                        (ktv "gender" "varchar"
                             (if (equal? (list-ref i 1) "F") "Female" "Male"))
                        (ktv "pack-id" "varchar" (ktv-get pack "unique_id"))
-                       (ktv "litter-code" "varchar" (if (eq? (length i) 5) (list-ref i 4) ""))
+                       (ktv "litter-code" "varchar" "")
                        (ktv "chip-code" "varchar" "")
                        (ktv "dob" "varchar" (string-append
                                              (list-ref date 2) "-"
@@ -107,5 +108,5 @@
 
 
 (define (write-db db table path)
-  (insert-packs db table (list "11" "14" "15" "17" "18" "1B" "1H" "2" "4B" "4E" "7A"))
+  (insert-packs db table (list "11" "14" "15" "17" "18" "19" "1B" "1H" "2" "21" "4B" "4E" "7A"))
   (insert-csv db table path))
