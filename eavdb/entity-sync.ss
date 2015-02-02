@@ -87,9 +87,13 @@
   (let ((de (db-select
              db (string-append
                  "select e.entity_id, e.entity_type, e.unique_id, e.dirty, e.version from " table "_entity as e "
-                 "left join stream_value_varchar "
+                 "left join " table "_value_varchar "
                  "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' "
-                 "where e.dirty = 1 and p.value is NULL or p.value='not-set'"))))
+                 "join " table "_value_int "
+                 "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' "
+                 "where e.dirty = 1 and p.value is NULL or p.value='not-set' "
+                 "and d.value = 0 "
+                 ))))
     (if (null? de)
         '()
         (map
@@ -106,9 +110,12 @@
   (let ((de (db-select
              db (string-append
                  "select e.entity_id, e.entity_type, e.unique_id, e.dirty, e.version from " table "_entity as e "
-                 "left join stream_value_varchar "
+                 "left join " table "_value_varchar "
                  "as p on p.entity_id = e.entity_id and p.attribute_id = 'parent' "
-                 "where e.dirty=1 and (p.value = ? or e.unique_id = ?);") parent parent)))
+                 "join " table "_value_int "
+                 "as d on d.entity_id = e.entity_id and d.attribute_id = 'deleted' "
+                 "where e.dirty=1 and (p.value = ? or e.unique_id = ?) and d.value=0;")
+             parent parent)))
     (if (null? de)
         '()
         (map

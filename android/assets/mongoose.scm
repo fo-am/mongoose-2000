@@ -569,7 +569,7 @@
                                    (if (number? (ktv-value ktv))
                                        (number->string (ktv-value ktv))
                                        (ktv-value ktv)) "numeric"
-                                   (lambda (v)
+                                       (lambda (v)
                                      (entity-set-value! (ktv-key ktv) (ktv-type ktv) v) '()))))
           (else (mtext "" (string-append (ktv-type ktv) " not handled")) '()))))
     '()
@@ -596,7 +596,20 @@
                       (lambda (v)
                         (cond
                          ((eqv? v 1) (list))
-                         (else (list)))))))))))))))
+                         (else (list)))))))))))
+     (mbutton (string-append uid "-delete") "Delete"
+              (lambda ()
+                (list
+                 (alert-dialog
+                  "mongoose-item-delete"
+                  "Are you sure you want to delete this?"
+                  (lambda (v)
+                    (cond
+                     ((eqv? v 1)
+                      (entity-set-value! "deleted" "int" 1)
+                      (entity-update-values!)
+                      (list (finish-activity 0)))
+                     (else (list))))))))))))
 
 
 (define (review-item-build)
