@@ -123,9 +123,14 @@ public class starwisp extends StarwispActivity
         int day = c.get(Calendar.DAY_OF_MONTH);
         int month = c.get(Calendar.MONTH)+1;
         int year = c.get(Calendar.YEAR);
+        int timezone_offset_mins = (c.get(Calendar.ZONE_OFFSET) + c.get(Calendar.DST_OFFSET)) / 60000;
 
         // pass in a bunch of useful stuff
-        m_Scheme.eval("(define dirname \"/sdcard/"+dirname+"\")(define date-day "+day+") (define date-month "+month+") (define date-year "+year+")");
+        m_Scheme.eval("(define dirname \"/sdcard/"+dirname+"\")"+
+                      "(define date-day "+day+")"+
+                      "(define date-month "+month+")"+
+                      "(define date-year "+year+")"+
+                      "(define timezone-offset-mins "+timezone_offset_mins+")");
 
         Log.i("starwisp","started, now running starwisp.scm...");
         m_Scheme.eval(m_Scheme.readRawTextFile(this, "starwisp.scm"));

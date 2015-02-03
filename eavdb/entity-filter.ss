@@ -125,11 +125,11 @@
   (let ((q (build-query table filter type)))
     (let ((s (apply
               db-select
-              (dbg (append
+              (append
                (list db q)
                (build-args filter)
-               (if (not (equal? type "*")) (list type) '()))))))
-    (msg (db-status db))
+               (if (not (equal? type "*")) (list type) '())))))
+      ;;(msg (db-status db))
       (if (null? s)
 	  '()
 	  (map
@@ -148,7 +148,7 @@
              (list db (build-query table filter (not (equal? type "*"))))
              (build-args filter)
              (if (equal? type "*") '() (list type))))))
-    (msg (db-status db))
+    ;;(msg (db-status db))
     (if (null? s)
         '()
         (map

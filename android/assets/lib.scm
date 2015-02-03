@@ -601,7 +601,8 @@
 (define (get-id name)
   (let ((r (id-map-get name)))
     (cond
-     ((zero? r) (msg "no id found for" name) 0)
+     ((zero? r) ;(msg "no id found for" name)
+      0)
      (else r))))
 
 (define (make-id name)

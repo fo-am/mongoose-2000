@@ -728,6 +728,10 @@
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
+     ;; in case we come back from pup assoc...
+     (entity-init! db "stream" "group-comp"
+                   (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+
      (append
       (list
        (populate-grid-selector

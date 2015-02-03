@@ -332,7 +332,7 @@
 
 (define (update-grid-selector-checked id items-id)
   (let ((items-str (entity-get-value items-id)))
-    (msg "selector-checked for" id items-id items-str)
+    ;;(msg "selector-checked for" id items-id items-str)
     (if items-str
         (map
          (lambda (item)
@@ -845,12 +845,10 @@
 
 ;; hack
 (define (update-selector-colours2-or id entity-type where)
-  (msg "----------------------------------------------**")
   (update-grid-selector-colours
    id "id-mongoose"
    (map
     (lambda (i)
-      (msg "found:" i)
       (get-entity db "stream" i))
     (let ((s (apply
               db-select

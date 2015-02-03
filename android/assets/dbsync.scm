@@ -129,7 +129,7 @@
 
 ;; used internally
 (define (entity-create! db table entity-type ktv-list)
-  (msg "creating:" entity-type ktv-list)
+  ;(msg "creating:" entity-type ktv-list)
   (let ((values
          (append
           (list
@@ -139,11 +139,11 @@
            (ktv "lon" "real" (cadr (get-current 'location '(0 0))))
            (ktv "deleted" "int" 0))
           ktv-list)))
-    (msg "about to insert")
+    ;(msg "about to insert")
     (let ((r (insert-entity/get-unique
               db table entity-type (get-current 'user-id "no id")
               values)))
-      (msg "entity-create: " entity-type)
+      ;;(msg "entity-create: " entity-type)
       r)))
 
 ;; updates existing db entity from memory values
@@ -155,7 +155,7 @@
            (unique-id (ktv-get values "unique_id")))
       (cond
        ((and unique-id (not (null? values)))
-        (msg "entity-update-values inner" values)
+        ;;(msg "entity-update-values inner" values)
         (update-entity db table (entity-id-from-unique db table unique-id) values)
         ;; removed due to save button no longer exiting activity - need to keep!
         ;;(entity-reset!)
