@@ -1075,6 +1075,7 @@
      (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 "")))))
 
     (image-view 0 "mongooses" fillwrap)
+    (text-view (make-id "version") app-version 10 fillwrap)
     (mtext "foo" "Your ID")
     (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
@@ -1099,7 +1100,8 @@
                            (set-current! 'location loc)
                            (list (toast (string-append
                                          (number->string (car loc)) ", "
-                                         (number->string (cadr loc)))))))
+                                         (number->string (cadr loc))))))
+                   (* 3 60 1000) 5)
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())

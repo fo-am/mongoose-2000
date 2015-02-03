@@ -516,13 +516,14 @@
 (define (drawlist-line colour width points) (list "line" colour width points))
 (define (drawlist-text text x y colour size align) (list "text" text x y colour size align))
 
-(define (toast msg) (list "toast" 0 "toast" msg))
+(define (toast msg) (list "toast" 0 "toast" msg 30))
+(define (toast-size msg size) (list "toast" 0 "toast" msg size))
 (define (play-sound wav) (list "play-sound" 0 "play-sound" wav))
 (define (vibrate time) (list "vibrate" 0 "vibrate" time))
 (define (make-directory name) (list "make-directory" 0 "make-directory" name))
 ;; treat this like a dialog so the callback fires
 (define (list-files name path fn) (list "list-files" 0 "list-files" name fn path))
-(define (gps-start name fn) (list "gps-start" 0 "gps-start" name fn))
+(define (gps-start name fn min-msecs min-metres) (list "gps-start" 0 "gps-start" name fn min-msecs min-metres))
 (define (delayed name delay fn) (list "delayed" 0 "delayed" name fn delay))
 (define (network-connect name ssid fn) (list "network-connect" 0 "network-connect" name fn ssid))
 (define (http-request name url fn) (list "http-request" 0 "http-request" name fn url))
