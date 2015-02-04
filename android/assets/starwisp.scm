@@ -328,7 +328,7 @@
                   (lambda (v)
                     (set-current! 'entity-type "group-interaction")
                     (entity-set-value! "outcome" "varchar" (spinner-choice list-interaction-outcome v)) '()))
-        (mtext "text" "Duration")
+        (mtext "text" "Duration (mins)")
         (edit-text (make-id "gp-int-dur") "" 30 "numeric" fillwrap
                    (lambda (v)
                      (set-current! 'entity-type "group-interaction")
@@ -340,6 +340,7 @@
        (mbutton "pf-grpint-done" "Done"
                 (lambda ()
                   (set-current! 'entity-type "group-interaction")
+                  (entity-set-value! "id-pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                   (entity-record-values!)
                   (list (replace-fragment (get-id "event-holder") "events"))))
        (mbutton "pf-grpint-cancel" "Cancel"
@@ -399,6 +400,7 @@
       (mbutton "pf-grpalarm-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "group-alarm")
+                 (entity-set-value! "id-pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -432,13 +434,13 @@
     (list
      (build-grid-selector "gp-mov-leader" "single" "<b>Group movement</b>: Leader")
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content -1 'left 0) trans-col
       (list
-       (medit-text "gp-mov-w" "Pack width" "numeric"
+       (medit-text "gp-mov-w" "Pack width (m)" "numeric"
                    (lambda (v)
                      (set-current! 'entity-type "group-move")
                      (entity-set-value! "pack-width" "int" (string->number v)) '()))
-       (medit-text "gp-mov-l" "Pack depth" "numeric"
+       (medit-text "gp-mov-l" "Pack depth (m)" "numeric"
                    (lambda (v)
                      (set-current! 'entity-type "group-move")
                      (entity-set-value! "pack-depth" "int" (string->number v)) '()))
@@ -447,7 +449,7 @@
                      (set-current! 'entity-type "group-move")
                      (entity-set-value! "pack-count" "int" (string->number v)) '()))))
      (linear-layout
-      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
+      (make-id "") 'horizontal (layout 'fill-parent 'wrap-content -1 'left 0) trans-col
       (list
        (vert
         (mtext "" "Direction")
@@ -463,11 +465,11 @@
                     (set-current! 'entity-type "group-move")
                     (entity-set-value! "destination" "varchar" (spinner-choice list-move-to v))  '())))))
 
-     (spacer 20)
      (horiz
       (mbutton "pf-grpmov-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "group-move")
+                 (entity-set-value! "id-pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                  (entity-record-values!)
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
@@ -500,11 +502,6 @@
     (make-id "") 'vertical fillwrap gp-col
     (list
      (mtitle "title" "Make a note")
-     (edit-text (make-id "note-text") "" 30 "text" fillwrap
-                (lambda (v)
-                  (set-current! 'entity-type "note")
-                  (entity-set-value! "text" "varchar" v)
-                  '()))
      (horiz
       (mbutton "note-done" "Done"
                (lambda ()
@@ -518,7 +515,12 @@
                  (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "note-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))
+     (edit-text (make-id "note-text") "" 30 "text" fillwrap
+                (lambda (v)
+                  (set-current! 'entity-type "note")
+                  (entity-set-value! "text" "varchar" v)
+                  '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -559,7 +561,7 @@
                     (entity-update-values!
                      (ktv "group-comp-code" "varchar" v)) '()))))
 
-     (mtitle "title" "Weights")
+     (mtitle "title" "Weights and Group Composition")
      (build-grid-selector "gc-weigh-choose" "single" "Choose mongoose")
      (spacer 20)
      (horiz
@@ -807,14 +809,14 @@
                (let ((s (db-filter
                          db "stream" "group-comp-pup-assoc"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-                               (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
+                               (list "id-other" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
                      (entity-init&save! db "stream" "group-comp-pup-assoc"
                                         (list
                                          (ktv "name" "varchar" "")
-                                         (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
+                                         (ktv "id-other" "varchar" (ktv-get escort-individual "unique_id"))
                                          (ktv "accurate" "varchar" "none")
                                          (ktv "strength" "varchar" "none")
                                          (ktv "parent" "varchar" (get-current 'group-composition-id 0))
@@ -917,14 +919,14 @@
                (let ((s (db-filter
                          db "stream" "group-comp-mate-guard"
                          (list (list "parent" "varchar" "=" (get-current 'group-composition-id 0))
-                               (list "id-escort" "varchar" "=" (ktv-get escort-individual "unique_id"))
+                               (list "id-other" "varchar" "=" (ktv-get escort-individual "unique_id"))
                                (list "id-mongoose" "varchar" "=" (ktv-get pup-individual "unique_id"))))))
                  (if (null? s)
                      ;; not there, make a new one
                      (entity-init&save! db "stream" "group-comp-mate-guard"
                                         (list
                                          (ktv "name" "varchar" "")
-                                         (ktv "id-escort" "varchar" (ktv-get escort-individual "unique_id"))
+                                         (ktv "id-other" "varchar" (ktv-get escort-individual "unique_id"))
                                          (ktv "accurate" "varchar" "none")
                                          (ktv "strength" "varchar" "none")
                                          (ktv "pester" "int" 0)
@@ -1163,10 +1165,7 @@
               (list (start-activity "group-events" 2 "")))
              (else
               ;; check if there is currently a gc activity active
-              (msg "gc id = " (get-current 'group-composition-id #f))
-
               (when (not (get-current 'group-composition-id #f))
-                    (msg "making new gc")
                     ;; create a new gc entity
                     ;; initialise it to the current memory entity
                     (set-current!
@@ -1180,7 +1179,7 @@
               (list
                (start-activity "group-composition" 2 ""))))
             (list
-             (alert-dialog
+             (ok-dialog
               "choose-obs-finish"
               "Need to specify a pack and an observation"
               (lambda () '())))))))
@@ -1269,9 +1268,9 @@
     (mtext "pf1-pack" "Pack")
     (build-grid-selector "pf1-grid" "single" "Select pup")
     (horiz
-     (medit-text "pf1-width" "Pack width - left to right" "numeric"
+     (medit-text "pf1-width" "Pack width - left to right (m)" "numeric"
                  (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
-     (medit-text "pf1-height" "Pack depth - front to back" "numeric"
+     (medit-text "pf1-height" "Pack depth - front to back (m)" "numeric"
                  (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
     (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
                 (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
@@ -1289,7 +1288,7 @@
                     (start-activity "pup-focal" 2 "")))
                   (else
                    (list
-                    (alert-dialog
+                    (ok-dialog
                      "pup-focal-check"
                      "You need to specify an pup for the focal"
                      (lambda () '())))))))))
@@ -1463,11 +1462,32 @@
     (build-grid-selector "manage-individuals-list" "button" "Choose individual")
     (horiz
      (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
-     (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 "")))))
-    )
+     (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
+     (mbutton2 "manage-individuals-delete" "Delete pack"
+               (lambda ()
+                 (list
+                  (alert-dialog
+                   "delete-pack-dialog"
+                   "Delete this pack: are you sure?"
+                   (lambda (v)
+                     (cond
+                      ((eqv? v 1)
+                       (list
+                        (alert-dialog
+                         "delete-really-pack-dialog"
+                         "Really delete this pack: are you absolutely sure?"
+                         (lambda (v)
+                           (cond
+                            ((eqv? v 1)
+                             (entity-update-single-value! (ktv "deleted" "int" 1))
+                             (list (finish-activity 1)))
+                            (else
+                             (list)))))))
+                      (else (list))))))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (entity-init! db "sync" "pack" (get-current 'pack #f))
      (list
       (populate-grid-selector
        "manage-individuals-list" "button"
@@ -1512,7 +1532,7 @@
      (button (make-id "unknown-date") "Unknown" 30 fillwrap
              (lambda ()
                (entity-set-value! "dob" "varchar" "Unknown")
-               (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
+               (list (update-widget 'text-view (get-id "new-individual-dob") 'text "Unknown"))))
      )
     (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
     (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
@@ -1716,7 +1736,7 @@
                    )
                   entity-types)
                   (list))))
-     (mbutton2 "sync-export" "Email"
+     (mbutton2 "sync-export" "Email data"
                (lambda ()
                  (debug! "Sending mail")
                  (list
@@ -1725,20 +1745,13 @@
                    "From Mongoose2000" "Please find attached your mongoose data"
                    (append
                     (list
+                     "/sdcard/mongoose/local-mongoose.db"
                      "/sdcard/mongoose/mongoose.db"
                      "/sdcard/mongoose/server-log.txt")
                     (map
                      (lambda (e)
                        (string-append "/sdcard/mongoose/" e ".csv"))
                      entity-types))))))
-     (mbutton2 "sync-export" "Email local data"
-               (lambda ()
-                 (debug! "Sending mail")
-                 (list
-                  (send-mail
-                   ""
-                   "From Mongoose2000" "Please find attached your local mongoose data"
-                   (list "/sdcard/mongoose/local-mongoose.db")))))
      )
     (spacer 10)
     (mtitle "" "Debug")

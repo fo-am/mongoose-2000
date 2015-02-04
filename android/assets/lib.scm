@@ -542,6 +542,8 @@
   (list "date-picker-dialog" 0 "date-picker-dialog" name fn))
 (define (alert-dialog name msg fn)
   (list "alert-dialog" 0 "alert-dialog" name fn msg))
+(define (ok-dialog name msg fn)
+  (list "ok-dialog" 0 "ok-dialog" name fn msg))
 (define (dialog-type d) (list-ref d 2))
 (define (dialog-name d) (list-ref d 3))
 (define (dialog-fn d) (list-ref d 4))

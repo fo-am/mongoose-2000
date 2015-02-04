@@ -96,9 +96,9 @@
 (define list-strength
   (list
    (list 'none "None")
-   (list 'strength-3 "Weak")
-   (list 'strength-2 "Medium")
-   (list 'strength-1 "Strong")))
+   (list 'weak "Weak")
+   (list 'medium "Medium")
+   (list 'strong "Strong")))
 
 (define list-gender
   (list (list 'male "Male")
@@ -590,7 +590,7 @@
                     (list (finish-activity 0)))
                    (else
                     (list
-                     (alert-dialog
+                     (ok-dialog
                       "mongoose-not-found"
                       (string-append "Can't find mongoose or pack: " new-entity)
                       (lambda (v)
@@ -694,11 +694,11 @@
                           ((equal? type "group-comp-pup-assoc")
                            (string-append
                             " between pup " (uid->name db (ktv-get entity "id-mongoose"))
-                            " and " (uid->name db (ktv-get entity "id-escort"))))
+                            " and " (uid->name db (ktv-get entity "id-other"))))
                           ((equal? type "group-comp-mate-guard")
                            (string-append
                             " between female " (uid->name db (ktv-get entity "id-mongoose"))
-                            " and " (uid->name db (ktv-get entity "id-escort"))))
+                            " and " (uid->name db (ktv-get entity "id-other"))))
                           ((equal? type "group-comp-weight")
                            (string-append
                             " for " (uid->name db (ktv-get entity "id-mongoose"))))
@@ -765,7 +765,7 @@
     ((< (get-current 'timer-seconds 59) 0)
      (set-current! 'timer-minutes (- (get-current 'timer-minutes pf-length) 1))
      (set-current! 'timer-seconds 59)
-     (cond ((< (get-current 'timer-minutes pf-length) 1)
+     (cond ((< (get-current 'timer-minutes pf-length) 0)
             (list
              (alert-dialog
               "pup-focal-end"
@@ -827,7 +827,7 @@
 
 (define (update-selector-colours2 id entity-type where)
   (update-grid-selector-colours
-   id "id-escort"
+   id "id-other"
    (db-filter
     db "stream" entity-type
     (cons
@@ -898,7 +898,7 @@
 (define (update-selector-colours3-or id entity-type mongoose where)
   (msg "----------------------------------------------**")
   (update-grid-selector-colours
-   id "id-escort"
+   id "id-other"
    (map
     (lambda (i)
       (msg "found:" i)
