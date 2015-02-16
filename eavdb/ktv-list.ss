@@ -25,6 +25,10 @@
     (ktv-value (car ktv-list)))
    (else (ktv-get (cdr ktv-list) key))))
 
+;; todo: why are the fast versions switched off?
+;; presumably not on raspberry pi - bugger.
+;; do something with racket-fix.scm...
+
 ;(define (ktv-get ktv-list key)
 ;  (let ((k (assoc-string-fast key ktv-list)))
 ;    (if k (ktv-value k) #f)))

@@ -99,7 +99,7 @@
   (let ((s (db-select
             db (string-append
                 "select * from " table "_attribute where entity_type = ?")
-                entity-type)))
+            entity-type)))
     (if (null? s) '()
         (map
          (lambda (row)

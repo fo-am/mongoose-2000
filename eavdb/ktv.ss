@@ -68,15 +68,50 @@
         (number->string (ktv-value ktv))
         (ktv-value ktv)))))
 
+;; filter uri chars
+(define (filter-uri-chars s)
+  (list->string
+   (filter
+    (lambda (v)
+      (not (or
+            (eqv? v #\newline)
+            (eqv? v #\!)
+            (eqv? v #\*)
+            (eqv? v #\')
+            (eqv? v #\()
+            (eqv? v #\))
+            (eqv? v #\;)
+;;            (eqv? v #\:)
+            (eqv? v #\@)
+            (eqv? v #\&)
+            (eqv? v #\=)
+            (eqv? v #\+)
+            (eqv? v #\$)
+;;            (eqv? v #\,)
+            (eqv? v #\/)
+            (eqv? v #\?)
+            (eqv? v #\#)
+            (eqv? v #\[)
+            (eqv? v #\]))))
+    (string->list s))))
+
+(msg "TESTING FILTER URI CHARS")
+(msg (filter-uri-chars "1234"))
+(msg (filter-uri-chars "12&34"))
+(msg (filter-uri-chars "1\
+234"))
+(msg (filter-uri-chars "12[[]]34"))
+
 ;; stringify based on type (for url)
 (define (stringify-value-url ktv)
-  (cond
-   ((null? (ktv-value ktv)) "NULL")
-   ((equal? (ktv-type ktv) "varchar") (ktv-value ktv))
-   (else
-    (if (not (string? (ktv-value ktv)))
-        (number->string (ktv-value ktv))
-        (ktv-value ktv)))))
+  (filter-uri-chars
+   (cond
+    ((null? (ktv-value ktv)) "NULL")
+    ((equal? (ktv-type ktv) "varchar") (ktv-value ktv))
+    (else
+     (if (not (string? (ktv-value ktv)))
+         (number->string (ktv-value ktv))
+         (ktv-value ktv))))))
 
 ;; tests...
 
