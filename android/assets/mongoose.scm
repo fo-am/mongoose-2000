@@ -808,6 +808,38 @@
                (list
                 (replace-fragment (get-id "gc-top") next-frag))))))))
 
+(define (next-skip-button id dialog-msg last-frag next-frag fn skip-fn)
+  (vert
+   (spacer 30)
+   (horiz
+    (button (make-id (string-append id "-backb")) "Back" 30 (layout 'fill-parent 'wrap-content 1 'centre 5)
+            (lambda ()
+              (list (replace-fragment (get-id "gc-top") last-frag))))
+
+    (button (make-id (string-append id "-skipb")) "Skip" 30 (layout 'fill-parent 'wrap-content 1 'centre 5)
+            (lambda ()
+              (list
+               (alert-dialog
+                "mongoose-item-skip"
+                "Are you sure you want to skip this?"
+                (lambda (v)
+                  (cond
+                   ((eqv? v 1)
+                    (entity-update-values!)
+                    (append
+                     (skip-fn)
+                     (list
+                      (replace-fragment (get-id "gc-top") next-frag))))
+                   (else (list))))))))
+
+    (button (make-id (string-append id "-nextb")) "Next" 30 (layout 'fill-parent 'wrap-content 1 'centre 5)
+            (lambda ()
+              (entity-update-values!)
+              (append
+               (fn)
+               (list
+                (replace-fragment (get-id "gc-top") next-frag))))))))
+
 (define (force-pause)
   (list
    (delayed "timer" 1000 (lambda () '()))

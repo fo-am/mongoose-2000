@@ -641,14 +641,16 @@
                           (list "id-mongoose" "varchar" "=" (ktv-get individual "unique_id"))))))
             (if (null? s)
                 ;; not there, make a new one
-                (entity-init&save! db "stream" "group-comp-weight"
-                                   (list
-                                    (ktv "name" "varchar" "")
-                                    (ktv "weight" "real" 0)
-                                    (ktv "accurate" "int" 0)
-                                    (ktv "present" "int" 0)
-                                    (ktv "parent" "varchar" (get-current 'group-composition-id 0))
-                                    (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id"))))
+                (let* ((collar-weight (ktv-get individual "collar-weight")))
+                  (entity-init&save! db "stream" "group-comp-weight"
+                                     (list
+                                      (ktv "name" "varchar" "")
+                                      (ktv "weight" "real" 0)
+                                      (ktv "accurate" "int" 0)
+                                      (ktv "present" "int" 0)
+                                      (ktv "parent" "varchar" (get-current 'group-composition-id 0))
+                                      (ktv "cur-collar-weight" "real" (if (number? collar-weight) collar-weight 0))
+                                      (ktv "id-mongoose" "varchar" (ktv-get individual "unique_id")))))
                 (entity-init! db "stream" "group-comp-weight" (car s)))
             (append
              (list
@@ -775,12 +777,21 @@
                    (entity-update-single-value! (ktv "accurate" "varchar" (spinner-choice list-strength v)))
                    '()))))
      (build-grid-selector "gc-pup-escort" "toggle" "Escort")
-     (next-button "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
-                  (lambda ()
-                    ;; reset main entity
-                    (entity-init! db "stream" "group-comp"
-                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
-                    '()))))
+     (next-skip-button
+      "gc-pup-assoc-" "Going to oestrus, have you finished here?" "gc-preg" "gc-oestrus"
+      (lambda ()
+        ;; reset main entity
+        (entity-init! db "stream" "group-comp"
+                      (get-entity-by-unique
+                       db "stream" (get-current 'group-composition-id #f)))
+        '())
+      (lambda ()
+        ;; reset main entity
+        (entity-init! db "stream" "group-comp"
+                      (get-entity-by-unique
+                       db "stream" (get-current 'group-composition-id #f)))
+        (entity-update-single-value! (ktv "pup-assoc-skipped" "int" 1))
+        '()))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -887,12 +898,20 @@
 
       )
      (build-grid-selector "gc-oestrus-guard" "toggle" "Choose mate guard")
-     (next-button "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
-                  (lambda ()
-                    ;; reset main entity
-                    (entity-init! db "stream" "group-comp"
-                                  (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
-                    '()))))
+     (next-skip-button
+      "gc-pup-oestrus-" "Going to babysitters, have you finished here?" "gc-pup-assoc" "gc-babysitting"
+      (lambda ()
+        ;; reset main entity
+        (entity-init! db "stream" "group-comp"
+                      (get-entity-by-unique db "stream" (get-current 'group-composition-id #f)))
+        '())
+      (lambda ()
+        ;; reset main entity
+        (entity-init! db "stream" "group-comp"
+                      (get-entity-by-unique
+                       db "stream" (get-current 'group-composition-id #f)))
+        (entity-update-single-value! (ktv "oestrus-skipped" "int" 1))
+        '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -979,8 +998,12 @@
      (build-grid-selector "gc-baby-seen" "toggle" "Choose")
      (mtitle "title" "By elimination")
      (build-grid-selector "gc-baby-byelim" "toggle" "Choose")
-     (next-button "gc-pup-baby-" "Ending, have you finished here?" "gc-oestrus" "gc-end"
-                  (lambda () '()))))
+     (next-skip-button "gc-pup-baby-" "Ending, have you finished here?" "gc-oestrus" "gc-end"
+                       (lambda () '())
+                       (lambda ()
+                         (entity-update-single-value!
+                          (ktv "babysitting-skipped" "int" 1))
+                         '()))))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -1173,6 +1196,9 @@
                      (entity-init&save!
                       db "stream" "group-comp"
                       (list (ktv "pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
+                            (ktv "pup-assoc-skipped" "int" 0)
+                            (ktv "oestrus-skipped" "int" 0)
+                            (ktv "babysitting-skipped" "int" 0)
                             (ktv "group-comp-code" "varchar" ""))))
                     (set-current! 'parent-id (get-current 'group-composition-id #f))
                     )
