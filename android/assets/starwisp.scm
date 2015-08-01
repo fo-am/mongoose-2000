@@ -1745,19 +1745,20 @@
                                (string-append "/sdcard/mongoose/" e ".csv"))
                               )))
                   (list
-                   (http-download
-                    "getting-db"
-                    "http://192.168.2.1:8888/mongoose.db"
-                    (string-append "/sdcard/mongoose/mongoose.db"))
+                   ;(http-download
+                   ; "getting-db"
+                   ; "http://192.168.2.1:8888/mongoose.db"
+                   ; (string-append "/sdcard/mongoose/mongoose.db"))
                    ;; save paranoid backup
                    (http-download
                     "getting-backup-db"
                     "http://192.168.2.1:8888/mongoose.db"
-                    (string-append "/sdcard/mongoose/backup/mongoose-" (date-time->string (date-time)) ".db"))
-                   (http-download
-                    "getting-log"
-                    "http://192.168.2.1:8888/log.txt"
-                    (string-append "/sdcard/mongoose/server-log.txt"))
+                    (string-append "/sdcard/mongoose/backup/mongoose-"
+                                   (date-time->string (date-time)) ".db"))
+                  ; (http-download
+                  ;  "getting-log"
+                  ;  "http://192.168.2.1:8888/log.txt"
+                  ;  (string-append "/sdcard/mongoose/server-log.txt"))
 
                    )
                   entity-types)
