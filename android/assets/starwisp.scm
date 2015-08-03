@@ -1733,17 +1733,17 @@
      (mbutton2 "sync-download" "Download"
                (lambda ()
                  (debug! (string-append "Downloading whole db"))
-                 (append
-                  (foldl
-                   (lambda (e r)
-                     (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
-                     (append r
-                             (list
-                              (http-download
-                               (string-append "getting-" e)
-                               (string-append url "fn=entity-csv&table=stream&type=" e)
-                               (string-append "/sdcard/mongoose/" e ".csv"))
-                              )))
+                 ;(append
+                 ; (foldl
+                 ;  (lambda (e r)
+                 ;    (debug! (string-append "Downloading /sdcard/mongoose/" e ".csv"))
+                 ;    (append r
+                 ;            (list
+                 ;             (http-download
+                 ;              (string-append "getting-" e)
+                 ;              (string-append url "fn=entity-csv&table=stream&type=" e)
+                 ;              (string-append "/sdcard/mongoose/" e ".csv"))
+                 ;             )))
                   (list
                    ;(http-download
                    ; "getting-db"
@@ -1761,8 +1761,9 @@
                   ;  (string-append "/sdcard/mongoose/server-log.txt"))
 
                    )
-                  entity-types)
-                  (list))))
+                  ;entity-types)
+                  ;(list))
+                  ))
      (mbutton2 "sync-export" "Email data"
                (lambda ()
                  (debug! "Sending mail")
