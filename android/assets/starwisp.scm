@@ -1121,12 +1121,23 @@
        (set-current! 'user-id user-id)
        (msg "on-start 2")
        (list
-        (gps-start "gps" (lambda (loc)
-                           (set-current! 'location loc)
-                           (list (toast (string-append
-                                         (number->string (car loc)) ", "
-                                         (number->string (cadr loc))))))
-                   (* 3 60 1000) 5)
+        (gps-start
+         "gps" (lambda (loc)
+                 (set-current! 'location loc)
+
+                 ;; append to gps log
+                 (log-to-file "sdcard/mongoose/gps.log"
+                              (string-append
+                               (date->string (date-time)) ", "
+                               (number->string (car loc)) ", "
+                               (number->string (cadr loc)) ", "
+                               (get-current 'pup-focal-id #f) ", "
+                               (get-current 'group-composition-id #f) "\n"))
+
+                 (list (toast (string-append
+                               (number->string (car loc)) ", "
+                               (number->string (cadr loc))))))
+         (* 3 60 1000) 5)
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
