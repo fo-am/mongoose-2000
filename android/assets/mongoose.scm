@@ -78,12 +78,58 @@
         (list 'nothing "Nothing")
         (list 'other "Other")))
 
+(define list-oesaggression-over
+  (list (list 'food "Food")
+        (list 'male "Male")
+        (list 'nothing "Nothing")
+        (list 'other "Other")))
+
 (define list-aggression-level
   (list (list 'block "Block")
         (list 'snap "Snap")
         (list 'chase "Chase")
         (list 'push "Push")
         (list 'fight "Fight")))
+
+(define list-affiliation-over
+  (list
+   (list 'sniff "Ano-genital sniff")
+   (list 'groom "Groom")
+   (list 'scent "Scent mark")))
+
+(define list-mate-behaviour
+  (list
+   (list 'sniff "Ano-genital sniff")
+   (list 'follow "Follow")
+   (list 'chase "Chase")
+   (list 'mount "Mount")))
+
+(define list-female-response
+  (list
+   (list 'ignore "Ignore")
+   (list 'avoid "Avoid")
+   (list 'submission "Submission")
+   (list 'block "Block")
+   (list 'snarls "Snarls")
+   (list 'attack "Attack")
+   (list 'run-away "Runs away")
+   (list 'accept "Accept")
+   (list 'unknown "Unknown")))
+
+(define list-male-response
+  (list
+   (list 'withdraws "Withdraws")
+   (list 'follows "Follows")
+   (list 'guards "Guards")
+   (list 'attacks "Attacks")
+   (list 'mates "Mates")
+   (list 'unknown "Unknown")))
+
+(define list-maleaggression
+  (list
+   (list 'ID1 "ID 1")
+   (list 'ID2 "ID 2")
+   (list 'unknown "Unknown")))
 
 (define list-interaction-outcome
   (list (list 'retreat "Retreat")
@@ -128,10 +174,14 @@
 (define pf-col (list 255 204 51 255))
 (define gp-col (list 255 102 0 255))
 (define gc-col (list 164 82 9 255))
+(define of-col (list 51 204 51 255))
+(define prf-col (list 255 51 51 255))
 
 (define pf-bgcol (list 255 204 51 127))
 (define gp-bgcol (list 255 102 0 127))
 (define gc-bgcol (list 164 82 9 127))
+(define of-bgcol (list 51 204 51 127))
+(define prf-bgcol (list 255 51 51 127))
 
 ;(define pf-col (list  22  19 178  127))
 ;(define gp-col (list 255  97   0  127))
@@ -670,7 +720,9 @@
               (uid (list-ref data 1)))
          (cond
           ((or (equal? type "group-comp")
-               (equal? type "pup-focal"))
+               (equal? type "pup-focal")
+               (equal? type "oestrus-focal")
+               (equal? type "preg-focal"))
            (cons
             (mbutton
              (string-append "review-" uid)
@@ -736,7 +788,9 @@
                           ((equal? type "group-comp-weight")
                            (string-append
                             " for " (uid->name db (ktv-get entity "id-mongoose"))))
-                          ((equal? type "pup-focal")
+                          ((or (equal? type "pup-focal")
+                               (equal? type "oestrus-focal")
+                               (equal? type "preg-focal"))
                            (string-append
                             " on " (uid->name db (ktv-get entity "id-focal-subject"))))
                           ((equal? type "group-comp")
@@ -814,7 +868,12 @@
                   (set-current! 'timer-minutes 1)
                   (list)))))))
            (else
-            (list (replace-fragment (get-id "pf-top") "pf-scan1")))))
+            (list (replace-fragment
+                   (get-id "pf-top")
+                   (cond
+                    ((is-observation? obs-pf) "pf-scan1")
+                    ((is-observation? obs-of) "of-scan1")
+                    ((is-observation? obs-prf) "prf-scan1")))))))
     (else '()))
    (list
     (delayed "timer" 1000 timer-cb)

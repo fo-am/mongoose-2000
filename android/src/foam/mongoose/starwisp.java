@@ -116,6 +116,8 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("dbsync.scm");
         m_Scheme.Load("mongoose.scm");
         m_Scheme.Load("pup-focal.scm");
+        m_Scheme.Load("oestrus-focal.scm");
+        m_Scheme.Load("preg-focal.scm");
         m_Scheme.Load("group-events.scm");
         m_Scheme.Load("group-comp.scm");
 

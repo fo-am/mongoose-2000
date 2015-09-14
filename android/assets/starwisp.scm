@@ -28,6 +28,19 @@
   frag-ev-pupcare
   frag-ev-pupaggr
 
+  frag-of-timer
+  frag-of-events
+  frag-of-scan1
+  frag-ev-oesaggr
+  frag-ev-oesaffil
+  frag-ev-oesmate
+  frag-ev-oesmaleaggr
+
+
+  frag-prf-timer
+  frag-prf-events
+  frag-prf-scan1
+
   frag-ev-grpint
   frag-ev-grpalarm
   frag-ev-grpmov
@@ -40,6 +53,16 @@
   frag-gc-babysitting
   frag-gc-end
   )
+
+(define (clear-obs-toggles not-this)
+  (mclear-toggles
+   (filter (lambda (a) (not (equal? a not-this)))
+           (list "choose-obs-pf" "choose-obs-gc"
+                 "choose-obs-gp" "choose-obs-of" "choose-obs-prf"))))
+
+(define (is-observation? obs)
+  (equal? (get-current 'observation "none") obs))
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; activities
@@ -107,35 +130,33 @@
     (text-view (make-id "title") "Start Observation" 40 fillwrap)
     (vert
      (mtext "type" "Choose observation type")
-     (horiz
-      (linear-layout
-       0 'vertical fillwrap gc-col
-       (list
-        (mtoggle-button2 "choose-obs-gc" obs-gc
-                         (lambda (v)
-                           (set-current! 'observation obs-gc)
-                           (mclear-toggles (list "choose-obs-pf" "choose-obs-gp"))))))
-      (linear-layout
-       0 'vertical fillwrap pf-col
-       (list
-        (mtoggle-button2 "choose-obs-pf" obs-pf
-                         (lambda (v)
-                           (set-current! 'observation obs-pf)
-                           (mclear-toggles (list "choose-obs-gc" "choose-obs-gp"))))))
-      (linear-layout
-       0 'vertical fillwrap pf-col
-       (list
-        (mtoggle-button2 "choose-obs-of" obs-of
-                         (lambda (v)
-                           (set-current! 'observation obs-pf)
-                           (mclear-toggles (list "choose-obs-gc" "choose-obs-gp"))))))
-      (linear-layout
-       0 'vertical fillwrap gp-col
-       (list
-        (mtoggle-button2 "choose-obs-gp" obs-gp
-                         (lambda (v)
-                           (set-current! 'observation obs-gp)
-                           (mclear-toggles (list "choose-obs-pf" "choose-obs-gc"))))))))
+     (vert
+      (horiz
+       (mtoggle-button2 "choose-obs-gc" obs-gc
+                        (lambda (v)
+                          (set-current! 'observation obs-gc)
+                          (clear-obs-toggles "choose-obs-gc")))
+
+       (mtoggle-button2 "choose-obs-gp" obs-gp
+                        (lambda (v)
+                          (set-current! 'observation obs-gp)
+                          (clear-obs-toggles "choose-obs-gp"))))
+
+      (horiz
+       (mtoggle-button2 "choose-obs-pf" obs-pf
+                        (lambda (v)
+                          (set-current! 'observation obs-pf)
+                          (clear-obs-toggles "choose-obs-pf")))
+       (mtoggle-button2 "choose-obs-of" obs-of
+                        (lambda (v)
+                          (set-current! 'observation obs-of)
+                          (clear-obs-toggles "choose-obs-of")))
+
+       (mtoggle-button2 "choose-obs-prf" obs-prf
+                        (lambda (v)
+                          (set-current! 'observation obs-prf)
+                          (clear-obs-toggles "choose-obs-prf"))))))
+
     (build-grid-selector "choose-obs-pack-selector" "single" "Choose pack")
 
     (horiz
@@ -158,10 +179,11 @@
             (cond
              ((or
                ;; pup and oestrus focal go to the same activity
-               (eq? (get-current 'observation "none") obs-pf)
-               (eq? (get-current 'observation "none") obs-of))
+               (is-observation? obs-pf)
+               (is-observation? obs-of)
+               (is-observation? obs-prf))
               (list (start-activity "pup-focal-start" 2 "")))
-             ((eq? (get-current 'observation "none") obs-gp)
+             ((is-observation? obs-gp)
               (list (start-activity "group-events" 2 "")))
              (else
               ;; check if there is currently a gc activity active
@@ -267,11 +289,7 @@
   (activity
    "pup-focal-start"
    (vert
-    (cond
-     ((equal? (get-current 'observation #f) obs-pf)
-      (mtitle "" "Pup focal setup"))
-     ((equal? (get-current 'observation #f) obs-pf)
-      (mtitle "" "Oestrus focal setup")))
+    (mtitle "focal-title" "Pup focal setup")
     (mtext "pf1-pack" "Pack")
     (build-grid-selector "pf1-grid" "single" "Select individual")
     (horiz
@@ -297,16 +315,35 @@
                    (list
                     (ok-dialog
                      "pup-focal-check"
-                     "You need to specify an pup for the focal"
+                     (string-append
+                      "You need to specify a "
+                      (cond
+                       ((is-observation? obs-pf) "pup")
+                       ((is-observation? obs-of) "female")
+                       ((is-observation? obs-prf) "female"))
+                      " for the focal")
                      (lambda () '())))))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-init! db "stream" "pup-focal" '())
+     (cond
+      ((is-observation? obs-pf) (entity-init! db "stream" "pup-focal" '()))
+      ((is-observation? obs-of) (entity-init! db "stream" "oestrus-focal" '()))
+      ((is-observation? obs-prf) (entity-init! db "stream" "preg-focal" '())))
+
      (list
+      (update-widget 'text-view (get-id "focal-title") 'text
+                     (cond
+                      ((is-observation? obs-pf) "Pup focal setup")
+                      ((is-observation? obs-of) "Oestrus focal setup")
+                      ((is-observation? obs-prf) "Pregnancy focal setup")))
       (populate-grid-selector
        "pf1-grid" "single"
-       (db-mongooses-by-pack-pups) #f
+       (cond
+        ((is-observation? obs-pf) (db-mongooses-by-pack-pups))
+        ((is-observation? obs-of) (db-mongooses-by-pack-adult-females))
+        ((is-observation? obs-prf) (db-mongooses-by-pack-adult-females)))
+       #f
        (lambda (individual)
          (set-current! 'individual individual)
          (entity-set-value! "id-focal-subject" "varchar" (ktv-get individual "unique_id"))
@@ -328,7 +365,7 @@
       '(("parent-top"))
       (list 0 0 0 0)
       (horiz
-       (mtitle "title" "Pup Focal")
+       (mtext "pf-title" "Pup Focal")
        (linear-layout
         0 'vertical fillwrap trans-col
         (list
@@ -362,21 +399,29 @@
                              (else
                               (list))))))))))
 
-    (build-fragment "pf-timer" (make-id "pf-top") (layout 'fill-parent 'wrap-content -1 'left 0))
+     (build-fragment "pf-timer" (make-id "pf-top")
+                     (layout 'fill-parent 'wrap-content -1 'left 0))
 
-    (linear-layout
-     0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
-     (list 0 0 0 0) (list (spacer  10)))
+     (linear-layout
+      0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+      (list 0 0 0 0) (list (spacer  10)))
 
-    (relative
-     '(("parent-bottom"))
-     (list 0 0 0 0)
-     (build-fragment "events" (make-id "event-holder") (layout 'fill-parent 'wrap-content 1 'left 0)))))
+     (relative
+      '(("parent-bottom"))
+      (list 0 0 0 0)
+      (build-fragment "pf-events" (make-id "event-holder")
+                      (layout 'fill-parent 'wrap-content 1 'left 0)))))
 
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
+      ;; load the right events fragment for this focal type
+      (cond
+       ((is-observation? obs-pf) (replace-fragment (get-id "event-holder") "pf-events"))
+       ((is-observation? obs-of) (replace-fragment (get-id "event-holder") "of-events"))
+       ((is-observation? obs-prf) (replace-fragment (get-id "event-holder") "prf-events")))
+      (update-widget 'text-view (get-id "pf-title") 'text (get-current 'observation "none"))
       (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
                      (number->string (get-current 'timer-minutes pf-length)))
       (update-widget 'text-view (get-id "pf-timer-time") 'text
