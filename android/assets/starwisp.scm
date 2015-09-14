@@ -1126,18 +1126,18 @@
                  (set-current! 'location loc)
 
                  ;; append to gps log
-                 (log-to-file "sdcard/mongoose/gps.log"
+                 (log-to-file "sdcard/mongoose/gpslog.csv"
                               (string-append
-                               (date->string (date-time)) ", "
+                               (date-time->string (date-time)) ", "
                                (number->string (car loc)) ", "
                                (number->string (cadr loc)) ", "
-                               (get-current 'pup-focal-id #f) ", "
-                               (get-current 'group-composition-id #f) "\n"))
+                               (get-current 'pup-focal-id "none") ", "
+                               (get-current 'group-composition-id "none") "\n"))
 
                  (list (toast (string-append
                                (number->string (car loc)) ", "
                                (number->string (cadr loc))))))
-         (* 3 60 1000) 5)
+         (* 30 1000) 1)
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
