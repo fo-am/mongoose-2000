@@ -15,6 +15,8 @@
 
 (define obs-gc "Group Composition")
 (define obs-pf "Pup Focal")
+(define obs-of "Oestrus Focal")
+(define obs-prf "Pregnancy Focal")
 (define obs-gp "Group Events")
 
 (define entity-types
@@ -25,14 +27,29 @@
    "pup-focal-pupfind"
    "pup-focal-pupcare"
    "pup-focal-pupaggr"
+
    "group-interaction"
    "group-alarm"
    "group-move"
+
    "group-comp"
    "group-comp-weight"
    "group-comp-pup-assoc"
    "group-comp-mate-guard"
    "note"
+
+   "oestrus-focal"
+   "oestrus-focal-nearest"
+   "oestrus-focal-aggr"
+   "oestrus-focal-affil"
+   "oestrus-focal-mating"
+   "oestrus-focal-maleaggr"
+
+   "preg-focal"
+   "preg-focal-nearest"
+   "preg-focal-aggr"
+   "preg-focal-affil"
+
    ))
 
 (define pup-focal-export
@@ -408,6 +425,14 @@
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 6))))))
 
+(define (db-mongooses-by-pack-adults-3mth)
+  (db-filter
+   db "sync" "mongoose"
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "dob" "varchar" "t<"
+          (date->string (date-minus-months (date-time) 3))))))
+
 (define (db-mongooses-by-pack-adult-males)
   (db-filter
    db "sync" "mongoose"
@@ -416,6 +441,15 @@
     (list "gender" "varchar" "!=" "female")
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 6))))))
+
+(define (db-mongooses-by-pack-adult-males-9mth)
+  (db-filter
+   db "sync" "mongoose"
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "gender" "varchar" "!=" "female")
+    (list "dob" "varchar" "t<"
+          (date->string (date-minus-months (date-time) 9))))))
 
 (define (db-mongooses-by-pack-adult-females)
   (db-filter

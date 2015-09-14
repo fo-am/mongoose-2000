@@ -115,7 +115,9 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("eavdb/eavdb.ss");
         m_Scheme.Load("dbsync.scm");
         m_Scheme.Load("mongoose.scm");
-
+        m_Scheme.Load("pup-focal.scm");
+        m_Scheme.Load("group-events.scm");
+        m_Scheme.Load("group-comp.scm");
 
         m_Builder = new StarwispBuilder(m_Scheme);
         m_Name = "main";
