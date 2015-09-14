@@ -82,7 +82,7 @@
                  (set-current! 'location loc)
 
                  ;; append to gps log
-                 (log-to-file "sdcard/mongoose/gps.log"
+                 (log-to-file "sdcard/mongoose/gpslog.csv"
                               (string-append
                                (date-time->string (date-time)) ", "
                                (number->string (car loc)) ", "
@@ -93,7 +93,7 @@
                  (list (toast (string-append
                                (number->string (car loc)) ", "
                                (number->string (cadr loc))))))
-         (* 3 60 1000) 5)
+         (* 30 1000) 1)
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())
    (lambda (activity) '())
