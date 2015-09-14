@@ -1,3 +1,54 @@
+(define frag-events
+  (fragment
+   "events"
+   (linear-layout
+    0 'vertical fillwrap trans-col
+    (list
+     (linear-layout
+      (make-id "ev-pf") 'vertical fill pf-col
+      (list))
+     (linear-layout
+      (make-id "ev-pf") 'vertical fill gp-col
+      (list
+       (mtitle "text" "Group Events")
+       (horiz
+        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpint"))))
+        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpalarm"))))
+        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov"))))
+        (mbutton2 "evb-grpnote" "Note" (lambda () (list (replace-fragment (get-id "event-holder") "note")))))))))
+   (lambda (fragment arg)
+     (activity-layout fragment))
+   (lambda (fragment arg)
+     (list
+      (update-widget
+       'linear-layout (get-id "ev-pf") 'contents
+       (cond
+        ((is-observation? obs-pf)
+         (list
+          (mtitle "ev-pf-text" "Pup Focal Events")
+          (horiz
+           (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfeed"))))
+           (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfind"))))
+           (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupcare"))))
+           (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupaggr")))))))
+        ((is-observation? obs-of)
+         (list
+          (mtitle "ev-pf-text" "Oestrus Focal Events")
+          (horiz
+           (mbutton2 "evb-oesaggr" "Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesaggr"))))
+           (mbutton2 "evb-oesaffil" "Affiliation" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesaffil"))))
+           (mbutton2 "evb-oesmating" "Mating" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmate"))))
+           (mbutton2 "evb-oesmaleaggr" "Male-Male Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmaleaggr")))))
+          ))
+
+        ((is-observation? obs-prf) (list))
+        (else (list))))))
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())
+   (lambda (fragment) '())))
+
+
 (define frag-ev-grpint
   (fragment
    "ev-grpint"
@@ -88,7 +139,7 @@
                  (set-current! 'entity-type "group-alarm")
                  (entity-set-value! "id-pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                 (list (replace-fragment (get-id "event-holder") "group-events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))

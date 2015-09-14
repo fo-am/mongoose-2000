@@ -729,7 +729,12 @@
 
              (string-append type
                             (cond
-                             ((equal? type "pup-focal")
+                             ((and (or
+                                    (equal? type "pup-focal")
+                                    (equal? type "oestrus-focal")
+                                    (equal? type "preg-focal"))
+                                   (ktv-get entity "id-focal-subject")
+                                   )
                               (string-append
                                " on " (uid->name db (ktv-get entity "id-focal-subject"))))
                              ((equal? type "group-comp")

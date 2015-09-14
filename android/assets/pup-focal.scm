@@ -19,45 +19,6 @@
    (lambda (fragment) '())
    (lambda (fragment) '())))
 
-(define frag-pf-events
-  (fragment
-   "pf-events"
-   (linear-layout
-    0 'vertical fillwrap trans-col
-    (list
-     (linear-layout
-      (make-id "ev-pf") 'vertical fill pf-col
-      (list
-       (mtitle "ev-pf-text" "Pup Focal Events")
-       (horiz
-        (mbutton2 "evb-pupfeed" "Pup Feed" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfeed"))))
-        (mbutton2 "evb-pupfind" "Pup Find" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupfind"))))
-        (mbutton2 "evb-pupcare" "Pup Care" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupcare"))))
-        (mbutton2 "evb-pupagg" "Pup Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pupaggr")))))))
-     (linear-layout
-      (make-id "ev-pf") 'vertical fill gp-col
-      (list
-       (mtitle "text" "Group Events")
-       (horiz
-        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpint"))))
-        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpalarm"))))
-        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov"))))
-        (mbutton2 "evb-grpnote" "Note" (lambda () (list (replace-fragment (get-id "event-holder") "note")))))))))
-   (lambda (fragment arg)
-     (activity-layout fragment))
-   (lambda (fragment arg)
-     (if (equal? (get-current 'observation "none") obs-pf)
-         (list
-          (update-widget 'text-view (get-id "ev-pf-text") 'show 0)
-          (update-widget 'linear-layout (get-id "ev-pf") 'show 0))
-         (list
-          (update-widget 'text-view (get-id "ev-pf-text") 'hide 0)
-          (update-widget 'linear-layout (get-id "ev-pf") 'hide 0))))
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())))
-
 (define frag-pf-scan1
   (fragment
    "pf-scan1"
@@ -69,7 +30,7 @@
      (mbutton "pf-scan-done" "Done"
               (lambda ()
                 (set-current! 'entity-type "pup-focal-nearest")
-                (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                 (entity-record-values!)
                 (list (replace-fragment (get-id "pf-top") "pf-timer"))))))
 
@@ -121,12 +82,12 @@
       (mbutton "pf-pupfeed-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "pup-focal-pupfeed")
-                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "pf-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfeed-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "pf-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -164,12 +125,12 @@
       (mbutton "pf-pupfind-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "pup-focal-pupfind")
-                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "pf-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupfind-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "pf-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -202,12 +163,12 @@
       (mbutton "pf-pupcare-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "pup-focal-pupcare")
-                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "pf-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupcare-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "pf-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -266,12 +227,12 @@
       (mbutton "pf-pupaggr-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "pup-focal-pupaggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'pup-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "pf-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-pupaggr-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "pf-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
 
    (lambda (fragment arg)

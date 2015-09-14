@@ -20,8 +20,10 @@
 ;; fragments
 
 (define-fragment-list
+
+  frag-events
+
   frag-pf-timer
-  frag-pf-events
   frag-pf-scan1
   frag-ev-pupfeed
   frag-ev-pupfind
@@ -29,7 +31,6 @@
   frag-ev-pupaggr
 
   frag-of-timer
-  frag-of-events
   frag-of-scan1
   frag-ev-oesaggr
   frag-ev-oesaffil
@@ -110,7 +111,7 @@
                                (date-time->string (date-time)) ", "
                                (number->string (car loc)) ", "
                                (number->string (cadr loc)) ", "
-                               (get-current 'pup-focal-id "none") ", "
+                               (get-current 'focal-id "none") ", "
                                (get-current 'group-composition-id "none") "\n"))
 
                  (list (toast (string-append
@@ -305,8 +306,8 @@
                (lambda ()
                  (cond
                   ((current-exists? 'individual)
-                   (set-current! 'pup-focal-id (entity-record-values!))
-                   (set-current! 'parent-id (get-current 'pup-focal-id #f))
+                   (set-current! 'focal-id (entity-record-values!))
+                   (set-current! 'parent-id (get-current 'focal-id #f))
                    (set-current! 'timer-minutes pf-length)
                    (set-current! 'timer-seconds 0)
                    (list
@@ -394,7 +395,7 @@
                             (cond
                              ((eqv? v 1)
                               (set-current! 'parent-id #f)
-                              (set-current! 'pup-focal-id #f)
+                              (set-current! 'focal-id #f)
                               (list (finish-activity 1)))
                              (else
                               (list))))))))))
@@ -409,18 +410,13 @@
      (relative
       '(("parent-bottom"))
       (list 0 0 0 0)
-      (build-fragment "pf-events" (make-id "event-holder")
+      (build-fragment "events" (make-id "event-holder")
                       (layout 'fill-parent 'wrap-content 1 'left 0)))))
 
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
      (list
-      ;; load the right events fragment for this focal type
-      (cond
-       ((is-observation? obs-pf) (replace-fragment (get-id "event-holder") "pf-events"))
-       ((is-observation? obs-of) (replace-fragment (get-id "event-holder") "of-events"))
-       ((is-observation? obs-prf) (replace-fragment (get-id "event-holder") "prf-events")))
       (update-widget 'text-view (get-id "pf-title") 'text (get-current 'observation "none"))
       (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
                      (number->string (get-current 'timer-minutes pf-length)))

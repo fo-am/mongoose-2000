@@ -19,45 +19,6 @@
    (lambda (fragment) '())
    (lambda (fragment) '())))
 
-(define frag-of-events
-  (fragment
-   "of-events"
-   (linear-layout
-    0 'vertical fillwrap trans-col
-    (list
-     (linear-layout
-      (make-id "ev-of") 'vertical fill of-col
-      (list
-       (mtitle "ev-of-text" "Oestrus Focal Events")
-       (horiz
-        (mbutton2 "evb-oesaggr" "Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesaggr"))))
-        (mbutton2 "evb-oesaffil" "Affiliation" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesaffil"))))
-        (mbutton2 "evb-oesmating" "Mating" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmate"))))
-        (mbutton2 "evb-oesmaleaggr" "Male-Male Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmaleaggr")))))))
-     (linear-layout
-      (make-id "ev-of") 'vertical fill gp-col
-      (list
-       (mtitle "text" "Group Events")
-       (horiz
-        (mbutton2 "evb-grpint" "Interaction" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpint"))))
-        (mbutton2 "evb-grpalarm" "Alarm" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpalarm"))))
-        (mbutton2 "evb-grpmov" "Movement" (lambda () (list (replace-fragment (get-id "event-holder") "ev-grpmov"))))
-        (mbutton2 "evb-grpnote" "Note" (lambda () (list (replace-fragment (get-id "event-holder") "note")))))))))
-   (lambda (fragment arg)
-     (activity-layout fragment))
-   (lambda (fragment arg)
-     (if (equal? (get-current 'observation "none") obs-of)
-         (list
-          (update-widget 'text-view (get-id "ev-of-text") 'show 0)
-          (update-widget 'linear-layout (get-id "ev-of") 'show 0))
-         (list
-          (update-widget 'text-view (get-id "ev-of-text") 'hide 0)
-          (update-widget 'linear-layout (get-id "ev-of") 'hide 0))))
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())
-   (lambda (fragment) '())))
-
 (define frag-of-scan1
   (fragment
    "of-scan1"
@@ -69,7 +30,7 @@
      (mbutton "of-scan-done" "Done"
               (lambda ()
                 (set-current! 'entity-type "oestrus-focal-nearest")
-                (entity-set-value! "parent" "varchar" (get-current 'oestrus-focal-id ""))
+                (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                 (entity-record-values!)
                 (list (replace-fragment (get-id "pf-top") "of-timer"))))))
 
@@ -141,12 +102,12 @@
       (mbutton "of-aggr-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "oestrus-focal-aggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'oestrus-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "of-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "of-aggr-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "of-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
 
    (lambda (fragment arg)
@@ -196,12 +157,12 @@
       (mbutton "of-affil-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "oestrus-focal-affil")
-                 (entity-set-value! "parent" "varchar" (get-current 'oestrus-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "of-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "of-affil-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "of-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
 
    (lambda (fragment arg)
@@ -266,12 +227,12 @@
       (mbutton "of-mate-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "oestrus-focal-mate")
-                 (entity-set-value! "parent" "varchar" (get-current 'oestrus-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "of-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "of-mate-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "of-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
 
    (lambda (fragment arg)
@@ -343,12 +304,12 @@
       (mbutton "of-maleaggr-done" "Done"
                (lambda ()
                  (set-current! 'entity-type "oestrus-focal-maleaggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'oestrus-focal-id ""))
+                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "of-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "of-maleaggr-cancel" "Cancel"
                (lambda ()
-                 (list (replace-fragment (get-id "event-holder") "of-events")))))))
+                 (list (replace-fragment (get-id "event-holder") "events")))))))
 
 
    (lambda (fragment arg)
