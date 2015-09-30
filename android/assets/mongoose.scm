@@ -89,7 +89,8 @@
         (list 'snap "Snap")
         (list 'chase "Chase")
         (list 'push "Push")
-        (list 'fight "Fight")))
+        (list 'fight "Fight")
+        (list 'unknown "Unknown")))
 
 (define list-affiliation-over
   (list
@@ -174,14 +175,18 @@
 (define pf-col (list 255 204 51 255))
 (define gp-col (list 255 102 0 255))
 (define gc-col (list 164 82 9 255))
-(define of-col (list 51 204 51 255))
-(define prf-col (list 255 51 51 255))
+(define of-col (list 82 102 204 255))
+(define prf-col (list 255 81 81 255))
+
+;(define of-col (list 51 204 51 255))
+;(define prf-col (list 255 51 51 255))
+
 
 (define pf-bgcol (list 255 204 51 127))
 (define gp-bgcol (list 255 102 0 127))
 (define gc-bgcol (list 164 82 9 127))
-(define of-bgcol (list 51 204 51 127))
-(define prf-bgcol (list 255 51 51 127))
+(define of-bgcol (list 102 204 102 127))
+(define prf-bgcol (list 255 102 51 127))
 
 ;(define pf-col (list  22  19 178  127))
 ;(define gp-col (list 255  97   0  127))
@@ -488,7 +493,7 @@
    db "sync" "mongoose"
    (list
     (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
-    (list "gender" "varchar" "!=" "female")
+    (list "gender" "varchar" "not like" "female")
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 6))))))
 
@@ -497,7 +502,7 @@
    db "sync" "mongoose"
    (list
     (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
-    (list "gender" "varchar" "!=" "female")
+    (list "gender" "varchar" "not like" "female")
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 9))))))
 
@@ -506,7 +511,7 @@
    db "sync" "mongoose"
    (list
     (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
-    (list "gender" "varchar" "!=" "male")
+    (list "gender" "varchar" "not like" "male")
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 6))))))
 
@@ -862,7 +867,7 @@
             (list
              (alert-dialog
               "pup-focal-end"
-              "Pup focal time is up, have you finished?"
+              "Focal time is up, have you finished?"
               (lambda (v)
                 (cond
                  ((eqv? v 1)

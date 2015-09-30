@@ -37,10 +37,10 @@
   frag-ev-oesmate
   frag-ev-oesmaleaggr
 
-
   frag-prf-timer
-  frag-prf-events
   frag-prf-scan1
+  frag-ev-pregaggr
+  frag-ev-pregaffil
 
   frag-ev-grpint
   frag-ev-grpalarm
@@ -214,6 +214,12 @@
      (activity-layout activity))
    (lambda (activity arg)
      (list
+      (update-widget 'toggle-button (get-id "choose-obs-gc") 'background-colour gc-col)
+      (update-widget 'toggle-button (get-id "choose-obs-gp") 'background-colour gp-col)
+      (update-widget 'toggle-button (get-id "choose-obs-pf") 'background-colour pf-col)
+      (update-widget 'toggle-button (get-id "choose-obs-of") 'background-colour of-col)
+      (update-widget 'toggle-button (get-id "choose-obs-prf") 'background-colour prf-col)
+
       (populate-grid-selector
        "choose-obs-pack-selector" "single"
        (db-mongoose-packs) #f
@@ -289,41 +295,45 @@
 
   (activity
    "pup-focal-start"
-   (vert
-    (mtitle "focal-title" "Pup focal setup")
-    (mtext "pf1-pack" "Pack")
-    (build-grid-selector "pf1-grid" "single" "Select individual")
-    (horiz
-     (medit-text "pf1-width" "Pack width - left to right (m)" "numeric"
-                 (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
-     (medit-text "pf1-height" "Pack depth - front to back (m)" "numeric"
-                 (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
-    (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
-                (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
-    (horiz
-     (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
-     (mbutton2 "pf1-done" "Done"
-               (lambda ()
-                 (cond
-                  ((current-exists? 'individual)
-                   (set-current! 'focal-id (entity-record-values!))
-                   (set-current! 'parent-id (get-current 'focal-id #f))
-                   (set-current! 'timer-minutes pf-length)
-                   (set-current! 'timer-seconds 0)
-                   (list
-                    (start-activity "pup-focal" 2 "")))
-                  (else
-                   (list
-                    (ok-dialog
-                     "pup-focal-check"
-                     (string-append
-                      "You need to specify a "
-                      (cond
-                       ((is-observation? obs-pf) "pup")
-                       ((is-observation? obs-of) "female")
-                       ((is-observation? obs-prf) "female"))
-                      " for the focal")
-                     (lambda () '())))))))))
+   (linear-layout
+    (make-id "focal-start-bg")
+    'vertical (layout 'fill-parent 'wrap-content 1 'centre 20)
+    pf-col
+    (list
+     (mtitle "focal-title" "Pup focal setup")
+     (mtext "pf1-pack" "Pack")
+     (build-grid-selector "pf1-grid" "single" "Select individual")
+     (horiz
+      (medit-text "pf1-width" "Pack width - left to right (m)" "numeric"
+                  (lambda (v) (entity-set-value! "pack-width" "int" v) '()))
+      (medit-text "pf1-height" "Pack depth - front to back (m)" "numeric"
+                  (lambda (v) (entity-set-value! "pack-depth" "int" v) '())))
+     (medit-text "pf1-count" "How many mongooses can you see?" "numeric"
+                 (lambda (v) (entity-set-value! "pack-count" "int" v) '()))
+     (horiz
+      (mbutton2 "pf1-back" "Back" (lambda () (list (finish-activity 1))))
+      (mbutton2 "pf1-done" "Done"
+                (lambda ()
+                  (cond
+                   ((current-exists? 'individual)
+                    (set-current! 'focal-id (entity-record-values!))
+                    (set-current! 'parent-id (get-current 'focal-id #f))
+                    (set-current! 'timer-minutes pf-length)
+                    (set-current! 'timer-seconds 0)
+                    (list
+                     (start-activity "pup-focal" 2 "")))
+                   (else
+                    (list
+                     (ok-dialog
+                      "pup-focal-check"
+                      (string-append
+                       "You need to specify a "
+                       (cond
+                        ((is-observation? obs-pf) "pup")
+                        ((is-observation? obs-of) "female")
+                        ((is-observation? obs-prf) "female"))
+                       " for the focal")
+                      (lambda () '()))))))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -331,8 +341,11 @@
       ((is-observation? obs-pf) (entity-init! db "stream" "pup-focal" '()))
       ((is-observation? obs-of) (entity-init! db "stream" "oestrus-focal" '()))
       ((is-observation? obs-prf) (entity-init! db "stream" "preg-focal" '())))
-
      (list
+      (cond
+       ((is-observation? obs-pf) (update-widget 'linear-layout (get-id "focal-start-bg") 'background-colour pf-col))
+       ((is-observation? obs-of) (update-widget 'linear-layout (get-id "focal-start-bg") 'background-colour of-col))
+       ((is-observation? obs-prf) (update-widget 'linear-layout (get-id "focal-start-bg") 'background-colour prf-col)))
       (update-widget 'text-view (get-id "focal-title") 'text
                      (cond
                       ((is-observation? obs-pf) "Pup focal setup")
@@ -359,8 +372,9 @@
   (activity
    "pup-focal"
    (linear-layout
-    0 'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
-    pf-col
+    (make-id "focal-bg")
+    'vertical (layout 'fill-parent 'fill-parent 1 'left 0)
+    prf-col
     (list
      (relative
       '(("parent-top"))
@@ -390,7 +404,7 @@
                         (list
                          (alert-dialog
                           "pup-focal-end-done"
-                          "Finish pup focal are you sure?"
+                          "Finish focal - are you sure?"
                           (lambda (v)
                             (cond
                              ((eqv? v 1)
@@ -417,6 +431,12 @@
      (activity-layout activity))
    (lambda (activity arg)
      (list
+
+      (cond
+       ((is-observation? obs-pf) (update-widget 'linear-layout (get-id "focal-bg") 'background-colour pf-col))
+       ((is-observation? obs-of) (update-widget 'linear-layout (get-id "focal-bg") 'background-colour of-col))
+       ((is-observation? obs-prf) (update-widget 'linear-layout (get-id "focal-bg") 'background-colour prf-col)))
+
       (update-widget 'text-view (get-id "pf-title") 'text (get-current 'observation "none"))
       (update-widget 'text-view (get-id "pf-timer-time-minutes") 'text
                      (number->string (get-current 'timer-minutes pf-length)))

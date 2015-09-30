@@ -12,7 +12,7 @@
       (update-widget 'text-view (get-id "pf-details") 'text
                      (string-append
                       "Pack: " (ktv-get (get-current 'pack '()) "name") " "
-                      "Pup: " (ktv-get (get-current 'individual '()) "name"))
+                      "Subject: " (ktv-get (get-current 'individual '()) "name"))
                      )))
    (lambda (fragment) '())
    (lambda (fragment) '())

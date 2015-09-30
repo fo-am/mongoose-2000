@@ -40,9 +40,21 @@
            (mbutton2 "evb-oesmating" "Mating" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmate"))))
            (mbutton2 "evb-oesmaleaggr" "Male-Male Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-oesmaleaggr")))))
           ))
+        ((is-observation? obs-prf)
+         (list
+          (mtitle "ev-pf-text" "Pregnancy Focal Events")
+          (horiz
+           (mbutton2 "evb-pregaggr" "Aggression" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pregaggr"))))
+           (mbutton2 "evb-pregaffil" "Affiliation" (lambda () (list (replace-fragment (get-id "event-holder") "ev-pregaffil"))))
+          )))
+        (else (list))))
 
-        ((is-observation? obs-prf) (list))
-        (else (list))))))
+      (cond
+       ((is-observation? obs-pf) (update-widget 'linear-layout (get-id "ev-pf") 'background-colour pf-col))
+       ((is-observation? obs-of) (update-widget 'linear-layout (get-id "ev-pf") 'background-colour of-col))
+       ((is-observation? obs-prf) (update-widget 'linear-layout (get-id "ev-pf") 'background-colour prf-col)))
+
+      ))
    (lambda (fragment) '())
    (lambda (fragment) '())
    (lambda (fragment) '())

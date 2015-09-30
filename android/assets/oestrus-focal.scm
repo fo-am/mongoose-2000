@@ -4,7 +4,7 @@
    (linear-layout
     (make-id "") 'vertical fillwrap trans-col
     (list
-     (mtitle "of-details" "Pack: xxx Female: xxx")))
+     (mtitle "of-details" "Pack: xxx Focal: xxx")))
    (lambda (fragment arg)
      (activity-layout fragment))
    (lambda (fragment arg)
@@ -12,7 +12,7 @@
       (update-widget 'text-view (get-id "of-details") 'text
                      (string-append
                       "Pack: " (ktv-get (get-current 'pack '()) "name") " "
-                      "Female: " (ktv-get (get-current 'individual '()) "name"))
+                      "Subject: " (ktv-get (get-current 'individual '()) "name"))
                      )))
    (lambda (fragment) '())
    (lambda (fragment) '())
@@ -321,14 +321,14 @@
        "of-maleaggr-male1" "single"
        (db-mongooses-by-pack-adult-males-9mth) #t
        (lambda (individual)
-         (set-current! 'entity-type "oestrus-focal-aggr")
+         (set-current! 'entity-type "oestrus-focal-maleaggr")
          (entity-set-value! "id-male1" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
        "of-maleaggr-male2" "single"
        (db-mongooses-by-pack-adult-males-9mth) #t
        (lambda (individual)
-         (set-current! 'entity-type "oestrus-focal-aggr")
+         (set-current! 'entity-type "oestrus-focal-maleaggr")
          (entity-set-value! "id-male2" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
