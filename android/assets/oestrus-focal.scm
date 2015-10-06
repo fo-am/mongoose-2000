@@ -101,10 +101,14 @@
      (horiz
       (mbutton "of-aggr-done" "Done"
                (lambda ()
-                 (set-current! 'entity-type "oestrus-focal-aggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                 (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                 (check-not-same-focal
+                  "oestrus-focal-aggr"
+                  "id-with"
+                  (lambda ()
+                    (set-current! 'entity-type "oestrus-focal-aggr")
+                    (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                    (entity-record-values!)
+                    (list (replace-fragment (get-id "event-holder") "events"))))))
       (mbutton "of-aggr-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
@@ -156,10 +160,14 @@
      (horiz
       (mbutton "of-affil-done" "Done"
                (lambda ()
-                 (set-current! 'entity-type "oestrus-focal-affil")
-                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                 (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                 (check-not-same-focal
+                  "oestrus-focal-affil"
+                  "id-with"
+                  (lambda ()
+                    (set-current! 'entity-type "oestrus-focal-affil")
+                    (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                    (entity-record-values!)
+                    (list (replace-fragment (get-id "event-holder") "events"))))))
       (mbutton "of-affil-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
@@ -226,6 +234,7 @@
      (horiz
       (mbutton "of-mate-done" "Done"
                (lambda ()
+                 ;; no check as different genders
                  (set-current! 'entity-type "oestrus-focal-mate")
                  (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
                  (entity-record-values!)
@@ -253,7 +262,6 @@
    (lambda (fragment) '())
    (lambda (fragment) '())))
 
-
 (define frag-ev-oesmaleaggr
   (fragment
    "ev-oesmaleaggr"
@@ -261,8 +269,8 @@
     (make-id "") 'vertical fillwrap of-col
     (list
      (mtitle "title" "Event: Male aggression")
-     (build-grid-selector "of-maleaggr-male1" "single" "Male 1")
-     (build-grid-selector "of-maleaggr-male2" "single" "Male 2")
+     (build-grid-selector "of-maleaggr-initiator" "single" "Initiator")
+     (build-grid-selector "of-maleaggr-receiver" "single" "Receiver")
 
      (linear-layout
       (make-id "") 'horizontal (layout 'fill-parent 'wrap-content '1 'left 0) trans-col
@@ -273,14 +281,6 @@
                   (lambda (v)
                     (set-current! 'entity-type "oestrus-focal-maleaggr")
                     (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
-
-
-       (vert
-        (mtext "" "Initiator")
-        (mspinner "of-maleaggr-in" list-maleaggression
-                  (lambda (v)
-                    (set-current! 'entity-type "oestrus-focal-maleaggr")
-                    (entity-set-value! "initiator" "varchar" (spinner-choice list-maleaggression v)) '())))
 
        (vert
         (mtext "" "Winner")
@@ -303,10 +303,15 @@
      (horiz
       (mbutton "of-maleaggr-done" "Done"
                (lambda ()
-                 (set-current! 'entity-type "oestrus-focal-maleaggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                 (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                 (check-not-same
+                  "oestrus-focal-maleaggr"
+                  "id-receiver" "id-initiator"
+                  "Initiator and receiver are the same!"
+                  (lambda ()
+                    (set-current! 'entity-type "oestrus-focal-maleaggr")
+                    (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                    (entity-record-values!)
+                    (list (replace-fragment (get-id "event-holder") "events"))))))
       (mbutton "of-maleaggr-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
@@ -318,18 +323,18 @@
      (entity-init! db "stream" "oestrus-focal-maleaggr" '())
      (list
       (populate-grid-selector
-       "of-maleaggr-male1" "single"
+       "of-maleaggr-initiator" "single"
        (db-mongooses-by-pack-adult-males-9mth) #t
        (lambda (individual)
          (set-current! 'entity-type "oestrus-focal-maleaggr")
-         (entity-set-value! "id-male1" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-initiator" "varchar" (ktv-get individual "unique_id"))
          (list)))
       (populate-grid-selector
-       "of-maleaggr-male2" "single"
+       "of-maleaggr-receiver" "single"
        (db-mongooses-by-pack-adult-males-9mth) #t
        (lambda (individual)
          (set-current! 'entity-type "oestrus-focal-maleaggr")
-         (entity-set-value! "id-male2" "varchar" (ktv-get individual "unique_id"))
+         (entity-set-value! "id-receiver" "varchar" (ktv-get individual "unique_id"))
          (list)))
       ))
    (lambda (fragment) '())

@@ -75,12 +75,14 @@
     (text-view (make-id "main-title") "Mongoose 2000" 50 fillwrap)
     (text-view (make-id "main-about") "Advanced mongoose technology" 30 fillwrap)
     (spacer 10)
+    (text-view (make-id "gps-state") "Waiting for GPS..." 30 fillwrap)
     (horiz
      (mbutton2 "main-observations" "Observations" (lambda () (list (start-activity "observations" 2 ""))))
      (mbutton2 "main-manage" "Manage Packs" (lambda () (list (start-activity "manage-packs" 2 "")))))
 
     (image-view 0 "mongooses" fillwrap)
-    (text-view (make-id "version") app-version 10 fillwrap)
+    (text-view (make-id "version")
+               (string-append "Version " (number->string app-version)) 20 fillwrap)
     (mtext "foo" "Your ID")
     (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
@@ -114,9 +116,11 @@
                                (get-current 'focal-id "none") ", "
                                (get-current 'group-composition-id "none") "\n"))
 
-                 (list (toast (string-append
-                               (number->string (car loc)) ", "
-                               (number->string (cadr loc))))))
+                 (list
+                  (update-widget 'text-view (get-id "gps-state") 'text "GPS working")
+                  (toast (string-append
+                          (number->string (car loc)) ", "
+                          (number->string (cadr loc))))))
          (* 30 1000) 1)
         (update-widget 'edit-text (get-id "main-id-text") 'text user-id))))
    (lambda (activity) '())

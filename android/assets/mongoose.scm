@@ -128,8 +128,8 @@
 
 (define list-maleaggression
   (list
-   (list 'ID1 "ID 1")
-   (list 'ID2 "ID 2")
+   (list 'initiator "Initiator")
+   (list 'receiver "Receiver")
    (list 'unknown "Unknown")))
 
 (define list-interaction-outcome
@@ -240,6 +240,9 @@
 (define (mbutton id title fn)
   (button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) fn))
 
+(define (mcolour-button id title col fn)
+  (colour-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) col fn))
+
 (define (mbutton2 id title fn)
   (button (make-id id) title 20 (layout 150 100 1 'centre 5) fn))
 
@@ -349,7 +352,11 @@
         (list (make-id (string-append name "-unknown"))
               (list (ktv "name" "varchar" "Unknown")
                     (ktv "unique_id" "varchar" "Unknown"))
-              "???"))
+              "???")
+        (list (make-id (string-append name "-none"))
+              (list (ktv "name" "varchar" "None")
+                    (ktv "unique_id" "varchar" "None"))
+              "None"))
        '())))
 
 (define (populate-grid-selector name type items unknown fn . args)
@@ -729,7 +736,7 @@
                (equal? type "oestrus-focal")
                (equal? type "preg-focal"))
            (cons
-            (mbutton
+            (mcolour-button
              (string-append "review-" uid)
 
              (string-append type
@@ -748,7 +755,20 @@
                              (else ""))
                             (if time (string-append " at " time) "") )
 
+
+             (cond
+              ((equal? type "group-comp") gc-col)
+              ((equal? type "pup-focal") pf-col)
+              ((equal? type "oestrus-focal") of-col)
+              ((equal? type "preg-focal") prf-col))
+
              (lambda ()
+               (set-current! 'review-button-col
+                             (cond
+                              ((equal? type "group-comp") gc-col)
+                              ((equal? type "pup-focal") pf-col)
+                              ((equal? type "oestrus-focal") of-col)
+                              ((equal? type "preg-focal") prf-col)))
                (set-current! 'review-collection uid)
                (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
                (list (start-activity "review-collection" 0 ""))))
@@ -783,7 +803,7 @@
               (time (ktv-get entity "time"))
               (type (list-ref data 0))
               (uid (list-ref data 1)))
-         (mbutton
+         (mcolour-button
           (string-append "review-" uid)
           (string-append type
                          (cond
@@ -808,6 +828,7 @@
                             " on pack " (uid->name db (ktv-get entity "pack"))))
                           (else ""))
                          (if time (string-append " at " time) "") )
+          (get-current 'review-button-col (list 255 255 255 100))
           (lambda ()
             (entity-init! db "stream" type (get-entity-by-unique db "stream" uid))
             (list (start-activity "review-item" 0 ""))))
@@ -1107,3 +1128,40 @@
 
 
   )
+
+(define (check-not-same entity-type key1 key2 message fn)
+  (set-current! 'entity-type entity-type)
+  (cond
+   ((equal? (entity-get-value key1)
+            (entity-get-value key2))
+    (list
+     (ok-dialog
+      "ok" message
+      (lambda ()
+        (list)))))
+   (else (fn))))
+
+(define (check-not-same-focal entity-type key fn)
+  (set-current! 'entity-type entity-type)
+  (cond
+   ((equal?
+     (ktv-get (get-current 'individual '()) "unique_id")
+     (entity-get-value key))
+    (list
+     (ok-dialog
+      "ok" "Selected mongoose is same as focal individual!"
+      (lambda ()
+        (list)))))
+   (else (fn))))
+
+
+(define (check-not-same-value entity-type value key message fn)
+  (set-current! 'entity-type entity-type)
+  (cond
+   ((equal? value (entity-get-value key))
+    (list
+     (ok-dialog
+      "ok" message
+      (lambda ()
+        (list)))))
+   (else (fn))))

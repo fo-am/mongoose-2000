@@ -30,10 +30,14 @@
      (build-grid-selector "prf-scan-close" "toggle" "Mongooses within 2m")
      (mbutton "prf-scan-done" "Done"
               (lambda ()
-                (set-current! 'entity-type "pregnancy-focal-nearest")
-                (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                (entity-record-values!)
-                (list (replace-fragment (get-id "pf-top") "prf-timer"))))))
+                (check-not-same-focal
+                 "pregnancy-focal-nearest"
+                 "id-nearest"
+                 (lambda ()
+                   (set-current! 'entity-type "pregnancy-focal-nearest")
+                   (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                   (entity-record-values!)
+                   (list (replace-fragment (get-id "pf-top") "prf-timer"))))))))
 
    (lambda (fragment arg)
      (activity-layout fragment))
@@ -96,10 +100,14 @@
      (horiz
       (mbutton "prf-aggr-done" "Done"
                (lambda ()
-                 (set-current! 'entity-type "pregnancy-focal-aggr")
-                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                 (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                (check-not-same-focal
+                 "pregnancy-focal-aggr"
+                 "id-with"
+                 (lambda ()
+                   (set-current! 'entity-type "pregnancy-focal-aggr")
+                   (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                   (entity-record-values!)
+                   (list (replace-fragment (get-id "event-holder") "events"))))))
       (mbutton "prf-aggr-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
@@ -151,10 +159,14 @@
      (horiz
       (mbutton "prf-affil-done" "Done"
                (lambda ()
-                 (set-current! 'entity-type "pregnancy-focal-affil")
-                 (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
-                 (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "events"))))
+                (check-not-same-focal
+                 "pregnancy-focal-affil"
+                 "id-with"
+                 (lambda ()
+                   (set-current! 'entity-type "pregnancy-focal-affil")
+                   (entity-set-value! "parent" "varchar" (get-current 'focal-id ""))
+                   (entity-record-values!)
+                   (list (replace-fragment (get-id "event-holder") "events"))))))
       (mbutton "prf-affil-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))
