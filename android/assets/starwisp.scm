@@ -106,15 +106,17 @@
         (gps-start
          "gps" (lambda (loc)
                  (set-current! 'location loc)
-
-                 ;; append to gps log
-                 (log-to-file "sdcard/mongoose/gpslog.csv"
-                              (string-append
-                               (date-time->string (date-time)) ", "
-                               (number->string (car loc)) ", "
-                               (number->string (cadr loc)) ", "
-                               (get-current 'focal-id "none") ", "
-                               (get-current 'group-composition-id "none") "\n"))
+                 (let ((focal-id (if (get-current 'focal-id #f)
+                                     (get-current 'focal-id "none")
+                                     "none")))
+                   ;; append to gps log
+                   (log-to-file "sdcard/mongoose/gpslog.csv"
+                                (string-append
+                                 (date-time->string (date-time)) ", "
+                                 (number->string (car loc)) ", "
+                                 (number->string (cadr loc)) ", "
+                                 focal-id ", "
+                                 (get-current 'group-composition-id "none") "\n")))
 
                  (list
                   (update-widget 'text-view (get-id "gps-state") 'text "GPS working")
