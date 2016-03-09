@@ -83,10 +83,10 @@
                     (entity-set-value! "over" "varchar" (spinner-choice list-oesaggression-over v)) '())))
        (vert
         (mtext "" "Level")
-        (mspinner "of-aggr-level" list-aggression-level
+        (mspinner "of-aggr-level" list-preg-oes-aggression-level
                   (lambda (v)
                     (set-current! 'entity-type "oestrus-focal-aggr")
-                    (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
+                    (entity-set-value! "level" "varchar" (spinner-choice list-preg-oes-aggression-level v)) '())))
 
        (tri-state "oestrus-focal-aggr" "of-aggr-in" "Initiate?" "initiate")
 

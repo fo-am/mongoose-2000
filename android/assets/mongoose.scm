@@ -84,6 +84,15 @@
         (list 'nothing "Nothing")
         (list 'other "Other")))
 
+(define list-preg-oes-aggression-level
+  (list (list 'block "Block")
+        (list 'snap "Snap")
+        (list 'chase "Chase")
+        (list 'push "Push")
+        (list 'fight "Fight")
+        (list 'submission "Submission")
+        (list 'unknown "Unknown")))
+
 (define list-aggression-level
   (list (list 'block "Block")
         (list 'snap "Snap")

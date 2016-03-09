@@ -151,7 +151,7 @@
                  (set-current! 'entity-type "group-alarm")
                  (entity-set-value! "id-pack" "varchar" (ktv-get (get-current 'pack ()) "unique_id"))
                  (entity-record-values!)
-                 (list (replace-fragment (get-id "event-holder") "group-events"))))
+                 (list (replace-fragment (get-id "event-holder") "events"))))
       (mbutton "pf-grpalarm-cancel" "Cancel"
                (lambda ()
                  (list (replace-fragment (get-id "event-holder") "events")))))))

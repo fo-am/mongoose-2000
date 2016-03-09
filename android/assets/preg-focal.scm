@@ -87,10 +87,10 @@
                     (entity-set-value! "over" "varchar" (spinner-choice list-oesaggression-over v)) '())))
        (vert
         (mtext "" "Level")
-        (mspinner "prf-aggr-level" list-aggression-level
+        (mspinner "prf-aggr-level" list-preg-oes-aggression-level
                   (lambda (v)
                     (set-current! 'entity-type "pregnancy-focal-aggr")
-                    (entity-set-value! "level" "varchar" (spinner-choice list-aggression-level v)) '())))
+                    (entity-set-value! "level" "varchar" (spinner-choice list-preg-oes-aggression-level v)) '())))
 
        (tri-state "pregnancy-focal-aggr" "prf-aggr-in" "Initiate?" "initiate")
 
