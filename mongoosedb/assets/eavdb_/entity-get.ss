@@ -46,14 +46,14 @@
 (define (fold-entity fn db table entity-id)
   (let* ((entity-type (get-entity-type db table entity-id)))
     (cond
-     ((null? entity-type) (msg "entity" entity-id "not found!") '())
-     (else
-      (foldl
-       (lambda (kt r)
-         (let ((vd (get-value db table entity-id kt)))
-           (fn kt vd r)))
-       '()
-       (reverse (get-attribute-ids/types db table entity-type)))))))
+      ((null? entity-type) (msg "entity" entity-id "not found!") '())
+      (else
+       (foldl
+        (lambda (kt r)
+          (let ((vd (get-value db table entity-id kt)))
+            (fn kt vd r)))
+        '()
+        (reverse (get-attribute-ids/types db table entity-type)))))))
 
 
 ;; get an entire entity, as a list of key/value pairs
@@ -64,16 +64,6 @@
          r (cons (ktv (ktv-key kt) (ktv-type kt) (car vd)) r)))
    db table entity-id))
 
-;; get an entire entity, as a list of key/value pairs
-;; this version includes null values as defaults
-(define (get-entity-plain-all db table entity-id)
-  (fold-entity
-   (lambda (kt vd r)
-     (if (null? vd)
-         (cons (ktv (ktv-key kt) (ktv-type kt) (null-value-for-type (ktv-type kt))) r)
-         (cons (ktv (ktv-key kt) (ktv-type kt) (car vd)) r)))
-   db table entity-id))
-
 ;; get an entire entity, as a list of key/value pairs, only dirty values
 (define (get-entity-plain-for-sync db table entity-id)
   (fold-entity
@@ -81,9 +71,10 @@
      (cond
       ((null? vd) r)
       ;; only return if dirty
-      ((not (zero? (cadr vd)))
+      ((zero? (cadr vd))
        (cons
-        (list (ktv-key kt) (ktv-type kt) (list-ref vd 0)) r))
+        (list (ktv-key kt) (ktv-type kt) (list-ref vd 0))
+        r))
       (else r)))
    db table entity-id))
 
@@ -104,35 +95,11 @@
      (list "unique_id" "varchar" unique-id)
      (get-entity-plain db table entity-id))))
 
-;; get an entire entity, including null entries as default
-(define (get-entity-all db table entity-id)
-  (let ((unique-id (get-unique-id db table entity-id)))
-    (cons
-     (list "unique_id" "varchar" unique-id)
-     (get-entity-plain-all db table entity-id))))
-
-;; like get-entity-plain, but only look for specific key/types - for speed
-(define (get-entity-only db table entity-id kt-list)
-  (let ((unique-id (get-unique-id db table entity-id)))
-    (cons
-     (list "unique_id" "varchar" unique-id)
-     (foldl
-      (lambda (kt r)
-        (let ((vd (get-value db table entity-id kt)))
-          (if (null? vd)
-              (begin
-                ;;(msg "ERROR: get-entity-plain: no value found for " entity-id " " (ktv-key kt))
-                r)
-              (cons (ktv (ktv-key kt) (ktv-type kt) (car vd)) r))))
-      '()
-      kt-list))))
-
-
 (define (all-entities db table type)
   (let ((s (db-select
             db (string-append "select e.entity_id from " table "_entity as e "
                               "join " table "_value_varchar "
-                              " as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                              " as n on n.entity_id = e.entity_id and n.attribute_id = ?"
                               "left join " table "_value_int "
                               "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
                               "where e.entity_type = ? "
@@ -151,9 +118,9 @@
   (let ((s (db-select
             db (string-append "select e.entity_id from " table "_entity as e "
                               "join " table "_value_varchar "
-                              " as n on n.entity_id = e.entity_id and n.attribute_id = ? "
+                              " as n on n.entity_id = e.entity_id and n.attribute_id = ?"
                               "join " table "_value_varchar "
-                              " as p on p.entity_id = e.entity_id and p.attribute_id = ? "
+                              " as p on p.entity_id = e.entity_id and p.attribute_id = ?"
                               "left join " table "_value_int "
                               "as d on d.entity_id = e.entity_id and d.attribute_id = ? "
                               "where e.entity_type = ? and "
@@ -169,17 +136,6 @@
            (vector-ref i 0))
          (cdr s)))))
 
-(define (all-unique-ids db table)
-  (let ((s (db-select
-            db (string-append "select e.unique_id from " table "_entity as e "))))
-    (if (null? s)
-        '()
-        (map
-         (lambda (i)
-           (vector-ref i 0))
-         (cdr s)))))
-
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; doing things with unique ids
 
@@ -193,10 +149,6 @@
    db (string-append "select version from " table "_entity where unique_id = ?")
    unique-id))
 
-(define (entity-type-from-unique db table unique-id)
-  (select-first
-   db (string-append "select entity_type from " table "_entity where unique_id = ?")
-   unique-id))
 
 (define (get-unique-id db table entity-id)
   (select-first
@@ -212,9 +164,6 @@
 
 (define (get-entity-by-unique db table unique-id)
   (get-entity db table (get-entity-id db table unique-id)))
-
-(define (get-entity-all-by-unique db table unique-id)
-  (get-entity-all db table (get-entity-id db table unique-id)))
 
 (define (get-entity-name db table unique-id)
   (ktv-get (get-entity-by-unique db table unique-id) "name"))

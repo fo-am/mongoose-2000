@@ -145,7 +145,7 @@
   (let ((s (apply
             db-select
             (append
-             (list db (build-query table filter (not (equal? type "*"))))
+             (list db q)
              (build-args filter)
              (if (equal? type "*") '() (list type))))))
     ;;(msg (db-status db))
