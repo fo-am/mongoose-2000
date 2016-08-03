@@ -438,7 +438,6 @@
   (msg "db-mongooses-by-pack")
   (db-filter db "sync" "pack" '()))
 
-
 (define (db-mongooses-by-pack)
   (msg "db-mongooses-by-pack")
   (db-filter
