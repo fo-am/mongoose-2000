@@ -411,17 +411,20 @@
 
 (define (mark-unlisted-entities-dirty! db table version-data)
   (msg "mark-unlisted...")
-  ;; load all local entities
-  (let ((ids (all-unique-ids db table))
-        (server-ids (map car version-data)))
+  ;; load some local entities
+  ;; don't need to do the whole list, as we are iterating here... (and it's slow)
+  (let ((ids (crop (shuffle (all-unique-ids db table)) 10))
+	;; version-data will be 0 instead of '() due to dialogcallback quoting problem
+        (server-ids (if (and (number? version-data) (eqv? version-data 0))
+			'() (map car version-data))))
     ;; look for each one in data
     (for-each
      (lambda (id)
        (when (not (in-list? id server-ids))
              (msg "can't find " id " in server data, marking dirty")
-             (debug! "Have an entity here not on raspberry pi - marking for upload...")
+	     (debug! "Have an entity here not on raspberry pi - marking for upload...")
              ;; mark those not present as dirty for next spit cycle
-             (update-entity-dirtify db table id)))
+	     (update-entity-dirtify db table id)))
      ids)))
 
 ;; repeatedly read version and request updates
@@ -442,13 +445,13 @@
          ((null? new-entity-requests)
           (debug! "No new data to download")
           (set-current! 'download 1)
-          (if (and
+          ;;(if (and
 ;;               (eqv? (get-current 'upload 0) 1) won't have got here if uploading still
-               (eqv? (get-current 'mismatch 0) 1))
-              (list
-               (play-sound "ping")
-               (toast "I'm synced with the Raspberry Pi"))))
-         (else
+	       ;;(eqv? (get-current 'mismatch 0) 1)) no mismatch files check on m2000
+	  (list
+	   (play-sound "ping")
+	   (toast "I'm synced with the Raspberry Pi")))
+	 (else
           (debug! (string-append
                    "Requesting "
                    (number->string (length new-entity-requests)) " entities"))
@@ -476,10 +479,7 @@
 
       ;; todo - this is really slow and we're doing it all the time
       ;; if there are loads to do it's bad
-      (alog "unlist check start")
-      (msg "checking for unlisted")
       (mark-unlisted-entities-dirty! db "sync" data)
-      (alog "unlist check end")
 
       (let ((r (append
                 (spit db "sync" (dirty-entities db "sync"))

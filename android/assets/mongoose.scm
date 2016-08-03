@@ -871,10 +871,11 @@
          (upload-dirty db)
          ;; important - don't receive until all are sent...
          (if (or (have-dirty? db "sync")
-                 (have-dirty? db "stream")) '()
-             (append
-              (suck-new db "sync")
-              (start-sync-files)))))))
+                 (have-dirty? db "stream")) 
+	     '()
+	     (suck-new db "sync")
+	     ;;(start-sync-files) no files on mongoose 2000
+	     )))))
     (else '()))
    (list
     (delayed "debug-timer" (+ 10000 (random 5000)) debug-timer-cb)

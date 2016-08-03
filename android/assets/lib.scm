@@ -65,6 +65,18 @@
    ((zero? n) '())
    (else (cons (car l) (crop (cdr l) (- n 1))))))
 
+(define (delete-n l n)
+  (if (eqv? n 0)
+      (cdr l)
+      (append (list (car l)) (delete-n (cdr l) (- n 1)))))
+
+(define (shuffle l)
+  (if (< (length l) 2)
+      l
+      (let ((item (random (length l))))
+	(cons (list-ref l item)
+	      (shuffle (delete-n l item))))))
+
 ;(define (in-list? n l)
 ;  (cond
 ;    ((null? l) #f)
