@@ -38,6 +38,35 @@
                           (_ (+ i 1))))))
   (_ 0))
 
+(define (string-remove-leading-whitespace str)
+  (define (_ i)
+    (cond
+     ((>= i (string-length str)) "")
+     ((char-whitespace? (string-ref str i))
+      (_ (+ i 1)))
+     (else (string-append (string (string-ref str i))
+                          (_ (+ i 1))))))
+  (_ 0))
+
+(define (string-remove-leading-whitespace str)
+  (define (_ i)
+    (cond
+     ((>= i (string-length str)) "")
+     ((char-whitespace? (string-ref str i))
+      (_ (+ i 1)))
+     (else (string-append (string (string-ref str i)) (substring str (+ i 1) (string-length str))))))
+  (_ 0))
+
+(define (reverse-string str)
+  (list->string (reverse (string->list str))))
+
+(define (string-remove-trailing-whitespace str)
+  (reverse-string (string-remove-leading-whitespace (reverse-string str))))
+
+(define (string-remove-trailing/leading-whitespace str)
+  (string-remove-trailing-whitespace
+   (string-remove-leading-whitespace str)))
+
 (define (ktv-key-is-id? ktv)
   (or
    (equal? (ktv-key ktv) "pack")
@@ -75,23 +104,25 @@
      ids)))
 
 (define (convert-id db name)
-  (let ((name (string-remove-whitespace name)))
+  (let ((name (string-remove-trailing/leading-whitespace name)))
     ;; search for unique id first
     (if (entity-exists? db "sync" name)
         name
+	;; search for actual name second
         (let ((new-entity (db-filter-only
                            db "sync" "*"
                            (list (list "name" "varchar" "=" name))
                            (list))))
           (if (null? new-entity)
               #f
+	      ;; return unique id
               (ktv-get (car new-entity) "unique_id"))))))
 
 (define (convert-id-list db str)
   (let ((names (string-split str (list #\,))))
     (foldl
      (lambda (name r)
-       (if (string? r)
+       (if (string? r) ;; if no errors
            (let ((id (convert-id db name)))
              (if id
                  (if (equal? r "") id (string-append r "," id))

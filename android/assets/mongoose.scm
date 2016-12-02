@@ -617,15 +617,14 @@
 (define (review-validate-contents uid entity)
   (foldl
    (lambda (ktv r)
-     (msg ktv)
      (cond
       ((string? r) r) ;; we have already found an error
       ((ktv-key-is-id? ktv)
        (let ((replacement
               (if (ktv-value-is-list? ktv)
-                  (convert-id-list db (ktv-value ktv))
-                  (convert-id db (ktv-value ktv)))))
-         (msg replacement)
+		  (convert-id-list db (ktv-value ktv))
+		  (convert-id db (ktv-value ktv)))))
+         ;;(msg replacement)
          (if replacement
              (cons (list (ktv-key ktv) (ktv-type ktv) replacement) r)
              ;; ditch the entity and return error
