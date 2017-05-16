@@ -127,8 +127,10 @@ def get_entity_name(db, table, unique_id):
         return uid_to_name[unique_id]
 
     if unique_id=="Unknown":
+            print("UNknown found")
             name="Unknown"
     elif unique_id=="None":
+            print("None found")
             name="None"
     else:
             name = ktv_get(get_entity_by_unique(db, table, unique_id), "name")
@@ -186,7 +188,8 @@ def conv_csv_ktv(db,k):
     elif k.key[0:3]=="id-" or k.key=="pack":
         name = get_entity_name(db,"sync",k.value)
         if not name or name==-1:
-            print("name not found for "+str(k.value))
+            if k.key=="id-focal-subject":
+                print("name not found for "+str(k.value)+" "+str(k.key))
             return "Name not found"
         else:
             return "\""+name+"\""

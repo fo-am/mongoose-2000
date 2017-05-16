@@ -219,6 +219,8 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     ;; clear individual so we can't get through without one
+     (set-current! 'individual #f)
      (list
       (update-widget 'toggle-button (get-id "choose-obs-gc") 'background-colour gc-col)
       (update-widget 'toggle-button (get-id "choose-obs-gp") 'background-colour gp-col)
@@ -321,7 +323,7 @@
       (mbutton2 "pf1-done" "Done"
                 (lambda ()
                   (cond
-                   ((current-exists? 'individual)
+                   ((get-current 'individual #f)
                     (set-current! 'focal-id (entity-record-values!))
                     (set-current! 'parent-id (get-current 'focal-id #f))
                     (set-current! 'timer-minutes pf-length)
