@@ -1,0 +1,554 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+CAUTION: Do not modify this file unless you know what you are doing.
+         Unexpected results may occur if the code is changed deliberately.
+-->
+<dbmodel pgmodeler-ver="0.9.0-beta" last-position="0,0" last-zoom="0.7"
+	 default-schema="public" default-owner="postgres">
+<database name="Foam_auto">
+</database>
+
+<schema name="public" fill-color="#e1e1e1" sql-disabled="true">
+</schema>
+
+<schema name="mongoose" rect-visible="true" fill-color="#e1e1e1">
+	<role name="postgres"/>
+	<prepended-sql><![CDATA[ CREATE EXTENSION Postgis;]]></prepended-sql>
+</schema>
+
+<table name="pack" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="1020" y="520"/>
+	<column name="pack_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="pack_created_date">
+		<type name="timestamp" length="0"/>
+	</column>
+	<constraint name="pack_pk" type="pk-constr" table="mongoose.pack">
+		<columns names="pack_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="name_unique" type="uq-constr" table="mongoose.pack">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="litter" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="1480" y="780"/>
+	<column name="litter_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="dateformed">
+		<type name="date" length="0"/>
+	</column>
+	<constraint name="litter_pk" type="pk-constr" table="mongoose.litter">
+		<columns names="litter_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="UQ_Litter_name_unique" type="uq-constr" table="mongoose.litter">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="pack_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="pack_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="pack_has_many_litters" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.pack"
+	 dst-table="mongoose.litter"
+	 src-required="false" dst-required="false"/>
+
+<table name="individual" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="2420" y="520"/>
+	<column name="individual_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="name" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="sex">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="individual_pk" type="pk-constr" table="mongoose.individual">
+		<columns names="individual_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="unique_name" type="uq-constr" table="mongoose.individual">
+		<columns names="name" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="litter_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="litter_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="litter_has_many_individuals" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.litter"
+	 dst-table="mongoose.individual"
+	 src-required="false" dst-required="false">
+	<label ref-type="dst-label">
+		<position x="-3.56" y="-0.7"/>
+	</label>
+</relationship>
+
+<table name="pack_history" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="1780" y="440"/>
+	<column name="pack_history_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="date_joined">
+		<type name="timestamp" length="0"/>
+	</column>
+	<constraint name="packhistory_pk" type="pk-constr" table="mongoose.pack_history">
+		<columns names="pack_history_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="individual_id" index="2"/>
+		<object name="pack_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="individual_fk" index="2"/>
+		<object name="pack_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="pack_has_many_packhistory" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.pack"
+	 dst-table="mongoose.pack_history"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="individual_has_many_packhistory" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.pack_history"
+	 src-required="false" dst-required="false">
+	<label ref-type="name-label">
+		<position x="0" y="0"/>
+	</label>
+</relationship>
+
+<table name="interaction" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="1280" y="1060"/>
+	<column name="interaction_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="secondpack_id">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="time" not-null="true">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="location">
+		<type name="geography" length="0"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="interaction_pk" type="pk-constr" table="mongoose.interaction">
+		<columns names="interaction_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="focalpack_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="pack_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="pack_has_many_interaction" type="rel1n"
+	 src-col-pattern="focalpack_id"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.pack"
+	 dst-table="mongoose.interaction"
+	 src-required="false" dst-required="false">
+	<label ref-type="src-label">
+		<position x="0" y="0"/>
+	</label>
+</relationship>
+
+<table name="pack_event" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="400" y="860"/>
+	<column name="pack_event_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="date" not-null="true">
+		<type name="date" length="0"/>
+	</column>
+	<column name="exact">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="location">
+		<type name="geography" length="0"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="event_pk" type="pk-constr" table="mongoose.pack_event">
+		<columns names="pack_event_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="pack_event_code_id" index="2"/>
+		<object name="pack_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="pack_event_code_fk" index="2"/>
+		<object name="pack_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="pack_has_many_events" type="rel1n"
+	 src-col-pattern="pack_id"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.pack"
+	 dst-table="mongoose.pack_event"
+	 src-required="false" dst-required="false">
+	<label ref-type="name-label">
+		<position x="41.3282" y="14.3393"/>
+	</label>
+</relationship>
+
+<table name="pack_event_code" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="360" y="1340"/>
+	<column name="pack_event_code_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="code" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<column name="detail">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="packevnettypes_pk" type="pk-constr" table="mongoose.pack_event_code">
+		<columns names="pack_event_code_id" ref-type="src-columns"/>
+	</constraint>
+	<constraint name="uq_code_is_unique" type="uq-constr" table="mongoose.pack_event_code">
+		<columns names="code" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<table name="individual_event" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="2960" y="1040"/>
+	<column name="individual_event_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="date" not-null="true">
+		<type name="date" length="0"/>
+	</column>
+	<column name="exact">
+		<type name="text" length="0"/>
+	</column>
+	<column name="status">
+		<type name="text" length="0"/>
+	</column>
+	<column name="location">
+		<type name="geography" length="0"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="individualevent_pk" type="pk-constr" table="mongoose.individual_event">
+		<columns names="individual_event_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="individual_event_code_id" index="1"/>
+		<object name="individual_id" index="2"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="individual_event_code_fk" index="2"/>
+		<object name="individual_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="individual_has_many_individualevents" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.individual_event"
+	 src-required="false" dst-required="false"/>
+
+<table name="individual_event_code" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="3080" y="1380"/>
+	<column name="individual_event_code_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="code" not-null="true">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="individualeventcode_pk" type="pk-constr" table="mongoose.individual_event_code">
+		<columns names="individual_event_code_id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<relationship name="individualeventcode_has_many_individualevents" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual_event_code"
+	 dst-table="mongoose.individual_event"
+	 src-required="false" dst-required="false"/>
+
+<table name="pregnancy" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="2120" y="840"/>
+	<column name="pregnancy_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<constraint name="pregnancy_pk" type="pk-constr" table="mongoose.pregnancy">
+		<columns names="pregnancy_id" ref-type="src-columns"/>
+	</constraint>
+</table>
+
+<relationship name="individual_has_many_pregnancies" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.pregnancy"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="litter_has_many_pregnancies" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.litter"
+	 dst-table="mongoose.pregnancy"
+	 src-required="false" dst-required="false"/>
+
+<table name="weight" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="3120" y="160"/>
+	<column name="weight_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="weight" not-null="true">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="time" not-null="true">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="accuracy">
+		<type name="smallint" length="0"/>
+	</column>
+	<column name="session">
+		<type name="text" length="0"/>
+	</column>
+	<column name="collar_weight">
+		<type name="integer" length="0"/>
+	</column>
+	<column name="location">
+		<type name="geography" length="0" spatial-type="POINT" variation="0" srid="4326"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="weight_pk" type="pk-constr" table="mongoose.weight">
+		<columns names="weight_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="individual_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="individual_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="individual_has_many_weights" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.weight"
+	 src-required="false" dst-required="false"/>
+
+<table name="ultrasound" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="3180" y="560"/>
+	<column name="ultrasound_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="observation_date" not-null="true">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="foetus_number">
+		<type name="smallint" length="0"/>
+	</column>
+	<column name="foetus_size">
+		<type name="text" length="0"/>
+	</column>
+	<column name="cross_view_length">
+		<type name="decimal" length="0"/>
+	</column>
+	<column name="cross_view_width">
+		<type name="decimal" length="0"/>
+	</column>
+	<column name="long_view_length">
+		<type name="decimal" length="0"/>
+	</column>
+	<column name="long_view_width">
+		<type name="decimal" length="0"/>
+	</column>
+	<column name="observer">
+		<type name="text" length="0"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<constraint name="ultrasound_pk" type="pk-constr" table="mongoose.ultrasound">
+		<columns names="ultrasound_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="individual_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="individual_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="individual_has_many_ultrasound" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.ultrasound"
+	 src-required="false" dst-required="false"/>
+
+<table name="radiocollar" hide-ext-attribs="true">
+	<schema name="mongoose"/>
+	<role name="postgres"/>
+	<position x="2100" y="1100"/>
+	<column name="radiocollar_id" not-null="true">
+		<type name="serial" length="0"/>
+	</column>
+	<column name="frequency">
+		<type name="smallint" length="0"/>
+	</column>
+	<column name="weight">
+		<type name="smallint" length="0"/>
+	</column>
+	<column name="fitted">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="turned_on">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="removed">
+		<type name="timestamp" length="0"/>
+	</column>
+	<column name="comment">
+		<type name="text" length="0"/>
+	</column>
+	<column name="date_entered">
+		<type name="timestamp" length="0"/>
+	</column>
+	<constraint name="radiocollar_pk" type="pk-constr" table="mongoose.radiocollar">
+		<columns names="radiocollar_id" ref-type="src-columns"/>
+	</constraint>
+
+	<customidxs object-type="column">
+		<object name="individual_id" index="1"/>
+	</customidxs>
+
+	<customidxs object-type="constraint">
+		<object name="individual_fk" index="1"/>
+	</customidxs>
+</table>
+
+<relationship name="individual_has_many_radiocollars" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.individual"
+	 dst-table="mongoose.radiocollar"
+	 src-required="false" dst-required="false"/>
+
+<relationship name="pack_event_code_has_many_pack_events" type="rel1n"
+	 src-col-pattern="{sc}"
+	 pk-pattern="{dt}_pk" uq-pattern="{dt}_uq"
+	 src-fk-pattern="{st}_fk"
+	 custom-color="#83af1f"
+	 src-table="mongoose.pack_event_code"
+	 dst-table="mongoose.pack_event"
+	 src-required="false" dst-required="false"/>
+
+<constraint name="pack_secondary" type="fk-constr" comparison-type="MATCH FULL"
+	 upd-action="NO ACTION" del-action="NO ACTION" ref-table="mongoose.pack" table="mongoose.interaction">
+	<columns names="secondpack_id" ref-type="src-columns"/>
+	<columns names="pack_id" ref-type="dst-columns"/>
+</constraint>
+
+</dbmodel>

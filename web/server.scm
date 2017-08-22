@@ -1,5 +1,5 @@
-#!/usr//bin/env racket
-#lang scheme/base
+#!/usr/bin/env racket
+#lang racket
 ;; Naked on Pluto Copyright (C) 2010 Aymeric Mansoux, Marloes de Valk, Dave Griffiths
 ;;
 ;; This program is free software: you can redistribute it and/or modify
@@ -15,9 +15,9 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(require scheme/system
-         scheme/foreign
-         scheme/cmdline
+(require racket/system
+;;         racket/foreign
+         racket/cmdline
          web-server/servlet
          web-server/servlet-env
          web-server/http/response-structs
@@ -198,7 +198,7 @@
  start
  ;; port number is read from command line as argument
  ;; ie: ./server.scm 8080
- #:listen-ip "192.168.2.1"
+;; #:listen-ip "192.168.2.1"
  #:port (string->number (command-line #:args (port) port))
  #:command-line? #t
  #:servlet-path "/mongoose"
