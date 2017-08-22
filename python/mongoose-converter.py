@@ -12,7 +12,7 @@ else:
 	from tkFileDialog import *
 	from tkMessageBox import *
 
-version = "0.0.3"
+version = "0.0.4"
 
 def msg(msg):
     print(msg)
@@ -153,7 +153,7 @@ def csv_titles(db, table, entity_type):
     return reduce(lambda r,kt:
                   r+"\""+kt[0]+"\",",
                   get_attribute_ids_types(db, table, entity_type),
-                  "")
+                  "\"unique_id\",")
 
 def write_csv(f, db, table, entity_type, raw):
     count=0
@@ -167,7 +167,7 @@ def write_csv(f, db, table, entity_type, raw):
     for n,record in enumerate(records):
         msg(entity_type+": "+str(n)+" out of "+str(len(records))+(": %02d"%(n/float(len(records))*100.0))+"% done...")
         entity_id = record[0]
-        f.write(conv_csv(db,get_entity_plain(db, table, entity_id))+"\n")
+        f.write(conv_csv(db,get_entity(db, table, entity_id))+"\n")
         #f.write(conv_csv_raw(db,get_entity_plain(db, table, entity_id))+"\n")
 
 def conv_csv_ktv(db,k):
