@@ -41,7 +41,7 @@
       ((null? t)
        (msg "adding new attribute for" entity-type " called " key " of type " type)
        (db-insert
-        db (string-append "insert into " table "_attribute values (null, ?, ?, ?)")
+        db (string-append "insert into " table "_attribute (id, attribute_id, entity_type, attribute_type) values (null, ?, ?, ?)")
         key entity-type type)
        type)
       (else
@@ -58,7 +58,7 @@
 (define (insert-value db table entity-id ktv dirty)
   ;; use type to dispatch insert to correct value table
   (db-insert db (string-append "insert into " table "_value_" (ktv-type ktv)
-                               " values (null, ?, ?, ?, ?, 0)")
+                               "(id, entity_id, attribute_id, value, dirty, version) values (null, ?, ?, ?, ?, 0)")
              entity-id (ktv-key ktv) (ktv-value ktv) (if dirty 1 0)))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)

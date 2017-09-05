@@ -54,7 +54,7 @@
   (db-exec db "begin transaction")
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (null, ?, ?, ?, ?)")
+                 "insert into " table "_entity (entity_id, entity_type, unique_id, dirty, version) values (null, ?, ?, ?, ?)")
              entity-type unique-id dirty version)))
 
     ;; create the attributes if they are new, and validate them if they exist
@@ -78,7 +78,7 @@
   (db-exec db "begin transaction")
   (let ((id (db-insert
              db (string-append
-                 "insert into " table "_entity values (?, ?, ?, ?, ?)")
+                 "insert into " table "_entity (entity_id, entity_type, unique_id, dirty, version) values (?, ?, ?, ?, ?)")
              id entity-type unique-id dirty version)))
 
     ;; create the attributes if they are new, and validate them if they exist

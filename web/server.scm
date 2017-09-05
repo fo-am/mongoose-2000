@@ -198,7 +198,7 @@
  start
  ;; port number is read from command line as argument
  ;; ie: ./server.scm 8080
-;; #:listen-ip "192.168.2.1"
+ #:listen-ip "192.168.2.1"
  #:port (string->number (command-line #:args (port) port))
  #:command-line? #t
  #:servlet-path "/mongoose"

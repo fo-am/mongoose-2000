@@ -37,8 +37,9 @@
 
 
 (define (upgrade-table db name)
-  (db-exec db (string-append "alter table " name " add version integer")))
-
+  (db-exec db (string-append "alter table " name " add version integer"))
+  (db-exec db (string-append "alter table " name " add sent integer default 0"))
+  )
 
 ;; create eav tables (add types as required)
 (define (setup db table)

@@ -34,12 +34,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; fix this mess
 (define (db-open db-name setup-fn)
   (cond
     ((file-exists? (string->path db-name))
      (display "open existing db")(newline)
      (let ((db (open (string->path db-name))))
-       ;; upgrade...
+       ;; upgrade
        (setup-fn db "sync")
        (setup-fn db "stream")
        db))
