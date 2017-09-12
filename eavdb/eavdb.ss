@@ -42,13 +42,16 @@
   )
 
 ;; create eav tables (add types as required)
+;; aggregating version updates - should clean all this up
 (define (setup db table)
   (msg "db setup")
   (db-exec db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer)"))
+  (db-exec db (string-append "alter table " table "_entity add sent integer default 0"))
   (db-exec db (string-append "create index if not exists index_" table "_entity on " table "_entity (unique_id)"))
 
 
   (db-exec db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))"))
+  (db-exec db (string-append "alter table " table "_attribute add sent integer default 0"))
   (db-exec db (string-append "create index if not exists index_" table "_attribute on " table "_attribute (entity_type)"))
 
 
