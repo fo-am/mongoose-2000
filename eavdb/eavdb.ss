@@ -33,42 +33,44 @@
 
 (provide (all-defined-out))
 
-(msg "hello from eavdb.ss")
-
 
 (define (upgrade-table db name)
   (db-exec db (string-append "alter table " name " add version integer"))
-  (db-exec db (string-append "alter table " name " add sent integer default 0"))
-  )
+  (db-exec db (string-append "alter table " name " add sent integer default 0")))
 
 ;; create eav tables (add types as required)
 ;; aggregating version updates - should clean all this up
+;;
+;; remember that this is run on both pi and android - on the tablets we don't really know
+;; how old the initial versions of the databases are, they might go right back to the beginning
+;; so need to be super conservative and alter tables to add new stuff
 (define (setup db table)
   (msg "db setup")
-  (db-exec db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_entity ( entity_id integer primary key autoincrement, entity_type varchar(256), unique_id varchar(256), dirty integer, version integer, sent integer default 0)"))
+  ;; throws benign errors if it exists - we catch and ignore em...
   (db-exec db (string-append "alter table " table "_entity add sent integer default 0"))
   (db-exec db (string-append "create index if not exists index_" table "_entity on " table "_entity (unique_id)"))
 
 
-  (db-exec db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256))"))
+  (db-exec db (string-append "create table " table "_attribute ( id integer primary key autoincrement, attribute_id varchar(256), entity_type varchar(256), attribute_type varchar(256), sent integer default 0)"))
   (db-exec db (string-append "alter table " table "_attribute add sent integer default 0"))
   (db-exec db (string-append "create index if not exists index_" table "_attribute on " table "_attribute (entity_type)"))
 
 
 
-  (db-exec db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_value_varchar ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer, version integer, sent integer default 0)"))
   (upgrade-table db (string-append table "_value_varchar"))
   (db-exec db (string-append "create index if not exists index_" table "_value_varchar on " table "_value_varchar (entity_id,attribute_id)"))
 
-  (db-exec db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_value_int ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value integer, dirty integer, version integer, sent integer default 0)"))
   (upgrade-table db (string-append table "_value_int"))
   (db-exec db (string-append "create index if not exists index_" table "_value_int on " table "_value_int (entity_id,attribute_id)"))
 
-  (db-exec db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_value_real ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value real, dirty integer, version integer, sent integer default 0)"))
   (upgrade-table db (string-append table "_value_real"))
   (db-exec db (string-append "create index if not exists index_" table "_value_real on " table "_value_real (entity_id,attribute_id)"))
 
-  (db-exec db (string-append "create table " table "_value_file ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer, version integer)"))
+  (db-exec db (string-append "create table " table "_value_file ( id integer primary key autoincrement, entity_id integer, attribute_id varchar(255), value varchar(4096), dirty integer, version integer, sent integer default 0)"))
   (upgrade-table db (string-append table "_value_file"))
   (db-exec db (string-append "create index if not exists index_" table "_value_file on " table "_value_file (entity_id,attribute_id)"))
 
@@ -119,3 +121,30 @@
    (lambda (i)
      (get-entity-only db table i kt-list))
    (filter-entities-inc-deleted db table type filter)))
+
+(define (run-unit-tests)
+  (msg "running eavdb tests...")
+  (define last-test-db (open (string->path "unit-test.db")))
+  ;; clear out last test
+  (db-exec last-test-db "drop table sync_entity;")
+  (db-exec last-test-db "drop table sync_attribute;")
+  (db-exec last-test-db "drop table sync_value_varchar;")
+  (db-exec last-test-db "drop table sync_value_int;")
+  (db-exec last-test-db "drop table sync_value_real;")
+  (db-exec last-test-db "drop table sync_value_file;")
+
+  (db-exec last-test-db "drop table stream_entity;")
+  (db-exec last-test-db "drop table stream_attribute;")
+  (db-exec last-test-db "drop table stream_value_varchar;")
+  (db-exec last-test-db "drop table stream_value_int;")
+  (db-exec last-test-db "drop table stream_value_real;")
+  (db-exec last-test-db "drop table stream_value_file;")
+  ;; reopen to run setup
+  (define test-db (db-open "unit-test.db" setup))
+  (ktv-test)
+  (entity-update-test test-db "sync")
+  (entity-sync-test test-db "sync")
+  (msg "finished running eavdb tests..."))
+
+(run-unit-tests)
+  
