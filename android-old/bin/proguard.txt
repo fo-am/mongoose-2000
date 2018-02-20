@@ -1,0 +1,51 @@
+# view AndroidManifest.xml #generated:34
+-keep class foam.mongoose.ExportActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:22
+-keep class foam.mongoose.GroupCompositionActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:25
+-keep class foam.mongoose.GroupEventsActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:29
+-keep class foam.mongoose.ManageIndividualActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:27
+-keep class foam.mongoose.ManagePacksActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:30
+-keep class foam.mongoose.NewIndividualActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:28
+-keep class foam.mongoose.NewPackActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:20
+-keep class foam.mongoose.ObservationsActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:24
+-keep class foam.mongoose.PupFocalActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:23
+-keep class foam.mongoose.PupFocalStartActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:35
+-keep class foam.mongoose.ReviewActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:37
+-keep class foam.mongoose.ReviewCollectionActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:36
+-keep class foam.mongoose.ReviewItemActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:33
+-keep class foam.mongoose.SyncActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:32
+-keep class foam.mongoose.TagLocationActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:31
+-keep class foam.mongoose.UpdateIndividualActivity { <init>(...); }
+
+# view AndroidManifest.xml #generated:12
+-keep class foam.mongoose.starwisp { <init>(...); }
+
