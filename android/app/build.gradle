@@ -23,19 +23,6 @@ android {
         }
     }
 
-    // call regular ndk-build(.cmd) script from app directory
-/*    task ndkBuild(type: Exec) {
-        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-            commandLine 'ndk-build.cmd', '-C', file('src/main').absolutePath
-        } else {
-            commandLine '/home/dave/opt/android-ndk-r12b/ndk-build', '-C', file('src/main/jni').absolutePath
-        }
-    }
-
-    tasks.withType(JavaCompile) {
-        compileTask -> compileTask.dependsOn ndkBuild
-    }
-*/
     externalNativeBuild {
         ndkBuild {
             path 'src/main/jni/Android.mk'

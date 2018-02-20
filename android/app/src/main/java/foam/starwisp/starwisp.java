@@ -47,7 +47,6 @@ import android.text.TextWatcher;
 import android.text.Editable;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
-import android.content.res.Configuration;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -66,33 +65,43 @@ public class starwisp extends StarwispActivity
         // register all activities here
         ActivityManager.RegisterActivity("splash",starwisp.class);
         ActivityManager.RegisterActivity("main",MainActivity.class);
-        ActivityManager.RegisterActivity("calc",CalcActivity.class);
-        ActivityManager.RegisterActivity("newfield",NewFieldActivity.class);
-        ActivityManager.RegisterActivity("field",FieldActivity.class);
-        ActivityManager.RegisterActivity("fieldhistory",FieldHistoryActivity.class);
-        ActivityManager.RegisterActivity("fieldcalc",FieldCalcActivity.class);
-        ActivityManager.RegisterActivity("camera",CameraActivity.class);
-        ActivityManager.RegisterActivity("eventview",EventViewActivity.class);
-        ActivityManager.RegisterActivity("about",AboutActivity.class);
-        ActivityManager.RegisterActivity("email",EmailActivity.class);
-        ActivityManager.RegisterActivity("manure",ManureActivity.class);
-        //ActivityManager.Register("nvz",NVZActivity.class);
-    };
+        ActivityManager.RegisterActivity("observations",ObservationsActivity.class);
 
+        ActivityManager.RegisterActivity("group-composition",GroupCompositionActivity.class);
+        ActivityManager.RegisterActivity("pup-focal-start",PupFocalStartActivity.class);
+        ActivityManager.RegisterActivity("pup-focal",PupFocalActivity.class);
+        ActivityManager.RegisterActivity("group-events",GroupEventsActivity.class);
+
+        ActivityManager.RegisterActivity("manage-packs",ManagePacksActivity.class);
+        ActivityManager.RegisterActivity("new-pack",NewPackActivity.class);
+        ActivityManager.RegisterActivity("manage-individual",ManageIndividualActivity.class);
+        ActivityManager.RegisterActivity("new-individual",NewIndividualActivity.class);
+        ActivityManager.RegisterActivity("update-individual",UpdateIndividualActivity.class);
+
+        ActivityManager.RegisterActivity("tag-location",TagLocationActivity.class);
+        ActivityManager.RegisterActivity("sync",SyncActivity.class);
+        ActivityManager.RegisterActivity("export",ExportActivity.class);
+        ActivityManager.RegisterActivity("review",ReviewActivity.class);
+        ActivityManager.RegisterActivity("review-item",ReviewItemActivity.class);
+        ActivityManager.RegisterActivity("review-collection",ReviewCollectionActivity.class);
+    };
 
     /** Called when the activity is first created. */
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        String dirname = "farmcrapapppro/";
+        String dirname = "mongoose/";
         m_AppDir = "/sdcard/"+dirname;
         File appdir = new File(m_AppDir);
         appdir.mkdirs();
 
+        File backupdir = new File(m_AppDir+"/backup/");
+        backupdir.mkdirs();
+
         // build static things
         m_Scheme = new Scheme(this);
+
         m_Scheme.Load("lib.scm");
-        m_Scheme.Load("json.scm");
         m_Scheme.Load("racket-fix.scm");
         m_Scheme.Load("eavdb/ktv.ss");
         m_Scheme.Load("eavdb/ktv-list.ss");
@@ -104,11 +113,16 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("eavdb/entity-sync.ss");
         m_Scheme.Load("eavdb/entity-csv.ss");
         m_Scheme.Load("eavdb/eavdb.ss");
-        m_Scheme.Load("dblite.scm");
-        m_Scheme.Load("interface.scm");
+        m_Scheme.Load("dbsync.scm");
+        m_Scheme.Load("mongoose.scm");
+        m_Scheme.Load("pup-focal.scm");
+        m_Scheme.Load("oestrus-focal.scm");
+        m_Scheme.Load("preg-focal.scm");
+        m_Scheme.Load("group-events.scm");
+        m_Scheme.Load("group-comp.scm");
 
         m_Builder = new StarwispBuilder(m_Scheme);
-        m_Name = "splash";
+        m_Name = "main";
 
         // tell scheme the date
         final Calendar c = Calendar.getInstance();
@@ -131,38 +145,11 @@ public class starwisp extends StarwispActivity
                       "(define date-month "+month+")"+
                       "(define date-year "+year+")"+
                       "(define timezone-offset-mins "+timezone_offset_mins+")"+
-                      "(define app-version \""+version+"\")");
-
-	// also updated in StarwispActivity::onCreate()
-	String ori = "'portrait";
-	if (getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE) {
-	    ori = "'landscape";
-	}
-	m_Scheme.eval("(define screen-orientation "+ori+")");	
-
-        // pass in a bunch of useful stuff
-        DeclareSensors();
-
-        m_Scheme.Load("decision.scm");
-        m_Scheme.Load("manure.scm");
-        m_Scheme.Load("soil-nutrients.scm");
-        m_Scheme.Load("crop-requirements.scm");
-        m_Scheme.Load("images.scm");
-        m_Scheme.Load("calc-core.scm");
-        m_Scheme.Load("geo.scm");
-        m_Scheme.Load("crap-app.scm");
-        m_Scheme.Load("translations.scm");
-
-        // pass in a bunch of useful stuff
-        m_Scheme.eval("(define dirname \"/sdcard/"+dirname+"\")(define date-day "+day+") (define date-month "+month+") (define date-year "+year+")");
+                      "(define app-version "+version+")");
 
         Log.i("starwisp","started, now running starwisp.scm...");
         m_Scheme.eval(m_Scheme.readRawTextFile(this, "starwisp.scm"));
 
         super.onCreate(savedInstanceState);
-
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                             WindowManager.LayoutParams.FLAG_FULLSCREEN);
-
     }
 }

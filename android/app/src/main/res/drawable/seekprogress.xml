@@ -4,7 +4,7 @@
     <item
         android:id="@android:id/background"
         android:drawable="@drawable/seekbg_fill"/>
-    <item android:id="@+id/seekprogress">
+    <item>
       <clip android:drawable="@drawable/seekprogress_fill" />
     </item>
 

@@ -18,20 +18,13 @@ package foam.starwisp;
 import android.app.Activity;
 import android.os.Bundle;
 import android.content.Context;
-import android.view.WindowManager;
-import android.view.WindowManager.LayoutParams;
 
-public class SyncActivity extends foam.starwisp.StarwispActivity
+public class ExportActivity extends foam.starwisp.StarwispActivity
 {
     @Override
     public void onCreate(Bundle savedInstanceState)
     {
-        m_Name = "sync";
+        m_Name = "export";
         super.onCreate(savedInstanceState);
-
-        WindowManager.LayoutParams params = getWindow().getAttributes();
-        params.flags |= LayoutParams.FLAG_KEEP_SCREEN_ON;
-        getWindow().setAttributes(params);
-
     }
 }
