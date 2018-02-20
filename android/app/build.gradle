@@ -1,0 +1,54 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+apply plugin: 'com.android.application'
+
+android {
+    compileSdkVersion 'Google Inc.:Google APIs:23'
+    buildToolsVersion "26.0.2"
+    useLibrary  'org.apache.http.legacy'
+
+    defaultConfig {
+        applicationId "foam.crapapppro"
+        minSdkVersion 10
+        targetSdkVersion 14
+
+        ndk {
+            moduleName "starwisp-core"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+    }
+
+    // call regular ndk-build(.cmd) script from app directory
+/*    task ndkBuild(type: Exec) {
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            commandLine 'ndk-build.cmd', '-C', file('src/main').absolutePath
+        } else {
+            commandLine '/home/dave/opt/android-ndk-r12b/ndk-build', '-C', file('src/main/jni').absolutePath
+        }
+    }
+
+    tasks.withType(JavaCompile) {
+        compileTask -> compileTask.dependsOn ndkBuild
+    }
+*/
+    externalNativeBuild {
+        ndkBuild {
+            path 'src/main/jni/Android.mk'
+        }
+    }
+
+}
+
+dependencies {
+   // compile 'com.android.support:gridlayout-v7:21.0.3'
+   // compile files('libs/android-support-v13.jar')
+    compile 'com.google.android.gms:play-services-maps:9.6.1'	
+    compile 'com.google.android.gms:play-services-places:9.6.0'
+    //compile 'com.google.maps.android:android-maps-utils:0.4'
+   // compile files('libs/ouya-sdk.jar')
+}
