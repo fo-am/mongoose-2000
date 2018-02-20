@@ -41,7 +41,7 @@
       ((null? t)
        (msg "adding new attribute for" entity-type " called " key " of type " type)
        (db-insert
-        db (string-append "insert into " table "_attribute values (null, ?, ?, ?)")
+        db (string-append "insert into " table "_attribute (id, attribute_id, entity_type, attribute_type) values (null, ?, ?, ?)")
         key entity-type type)
        type)
       (else
@@ -58,11 +58,12 @@
 (define (insert-value db table entity-id ktv dirty)
   ;; use type to dispatch insert to correct value table
   (db-insert db (string-append "insert into " table "_value_" (ktv-type ktv)
-                               " values (null, ?, ?, ?, ?, 0)")
+                               "(id, entity_id, attribute_id, value, dirty, version) values (null, ?, ?, ?, ?, 0)")
              entity-id (ktv-key ktv) (ktv-value ktv) (if dirty 1 0)))
 
 ;; update the value given an entity type, a attribute type and it's key (= attriute_id)
 ;; creates the value if it doesn't already exist, updates it otherwise if it's different
+;; setting sent=0 to work with the rabbitmq updater here - probably not needed
 (define (update-value db table entity-id ktv)
   (let ((s (select-first
             db (string-append
@@ -74,11 +75,12 @@
         (if (not (ktv-eq? ktv (list (ktv-key ktv) (ktv-type ktv) s)))
             (db-exec
              db (string-append "update " table "_value_" (ktv-type ktv)
-                               " set value=?, dirty=1  where entity_id = ? and attribute_id = ?")
+                               " set value=?, dirty=1, sent=0  where entity_id = ? and attribute_id = ?")
              (ktv-value ktv) entity-id (ktv-key ktv))
             '())))) ;;(msg "values for" (ktv-key ktv) "are the same (" (ktv-value ktv) "==" s ")")))))
 
 ;; don't make dirty or update version here
+;; setting sent=0 to work with the rabbitmq updater here
 (define (update-value-from-sync db table entity-id ktv)
   (let ((s (select-first
             db (string-append
@@ -91,7 +93,7 @@
         (insert-value db table entity-id ktv #t) ;; <- don't make dirty!?
         (db-exec
          db (string-append "update " table "_value_" (ktv-type ktv)
-                           " set value=?, dirty=0 where entity_id = ? and attribute_id = ?")
+                           " set value=?, dirty=0, sent=0 where entity_id = ? and attribute_id = ?")
          (ktv-value ktv) entity-id (ktv-key ktv)))))
 
 ;; get all the (current) attributes for an entity type

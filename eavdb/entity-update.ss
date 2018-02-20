@@ -28,16 +28,17 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; updating data
 
+;; setting sent=0 to update rabbitmq - probably not needed?
 (define (update-entity-changed db table entity-id)
   (db-exec
    db (string-append
-       "update " table "_entity set dirty=?, version=version+1 where entity_id = ?")
+       "update " table "_entity set dirty=?, sent=0, version=version+1 where entity_id = ?")
    1 entity-id))
 
 (define (update-entity-version db table entity-id version)
   (db-exec
    db (string-append
-       "update " table "_entity set dirty=0, version=? where entity_id = ?")
+       "update " table "_entity set dirty=0, sent=0, version=? where entity_id = ?")
    version entity-id))
 
 ;; update an entire entity (version incl), via a (possibly partial) list of key/value pairs
