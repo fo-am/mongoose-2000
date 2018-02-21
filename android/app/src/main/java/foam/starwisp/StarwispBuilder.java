@@ -811,7 +811,7 @@ public class StarwispBuilder
                         //ClipDrawable d1 = (ClipDrawable) ld.findDrawableByLayerId(R.id.seekprogress);
                         //int c=(int)((a/100.0f)*255.0f);
                         //int mc = 255-c;
-                        //d1.setColorFilter(Color.argb(127,c,mc,mc), PorterDuff.Mode.SRC_OVER);
+                        //      d1.setColorFilter(Color.argb(127,c,mc,mc), PorterDuff.Mode.SRC_OVER);
 
                         CallbackArgs(ctx,ctxname,v.getId(),Integer.toString(a));
                     }
