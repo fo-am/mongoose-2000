@@ -350,20 +350,14 @@
                        (list) (lambda (v) '()))))))
       (image-view (make-id "im") "arrow_right" (layout 200 'fill-parent 1 'right 0)))))))
 
-;; assumes grid selectors on mongeese only
-;; assumes order of ktv elements?
-(define (fast-get-name item)
-  (list-ref (list-ref item 1) 2))
-
-(define (fast-get-id item)
-  (list-ref (list-ref item 0) 2))
-
 (define (build-button-items name items unknown)
   (append
    (map
     (lambda (item)
-      (list (make-id (string-append name (fast-get-id item)))
-            item (fast-get-name item)))
+      (list 
+       (make-id (string-append name (ktv-get item "unique_id")))
+       item
+       (ktv-get item "name")))
     items)
    (if unknown
        (list

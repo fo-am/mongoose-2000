@@ -7,7 +7,7 @@ android {
     useLibrary  'org.apache.http.legacy'
 
     defaultConfig {
-        applicationId "foam.crapapppro"
+        applicationId "foam.mongoose"
         minSdkVersion 10
         targetSdkVersion 14
 
