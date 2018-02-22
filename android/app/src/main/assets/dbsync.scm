@@ -727,6 +727,12 @@
       (symbol->string (car (list-ref l i)))
       i))
 
+(define (symbol-list-to-names l)
+  (map 
+   (lambda (n) 
+     (cadr n))
+   l))
+
 (define (spinner-index l s)
   (define (_ l n s)
     (cond

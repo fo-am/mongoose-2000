@@ -717,26 +717,27 @@
    (lambda (activity arg)
      (entity-init! db "sync" "individual" (get-current 'individual #f))
      (let ((individual (get-current 'individual '())))
-       (list
+       (append
 	(update-lifehist (ktv-get individual "gender"))
-        (update-widget 'edit-text (get-id "update-individual-name") 'text
-                       (ktv-get individual "name"))
-        (update-widget 'text-view (get-id "update-individual-dob") 'text
-                       (ktv-get individual "dob"))
-        (update-widget 'spinner (get-id "update-individual-gender") 'selection
-                       (spinner-index list-gender (ktv-get individual "gender")))
-        (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
-                       (ktv-get individual "litter-code"))
-        (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
-                       (ktv-get individual "chip-code"))
-        (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
-                       (let ((v (ktv-get individual "collar-weight"))) (if v v 0)))
-
-        (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
-                       (if (eqv? (ktv-get individual "deleted") 1) 1 0))
-        (update-widget 'toggle-button (get-id "update-individual-died") 'checked
-                       (if (eqv? (ktv-get individual "deleted") 2) 1 0))
-        )))
+	(list
+	 (update-widget 'edit-text (get-id "update-individual-name") 'text
+			(ktv-get individual "name"))
+	 (update-widget 'text-view (get-id "update-individual-dob") 'text
+			(ktv-get individual "dob"))
+	 (update-widget 'spinner (get-id "update-individual-gender") 'selection
+			(spinner-index list-gender (ktv-get individual "gender")))
+	 (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
+			(ktv-get individual "litter-code"))
+	 (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
+			(ktv-get individual "chip-code"))
+	 (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
+			(let ((v (ktv-get individual "collar-weight"))) (if v v 0)))
+	 
+	 (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
+			(if (eqv? (ktv-get individual "deleted") 1) 1 0))
+	 (update-widget 'toggle-button (get-id "update-individual-died") 'checked
+			(if (eqv? (ktv-get individual "deleted") 2) 1 0))
+	 ))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())

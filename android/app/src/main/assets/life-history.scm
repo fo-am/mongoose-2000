@@ -46,16 +46,18 @@
    (else "female")))  
 
 (define (update-lifehist gender)
-  (msg "update-lifehist: " gender)
-  (msg (string? gender))
-  (update-widget 'spinner (get-id "lifehist-types") 'array
-		 (lifehist-types (if (string=? gender " female") 'female 'male))))
-
+  (list
+   (update-widget 
+    'spinner (get-id "lifehist-type") 'array
+    (symbol-list-to-names
+     (lifehist-types (if (equal? gender "female") 'female 'male))))
+   (update-widget 'text-view (get-id "lifehist-title") 'text
+		  (string-append "New life history event for this " (lifehist-text gender)))))
 (define (build-lifehist type)
   (linear-layout
    (make-id "") 'vertical fillwrap lh-bgcol
    (list
-    (text-view 0 (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
+    (text-view (make-id "lifehist-title") (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
     (horiz
      (vert
       (horiz
@@ -67,12 +69,12 @@
 	 (list (date-picker-dialog
 		"lifehist-date"
 		(lambda (day month year)
-		  (let ((datestring (date-time->string (list year (+ month 1) day))))			
+		  (let ((datestring (date->string (list year (+ month 1) day))))
 		    (set-current! 'lifehist-date datestring)
 		    (list
 		     (update-widget
-		      'text-view
-		      (get-id "lifehist-date-view") 'text datestring)))))))))
+		      'text-view (get-id "lifehist-date-view") 
+		      'text datestring)))))))))
      (vert
       (mtext 0 "Code")
       (mspinner "lifehist-type" 
