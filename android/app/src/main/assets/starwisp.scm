@@ -533,11 +533,10 @@
   (activity
    "manage-individual"
    (vert
-    (text-view (make-id "title") "Manage individuals" 40 fillwrap)
+    (text-view (make-id "title") "Update pack" 40 fillwrap)
     (text-view (make-id "manage-individual-pack-name") "Pack:" 30 fillwrap)
     (build-grid-selector "manage-individuals-list" "button" "Choose individual")
     (horiz
-     (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
      (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
      (mbutton2 "manage-individuals-delete" "Delete pack"
                (lambda ()
@@ -555,14 +554,19 @@
                          (lambda (v)
                            (cond
                             ((eqv? v 1)
+			     (set-current! 'entity-type "pack")
                              (entity-update-single-value! (ktv "deleted" "int" 1))
                              (list (finish-activity 1)))
                             (else
                              (list)))))))
-                      (else (list))))))))))
+                      (else (list)))))))))
+    (build-lifehist 'pack)
+    (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
+    )
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (init-lifehist db)
      (entity-init! db "sync" "pack" (get-current 'pack #f))
      (list
       (populate-grid-selector

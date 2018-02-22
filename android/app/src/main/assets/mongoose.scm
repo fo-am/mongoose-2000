@@ -50,6 +50,7 @@
    "preg-focal-aggr"
    "preg-focal-affil"
 
+   "lifehist-event"
    ))
 
 (define pup-focal-export
@@ -186,6 +187,7 @@
 (define gc-col (list 164 82 9 255))
 (define of-col (list 82 102 204 255))
 (define prf-col (list 255 81 81 255))
+(define lh-col (list 255 81 255 255))
 
 ;(define of-col (list 51 204 51 255))
 ;(define prf-col (list 255 51 51 255))
@@ -196,6 +198,7 @@
 (define gc-bgcol (list 164 82 9 127))
 (define of-bgcol (list 102 204 102 127))
 (define prf-bgcol (list 255 102 51 127))
+(define lh-bgcol (list 255 204 255 127))
 
 ;(define pf-col (list  22  19 178  127))
 ;(define gp-col (list 255  97   0  127))
@@ -249,8 +252,14 @@
 (define (mbutton id title fn)
   (button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) fn))
 
+(define (mbutton-large id title fn)
+  (button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 5) fn))
+
 (define (mcolour-button id title col fn)
   (colour-button (make-id id) title 20 (layout 'fill-parent 'wrap-content 1 'centre 5) col fn))
+
+(define (mcolour-button-large id title col fn)
+  (colour-button (make-id id) title 30 (layout 'fill-parent 'wrap-content 1 'centre 5) col fn))
 
 (define (mbutton2 id title fn)
   (button (make-id id) title 20 (layout 150 100 1 'centre 5) fn))

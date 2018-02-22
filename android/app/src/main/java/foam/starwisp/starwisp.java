@@ -47,6 +47,7 @@ import android.text.TextWatcher;
 import android.text.Editable;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.res.Configuration;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -115,6 +116,7 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("eavdb/eavdb.ss");
         m_Scheme.Load("dbsync.scm");
         m_Scheme.Load("mongoose.scm");
+        m_Scheme.Load("life-history.scm");
         m_Scheme.Load("pup-focal.scm");
         m_Scheme.Load("oestrus-focal.scm");
         m_Scheme.Load("preg-focal.scm");
@@ -146,6 +148,16 @@ public class starwisp extends StarwispActivity
                       "(define date-year "+year+")"+
                       "(define timezone-offset-mins "+timezone_offset_mins+")"+
                       "(define app-version "+version+")");
+
+	// also updated in StarwispActivity::onCreate()
+	String ori = "'portrait";
+	if (getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE) {
+	    ori = "'landscape";
+	}
+	m_Scheme.eval("(define screen-orientation "+ori+")");	
+
+        // pass in a bunch of useful stuff
+        DeclareSensors();
 
         Log.i("starwisp","started, now running starwisp.scm...");
         m_Scheme.eval(m_Scheme.readRawTextFile(this, "starwisp.scm"));

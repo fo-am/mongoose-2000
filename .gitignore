@@ -35,3 +35,5 @@ output.json
 obj/
 .externalNativeBuild
 *.so
+
+*.csv
