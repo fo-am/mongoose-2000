@@ -95,17 +95,25 @@
 	   (lambda (v)
 	     (cond
 	      ((eqv? v 1)
-	       (msg "creating lifehist:")
-	       ;; doing entity-create! so as not to disturb the current
-	       ;; pack/litter/individual being edited
+	       ;; using entity-create! so as not to disturb the current
+	       ;; pack/litter/individual being currently edited in 
+	       ;; memory via the rest of the interface
 	       (entity-create! 
 		db "stream" "lifehist-event" 
 		(list
 		 (ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
 		 (ktv "type" "varchar" (symbol->string type))
 		 (ktv "code" "varchar" (get-current 'lifehist-code "none"))
-		 (ktv "entity-uid" "varchar" "none")
-		 (ktv "entity-name" "varchar" "none")))
+		 (ktv "entity-uid" "varchar" 
+		      (cond 
+		       ((eq? type 'pack) (ktv-get (get-current 'pack ()) "unique_id"))
+		       ((eq? type 'litter) (ktv-get (get-current 'litter ()) "unique_id"))
+		       (else (ktv-get (get-current 'individual ()) "unique_id"))))
+		 (ktv "entity-name" "varchar"
+		      (cond 
+		       ((eq? type 'pack) (ktv-get (get-current 'pack ()) "name"))
+		       ((eq? type 'litter) (ktv-get (get-current 'litter ()) "name"))
+		       (else (ktv-get (get-current 'individual ()) "name"))))))
 	       '())
 	      (else
 	       (list)))))))))))))
