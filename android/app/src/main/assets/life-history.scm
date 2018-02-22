@@ -43,17 +43,13 @@
    ((eq? type 'pack) "pack")
    ((eq? type 'litter) "litter")
    ((eq? type 'male) "male")
-   (else "female")))
+   (else "female")))  
 
-(define (init-lifehist db)
-  (entity-init! db "stream" "lifehist-event" 
-		(list
-		 (ktv "date" "varchar" (date-time->string (date-time)))
-		 (ktv "type" "varchar" "none")
-		 (ktv "code" "varchar" "none")
-		 (ktv "entity-uid" "varchar" "none")
-		 (ktv "entity-name" "varchar" "none"))))
-  
+(define (update-lifehist gender)
+  (msg "update-lifehist: " gender)
+  (msg (string? gender))
+  (update-widget 'spinner (get-id "lifehist-types") 'array
+		 (lifehist-types (if (string=? gender " female") 'female 'male))))
 
 (define (build-lifehist type)
   (linear-layout
@@ -65,26 +61,25 @@
       (horiz
        (mtext 0 "Date:")
        (mtext "lifehist-date-view" (date->string (date-time))))
-      (mbutton-large "lifehist-date" "Set date" 
-	       (lambda ()
-		 (list (date-picker-dialog
-			"lifehist-date"
-			(lambda (day month year)
-			  (let ((datestring (date-time->string (list year (+ month 1) day))))			
-			    (set-current! 'entity-type "lifehist-event")
-			    (entity-set-value! "date" "varchar" datestring)
-			    (list
-			     (update-widget
-			      'text-view
-			      (get-id "lifehist-date-view") 'text datestring)))))))))
+      (mbutton-large 
+       "lifehist-date" "Set date" 
+       (lambda ()
+	 (list (date-picker-dialog
+		"lifehist-date"
+		(lambda (day month year)
+		  (let ((datestring (date-time->string (list year (+ month 1) day))))			
+		    (set-current! 'lifehist-date datestring)
+		    (list
+		     (update-widget
+		      'text-view
+		      (get-id "lifehist-date-view") 'text datestring)))))))))
      (vert
       (mtext 0 "Code")
       (mspinner "lifehist-type" 
 		(lifehist-types type)
 		(lambda (v) 
-		  (set-current! 'entity-type "lifehist-event")
-		  (entity-set-value! 
-		   "code" "varchar" 
+		  (set-current! 
+		   'lifehist-code 
 		   (spinner-choice (lifehist-types type) v))
 		  '())))
      (vert
@@ -93,8 +88,6 @@
        "lifehist-record" "Record"
        lh-col
        (lambda ()
-	 (set-current! 'entity-type "lifehist-event")
-	 (entity-set-value! "entity-uid" "varchar" (get-current 'focal-id ""))
 	 (list
 	  (alert-dialog
 	   "lifehist-check"
@@ -102,7 +95,17 @@
 	   (lambda (v)
 	     (cond
 	      ((eqv? v 1)
-	       (entity-record-values!)
+	       (msg "creating lifehist:")
+	       ;; doing entity-create! so as not to disturb the current
+	       ;; pack/litter/individual being edited
+	       (entity-create! 
+		db "stream" "lifehist-event" 
+		(list
+		 (ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
+		 (ktv "type" "varchar" (symbol->string type))
+		 (ktv "code" "varchar" (get-current 'lifehist-code "none"))
+		 (ktv "entity-uid" "varchar" "none")
+		 (ktv "entity-name" "varchar" "none")))
 	       '())
 	      (else
 	       (list)))))))))))))

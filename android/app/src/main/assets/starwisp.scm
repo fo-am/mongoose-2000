@@ -566,7 +566,6 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (init-lifehist db)
      (entity-init! db "sync" "pack" (get-current 'pack #f))
      (list
       (populate-grid-selector
@@ -702,6 +701,9 @@
                       (lambda (v)
                         (entity-set-value! "deleted" "int" (if v 2 0))
                         (list))))
+
+    (build-lifehist 'male)
+    
     (horiz
      (mbutton2 "update-individual-cancel" "Cancel"
                (lambda () (list (finish-activity 2))))
@@ -715,8 +717,8 @@
    (lambda (activity arg)
      (entity-init! db "sync" "individual" (get-current 'individual #f))
      (let ((individual (get-current 'individual '())))
-       (msg "deleted = " (ktv-get individual "deleted"))
        (list
+	(update-lifehist (ktv-get individual "gender"))
         (update-widget 'edit-text (get-id "update-individual-name") 'text
                        (ktv-get individual "name"))
         (update-widget 'text-view (get-id "update-individual-dob") 'text

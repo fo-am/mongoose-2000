@@ -746,6 +746,7 @@
               (time (ktv-get entity "time"))
               (type (list-ref data 0))
               (uid (list-ref data 1)))
+	 (msg type)
          (cond
           ((or (equal? type "group-comp")
                (equal? type "pup-focal")
@@ -792,7 +793,8 @@
           ((or (equal? type "group-interaction")
                (equal? type "group-alarm")
                (equal? type "group-move")
-               (equal? type "note"))
+               (equal? type "note")
+               (equal? type "lifehist-event"))
            (cons
             (mbutton
              (string-append "review-" uid)
