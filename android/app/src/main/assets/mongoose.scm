@@ -192,6 +192,12 @@
 ;(define of-col (list 51 204 51 255))
 ;(define prf-col (list 255 51 51 255))
 
+(define large-text-size 30)
+(define button-text-size 25)
+(define normal-text-size 20)
+(define small-text-size 15)
+(define margin-size 10)
+(define list-colour (list 255 255 255 50))
 
 (define pf-bgcol (list 255 204 51 127))
 (define gp-bgcol (list 255 102 0 127))
@@ -533,6 +539,12 @@
     (list "dob" "varchar" "t<"
           (date->string (date-minus-months (date-time) 6))))))
 
+(define (db-current-litters)
+  (db-filter
+   db "sync" "litter"
+   (list
+    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "date" "varchar" "d<" 30))))
 
 (define (tri-state entity-type id text key)
   (linear-layout
@@ -1178,3 +1190,68 @@
       (lambda ()
         (list)))))
    (else (fn))))
+
+
+;; a standard builder for list widgets of entities and a
+;; make new button, to add defaults to the list - edit-activity
+;; is called when the + button is pressed
+(define (build-list-widget db table title title-ids entity-type edit-activity parent-fn ktv-default-fn)
+    (vert-colour
+     list-colour
+     (horiz
+      (mtitle "" title)
+      (button
+       (make-id (string-append title "-add"))
+       "+" 40 (layout 100 'wrap-content 1 'centre 5)
+       (lambda ()
+         (let ((id (entity-create!
+		    db table entity-type
+		    (ktvlist-merge
+		     (ktv-default-fn)
+		     (list (ktv "parent" "varchar" (parent-fn)))))))
+	   (list (start-activity edit-activity 0 id))))))
+     
+     (linear-layout
+      (make-id (string-append entity-type "-list"))
+      'vertical
+      (layout 'fill-parent 'wrap-content 1 'centre 20)
+      (list 0 0 0 0)
+      (list))))
+
+(define (make-list-widget-title e title-ids)
+  (if (eqv? (length title-ids) 1)
+      (ktv-get e (car title-ids))
+      (dbg (foldl
+	    (lambda (id r)
+	      (if (equal? r "")
+		  (ktv-get e id)
+		  (string-append r " " (ktv-get e id))))
+	    "" 
+	    title-ids))))
+
+;; pull db data into list of button widgets
+(define (update-list-widget db table title-ids entity-type view-activity parent)
+  (let ((search-results
+         (if parent
+	     (db-filter-only db table entity-type
+                             (list (list "parent" "varchar" "=" parent))
+                             (map
+                              (lambda (id)
+                                (list id "varchar"))
+                              title-ids))
+             (db-all db table entity-type))))
+    (update-widget
+     'linear-layout
+     (get-id (string-append entity-type "-list"))
+     'contents
+     (if (null? search-results)
+         (list (mtext "" "No litters found"))
+         (map
+          (lambda (e)
+            (button
+             (make-id (string-append "list-button-" (ktv-get e "unique_id")))
+             (make-list-widget-title e title-ids)
+             button-text-size (layout 'fill-parent 'wrap-content 1 'centre 5)
+             (lambda ()
+               (list (start-activity view-activity 0 (ktv-get e "unique_id"))))))
+          search-results)))))

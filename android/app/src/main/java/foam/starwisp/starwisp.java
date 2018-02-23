@@ -78,6 +78,7 @@ public class starwisp extends StarwispActivity
         ActivityManager.RegisterActivity("manage-individual",ManageIndividualActivity.class);
         ActivityManager.RegisterActivity("new-individual",NewIndividualActivity.class);
         ActivityManager.RegisterActivity("update-individual",UpdateIndividualActivity.class);
+        ActivityManager.RegisterActivity("update-litter",UpdateLitterActivity.class);
 
         ActivityManager.RegisterActivity("tag-location",TagLocationActivity.class);
         ActivityManager.RegisterActivity("sync",SyncActivity.class);
@@ -117,6 +118,7 @@ public class starwisp extends StarwispActivity
         m_Scheme.Load("dbsync.scm");
         m_Scheme.Load("mongoose.scm");
         m_Scheme.Load("life-history.scm");
+        m_Scheme.Load("litter.scm");
         m_Scheme.Load("pup-focal.scm");
         m_Scheme.Load("oestrus-focal.scm");
         m_Scheme.Load("preg-focal.scm");

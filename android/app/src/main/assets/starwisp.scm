@@ -473,7 +473,6 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
   (activity
@@ -532,50 +531,85 @@
 
   (activity
    "manage-individual"
-   (vert
-    (text-view (make-id "title") "Update pack" 40 fillwrap)
-    (text-view (make-id "manage-individual-pack-name") "Pack:" 30 fillwrap)
-    (build-grid-selector "manage-individuals-list" "button" "Choose individual")
-    (horiz
-     (mbutton2 "manage-individuals-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
-     (mbutton2 "manage-individuals-delete" "Delete pack"
-               (lambda ()
-                 (list
-                  (alert-dialog
-                   "delete-pack-dialog"
-                   "Delete this pack: are you sure?"
-                   (lambda (v)
-                     (cond
-                      ((eqv? v 1)
-                       (list
-                        (alert-dialog
-                         "delete-really-pack-dialog"
-                         "Really delete this pack: are you absolutely sure?"
-                         (lambda (v)
-                           (cond
-                            ((eqv? v 1)
-			     (set-current! 'entity-type "pack")
-                             (entity-update-single-value! (ktv "deleted" "int" 1))
-                             (list (finish-activity 1)))
-                            (else
-                             (list)))))))
-                      (else (list)))))))))
-    (build-lifehist 'pack)
-    (mbutton2 "choose-obs-back" "Back" (lambda () (list (finish-activity 1))))
-    )
+   (scroll-view-vert
+    0 (layout 'fill-parent 'wrap-content 0.75 'centre 0)
+    (list
+     (vert
+      (text-view (make-id "title") "Update pack" 40 fillwrap)
+      (text-view (make-id "manage-pack-name") "Pack:" 30 fillwrap)
+      (build-grid-selector "manage-pack-list" "button" "Choose individual")
+      (horiz
+       (mbutton2 "manage-pack-new" "New individual" (lambda () (list (start-activity "new-individual" 2 ""))))
+       (mbutton2 "manage-pack-delete" "Delete pack"
+		 (lambda ()
+		   (list
+		    (alert-dialog
+		     "delete-pack-dialog"
+		     "Delete this pack: are you sure?"
+		     (lambda (v)
+		       (cond
+			((eqv? v 1)
+			 (list
+			  (alert-dialog
+			   "delete-really-pack-dialog"
+			   "Really delete this pack: are you absolutely sure?"
+			   (lambda (v)
+			     (cond
+			      ((eqv? v 1)
+			       (set-current! 'entity-type "pack")
+			       (entity-update-single-value! (ktv "deleted" "int" 1))
+			       (list (finish-activity 1)))
+			      (else
+			       (list)))))))
+			(else (list)))))))))
+      (vert
+       (mtext (make-id "") "Current litter code")
+       (horiz
+	(medit-text "litter-code-letter" "Letter"
+		    "normal"
+		    (lambda (v)
+		      (entity-set-value! "litter-code-letter" "varchar" v)
+		      '()))
+	(medit-text "litter-code-number" "Number"
+		    "numeric"
+		    (lambda (v)
+		      (entity-set-value! "litter-code-number" "int" (string->number v))
+		      '()))))
+
+      (build-list-widget db "sync" "Recent litters" (list "name" "date") 
+			 "litter" "update-litter" 
+			 (lambda () (msg "pack parent") (dbg (ktv-get (get-current 'pack '()) "unique_id")))
+			 (lambda () (init-litter)))
+      (build-lifehist 'pack)
+      (horiz
+       (mbutton2 "manage-pack-back" "Cancel" (lambda () (list (finish-activity 1))))
+       (mbutton2 "manage-pack-done" "Done"
+		 (lambda ()
+		   (entity-update-values!)
+		   (list (finish-activity 2))))))))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
+     (msg "pack ---------------------------")
      (entity-init! db "sync" "pack" (get-current 'pack #f))
      (list
+      (update-list-widget 
+       db "sync" (list "name" "date") "litter" "update-litter" 
+       (ktv-get (get-current 'pack '()) "unique_id"))
       (populate-grid-selector
-       "manage-individuals-list" "button"
+       "manage-pack-list" "button"
        (db-mongooses-by-pack) #f
        (lambda (individual)
          (set-current! 'individual individual)
          (list (start-activity "update-individual" 2 ""))))
-      (update-widget 'text-view (get-id "manage-individual-pack-name") 'text
+      (update-widget 'text-view (get-id "manage-pack-name") 'text
                      (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
+
+      (update-widget 'text-view (get-id "litter-code-letter") 'text
+		     (or (entity-get-value "litter-code-letter") ""))
+      (update-widget 'text-view (get-id "litter-code-number") 'text
+		     (or (entity-get-value "litter-code-number") ""))
+
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -717,7 +751,7 @@
    (lambda (activity arg)
      (entity-init! db "sync" "individual" (get-current 'individual #f))
      (let ((individual (get-current 'individual '())))
-       (append
+        (append
 	(update-lifehist (ktv-get individual "gender"))
 	(list
 	 (update-widget 'edit-text (get-id "update-individual-name") 'text
@@ -938,4 +972,63 @@
    (lambda (activity) '())
    (lambda (activity requestcode resultcode) '()))
 
+
+  (activity
+   "update-litter"
+   (vert
+    (text-view (make-id "title") "Update Litter" 40 fillwrap)
+    (text-view (make-id "litter-pack-text") "" 30 fillwrap)
+    (spacer 10)
+    (vert
+     (text-view (make-id "update-litter-date-text") "00/00/00" 25 fillwrap)
+     (button (make-id "date") "Set date" 30 fillwrap
+             (lambda ()
+               (list (date-picker-dialog
+                      "update-litter-date"
+                      (lambda (day month year)
+                        (let ((datestring (date->string (list year (+ month 1) day))))
+                          (entity-set-value! "date" "varchar" datestring)
+                          (list
+                           (update-widget
+                            'text-view
+                            (get-id "update-litter-date") 'text datestring)))))))))
+     
+
+    (build-lifehist 'litter)
+
+    (mtoggle-button2 "update-litter-delete" "Delete"
+		     (lambda (v)
+		       (entity-set-value! "deleted" "int" (if v 1 0))
+		       (list)))
+
+    (horiz
+     (mbutton2 "update-litter-cancel" "Cancel"
+	       (lambda () (list (finish-activity 2))))
+     (mbutton2 "update-litter-done" "Done"
+	       (lambda ()
+		 (entity-update-values!)
+		 (list (finish-activity 2)))))
+     
+    )
+   (lambda (activity arg)
+     (activity-layout activity))
+   (lambda (activity arg)
+     (set-current! 'litter (get-entity-by-unique db "sync" arg))
+     (entity-init! db "sync" "litter" (get-current 'litter '()))
+     (list
+      (update-widget 
+       'text-view (get-id "litter-pack-text") 'text
+       (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
+      (update-widget 'text-view (get-id "update-litter-date-text") 'text
+		     (entity-get-value "date"))
+      
+      ))
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity) '())
+   (lambda (activity requestcode resultcode) '()))
+  
+  
+  
   )

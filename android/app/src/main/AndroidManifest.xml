@@ -35,6 +35,7 @@
         <activity android:name="ReviewActivity" android:configChanges="orientation"></activity>
         <activity android:name="ReviewItemActivity" android:configChanges="orientation"></activity>
         <activity android:name="ReviewCollectionActivity" android:configChanges="orientation"></activity>
+        <activity android:name="UpdateLitterActivity" android:configChanges="orientation"></activity>
     </application>
 
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />

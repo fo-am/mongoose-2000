@@ -1,4 +1,17 @@
-
+;; Mongoose 2000 Copyright (C) 2018 FoAM Kernow
+;;
+;; This program is free software: you can redistribute it and/or modify
+;; it under the terms of the GNU Affero General Public License as
+;; published by the Free Software Foundation, either version 3 of the
+;; License, or (at your option) any later version.
+;;
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU Affero General Public License for more details.
+;;
+;; You should have received a copy of the GNU Affero General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define list-pack-lifehist
   (list
@@ -53,72 +66,72 @@
      (lifehist-types (if (equal? gender "female") 'female 'male))))
    (update-widget 'text-view (get-id "lifehist-title") 'text
 		  (string-append "New life history event for this " (lifehist-text gender)))))
+
 (define (build-lifehist type)
-  (linear-layout
-   (make-id "") 'vertical fillwrap lh-bgcol
-   (list
-    (text-view (make-id "lifehist-title") (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
-    (horiz
-     (vert
-      (horiz
-       (mtext 0 "Date:")
-       (mtext "lifehist-date-view" (date->string (date-time))))
-      (mbutton-large 
-       "lifehist-date" "Set date" 
-       (lambda ()
-	 (list (date-picker-dialog
-		"lifehist-date"
-		(lambda (day month year)
-		  (let ((datestring (date->string (list year (+ month 1) day))))
-		    (set-current! 'lifehist-date datestring)
-		    (list
-		     (update-widget
-		      'text-view (get-id "lifehist-date-view") 
-		      'text datestring)))))))))
-     (vert
-      (mtext 0 "Code")
-      (mspinner "lifehist-type" 
-		(lifehist-types type)
-		(lambda (v) 
-		  (set-current! 
-		   'lifehist-code 
-		   (spinner-choice (lifehist-types type) v))
-		  '())))
-     (vert
-      (mtext 0 "")
-      (mcolour-button-large 
-       "lifehist-record" "Record"
-       lh-col
-       (lambda ()
-	 (list
-	  (alert-dialog
-	   "lifehist-check"
-	   "Recording life history event: are you sure?"
-	   (lambda (v)
-	     (cond
-	      ((eqv? v 1)
-	       ;; using entity-create! so as not to disturb the current
-	       ;; pack/litter/individual being currently edited in 
-	       ;; memory via the rest of the interface
-	       (entity-create! 
-		db "stream" "lifehist-event" 
-		(list
-		 (ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
-		 (ktv "type" "varchar" (symbol->string type))
-		 (ktv "code" "varchar" (get-current 'lifehist-code "none"))
-		 (ktv "entity-uid" "varchar" 
-		      (cond 
-		       ((eq? type 'pack) (ktv-get (get-current 'pack ()) "unique_id"))
-		       ((eq? type 'litter) (ktv-get (get-current 'litter ()) "unique_id"))
-		       (else (ktv-get (get-current 'individual ()) "unique_id"))))
-		 (ktv "entity-name" "varchar"
-		      (cond 
-		       ((eq? type 'pack) (ktv-get (get-current 'pack ()) "name"))
-		       ((eq? type 'litter) (ktv-get (get-current 'litter ()) "name"))
-		       (else (ktv-get (get-current 'individual ()) "name"))))))
-	       '())
-	      (else
-	       (list)))))))))))))
+  (vert-colour 
+   lh-bgcol
+   (text-view (make-id "lifehist-title") (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
+   (horiz
+    (vert
+     (horiz
+      (mtext 0 "Date:")
+      (mtext "lifehist-date-view" (date->string (date-time))))
+     (mbutton-large 
+      "lifehist-date" "Set date" 
+      (lambda ()
+	(list (date-picker-dialog
+	       "lifehist-date"
+	       (lambda (day month year)
+		 (let ((datestring (date->string (list year (+ month 1) day))))
+		   (set-current! 'lifehist-date datestring)
+		   (list
+		    (update-widget
+		     'text-view (get-id "lifehist-date-view") 
+		     'text datestring)))))))))
+    (vert
+     (mtext 0 "Code")
+     (mspinner "lifehist-type" 
+	       (lifehist-types type)
+	       (lambda (v) 
+		 (set-current! 
+		  'lifehist-code 
+		  (spinner-choice (lifehist-types type) v))
+		 '())))
+    (vert
+     (mtext 0 "")
+     (mcolour-button-large 
+      "lifehist-record" "Record"
+      lh-col
+      (lambda ()
+	(list
+	 (alert-dialog
+	  "lifehist-check"
+	  "Recording life history event: are you sure?"
+	  (lambda (v)
+	    (cond
+	     ((eqv? v 1)
+	      ;; using entity-create! so as not to disturb the current
+	      ;; pack/litter/individual being currently edited in 
+	      ;; memory via the rest of the interface
+	      (entity-create! 
+	       db "stream" "lifehist-event" 
+	       (list
+		(ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
+		(ktv "type" "varchar" (symbol->string type))
+		(ktv "code" "varchar" (get-current 'lifehist-code "none"))
+		(ktv "entity-uid" "varchar" 
+		     (cond 
+		      ((eq? type 'pack) (ktv-get (get-current 'pack ()) "unique_id"))
+		      ((eq? type 'litter) (ktv-get (get-current 'litter ()) "unique_id"))
+		      (else (ktv-get (get-current 'individual ()) "unique_id"))))
+		(ktv "entity-name" "varchar"
+		     (cond 
+		      ((eq? type 'pack) (ktv-get (get-current 'pack ()) "name"))
+		      ((eq? type 'litter) (ktv-get (get-current 'litter ()) "name"))
+		      (else (ktv-get (get-current 'individual ()) "name"))))))
+	      '())
+	     (else
+	      (list))))))))))))
 
 
 

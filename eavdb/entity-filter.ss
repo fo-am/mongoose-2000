@@ -63,20 +63,30 @@
 (define (build-query-chunk i r table)
   (let ((var (mangle (string-append (filter-key i) "_var"))))
     ;; add a query chunk
-    (if (equal? (substring (filter-op i) 0 1) "t")
-        ;; time version
-        (string-append
-         r "join " table "_value_" (filter-type i) " "
-         "as " var " on "
-         var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and ( "
-         var ".value "  (substring (filter-op i) 1 (string-length (filter-op i))) " DateTime(?) "
-         "or " var ".value like 'unknown') ")
-        ;; normal version
-        (string-append
-         r "join " table "_value_" (filter-type i) " "
-         "as " var " on "
-         var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and "
-         var ".value " (filter-op i) " ? "))))
+    (cond
+     ((equal? (substring (filter-op i) 0 1) "d")
+      ;; a days comparison version (should replace time version)
+      (string-append
+       r "join " table "_value_" (filter-type i) " "
+       "as " var " on "
+       var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and ( "
+       "(julianday(" var ".value)-julianday('now'))"  (substring (filter-op i) 1 (string-length (filter-op i))) " ? "
+       "or " var ".value like 'unknown') "))      
+     ((equal? (substring (filter-op i) 0 1) "t")
+      ;; time version
+      (string-append
+       r "join " table "_value_" (filter-type i) " "
+       "as " var " on "
+       var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and ( "
+       var ".value "  (substring (filter-op i) 1 (string-length (filter-op i))) " DateTime(?) "
+       "or " var ".value like 'unknown') "))
+     ;; normal version
+     (else
+      (string-append
+       r "join " table "_value_" (filter-type i) " "
+       "as " var " on "
+       var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and "
+       var ".value " (filter-op i) " ? ")))))
 
 
 (define (build-query table filter typed)
@@ -136,8 +146,6 @@
 	   (lambda (i)
 	     (vector-ref i 0))
 	   (cdr s))))))
-
-
 
 
 (define (filter-entities-inc-deleted db table type filter)
