@@ -37,3 +37,6 @@ obj/
 *.so
 
 *.csv
+
+#VS Code
+.vscode/*
