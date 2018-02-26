@@ -798,7 +798,6 @@
                (equal? type "group-alarm")
                (equal? type "group-move")
                (equal? type "note")
-               (equal? type "movepack-event")
                (equal? type "lifehist-event"))
            (cons
             (mbutton
