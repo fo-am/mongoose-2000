@@ -491,8 +491,7 @@
       (populate-grid-selector
        "manage-packs-list" "button" (db-mongoose-packs) #f
        (lambda (pack)
-         (set-current! 'pack pack)
-         (list (start-activity "manage-individual" 2 ""))))
+         (list (start-activity "manage-individual" 2 (ktv-get pack "unique_id")))))
       ))
    (lambda (activity) '())
    (lambda (activity) '())
@@ -578,7 +577,7 @@
 
       (build-list-widget db "sync" "Recent litters" (list "name" "date") 
 			 "litter" "update-litter" 
-			 (lambda () (msg "pack parent") (dbg (ktv-get (get-current 'pack '()) "unique_id")))
+			 (lambda () (ktv-get (get-current 'pack '()) "unique_id"))
 			 (lambda () (init-litter)))
       (build-lifehist 'pack)
       (horiz
@@ -590,21 +589,18 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (msg "pack ---------------------------")
-     (entity-init! db "sync" "pack" (get-current 'pack #f))
+     (set-current! 'pack (get-entity-by-unique db "sync" arg))
+     (entity-init! db "sync" "pack" (get-current 'pack '()))
      (list
       (update-list-widget 
-       db "sync" (list "name" "date") "litter" "update-litter" 
-       (ktv-get (get-current 'pack '()) "unique_id"))
+       db "sync" (list "name" "date") "litter" "update-litter" (entity-get-value "unique_id"))
       (populate-grid-selector
        "manage-pack-list" "button"
        (db-mongooses-by-pack) #f
        (lambda (individual)
-         (set-current! 'individual individual)
-         (list (start-activity "update-individual" 2 ""))))
+         (list (start-activity "update-individual" 2 (ktv-get individual "unique_id")))))
       (update-widget 'text-view (get-id "manage-pack-name") 'text
-                     (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
-
+                     (string-append "Pack: " (entity-get-value "name")))
       (update-widget 'text-view (get-id "litter-code-letter") 'text
 		     (or (entity-get-value "litter-code-letter") ""))
       (update-widget 'text-view (get-id "litter-code-number") 'text
@@ -749,29 +745,29 @@
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
-     (entity-init! db "sync" "individual" (get-current 'individual #f))
-     (let ((individual (get-current 'individual '())))
-        (append
-	(update-lifehist (ktv-get individual "gender"))
-	(list
-	 (update-widget 'edit-text (get-id "update-individual-name") 'text
-			(ktv-get individual "name"))
-	 (update-widget 'text-view (get-id "update-individual-dob") 'text
-			(ktv-get individual "dob"))
-	 (update-widget 'spinner (get-id "update-individual-gender") 'selection
-			(spinner-index list-gender (ktv-get individual "gender")))
-	 (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
-			(ktv-get individual "litter-code"))
-	 (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
-			(ktv-get individual "chip-code"))
-	 (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
-			(let ((v (ktv-get individual "collar-weight"))) (if v v 0)))
-	 
-	 (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
-			(if (eqv? (ktv-get individual "deleted") 1) 1 0))
-	 (update-widget 'toggle-button (get-id "update-individual-died") 'checked
-			(if (eqv? (ktv-get individual "deleted") 2) 1 0))
-	 ))))
+     (set-current! 'individual (get-entity-by-unique db "sync" arg))
+     (entity-init! db "sync" "individual" (get-current 'individual '()))
+     (append
+      (update-lifehist (entity-get-value "gender"))
+      (list
+       (update-widget 'edit-text (get-id "update-individual-name") 'text
+		      (entity-get-value "name"))
+       (update-widget 'text-view (get-id "update-individual-dob") 'text
+		      (entity-get-value "dob"))
+       (update-widget 'spinner (get-id "update-individual-gender") 'selection
+		      (spinner-index list-gender (entity-get-value "gender")))
+       (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
+		      (entity-get-value "litter-code"))
+       (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
+		      (entity-get-value "chip-code"))
+       (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
+		      (let ((v (entity-get-value "collar-weight"))) (if v v 0)))
+       
+       (update-widget 'toggle-button (get-id "update-individual-delete") 'checked
+		      (if (eqv? (entity-get-value "deleted") 1) 1 0))
+       (update-widget 'toggle-button (get-id "update-individual-died") 'checked
+		      (if (eqv? (entity-get-value "deleted") 2) 1 0))
+       )))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -1018,7 +1014,7 @@
      (list
       (update-widget 
        'text-view (get-id "litter-pack-text") 'text
-       (string-append "Pack: " (ktv-get (get-current 'pack '()) "name")))
+       (string-append "Pack: " (get-current "pack-name" "none")))
       (update-widget 'text-view (get-id "update-litter-date-text") 'text
 		     (entity-get-value "date"))
       
