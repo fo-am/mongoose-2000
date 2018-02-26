@@ -51,6 +51,7 @@
    "preg-focal-affil"
 
    "lifehist-event"
+   "movepack-event"
    ))
 
 (define pup-focal-export
@@ -444,11 +445,9 @@
         '())))
 
 (define (db-mongoose-packs)
-  (msg "db-mongooses-by-pack")
   (db-filter db "sync" "pack" '()))
 
 (define (db-mongooses-by-pack)
-  (msg "db-mongooses-by-pack")
   (db-filter
    db "sync" "mongoose"
    (list (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id")))))
@@ -472,7 +471,6 @@
    (list
     (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
     (list "gender" "varchar" "not like" "male"))))
-
 
 
 ;; (y m d h m s)
@@ -800,6 +798,7 @@
                (equal? type "group-alarm")
                (equal? type "group-move")
                (equal? type "note")
+               (equal? type "movepack-event")
                (equal? type "lifehist-event"))
            (cons
             (mbutton
@@ -1234,7 +1233,8 @@
   (let ((search-results
          (if parent
 	     (db-filter-only db table entity-type
-                             (list (list "parent" "varchar" "=" parent))
+                             (list (list "parent" "varchar" "=" parent)
+				   (list "date" "varchar" "d<" 90))
                              (map
                               (lambda (id)
                                 (list id "varchar"))

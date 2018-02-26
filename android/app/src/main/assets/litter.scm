@@ -13,9 +13,11 @@
 ;; You should have received a copy of the GNU Affero General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define (init-litter)
+(define (init-litter pack-id)
   ;; retreve (and increment) the pack's id info
-  (set-current! 'entity-type "pack")
+  (entity-init! db "sync" "pack" (dbg (get-entity-by-unique db "sync" pack-id)))
+  (msg (entity-get-value "unique_id"))
+
   (let ((letter (entity-get-value "litter-code-letter"))
 	(number (entity-get-value "litter-code-number"))
 	(parent (entity-get-value "unique_id")))
@@ -35,7 +37,7 @@
   (db-filter
    db "sync" "litter"
    (list
-    (list "pack-id" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
-    (list "dob" "varchar" "d<" 30))))
+    (list "parent" "varchar" "=" (ktv-get (get-current 'pack '()) "unique_id"))
+    (list "date" "varchar" "d<" 30))))
 
 

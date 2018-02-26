@@ -575,10 +575,10 @@
 		      (entity-set-value! "litter-code-number" "int" (string->number v))
 		      '()))))
 
-      (build-list-widget db "sync" "Recent litters" (list "name" "date") 
+      (build-list-widget db "sync" "Recent litters (last 90 days)" (list "name" "date") 
 			 "litter" "update-litter" 
 			 (lambda () (ktv-get (get-current 'pack '()) "unique_id"))
-			 (lambda () (init-litter)))
+			 (lambda () (init-litter (ktv-get (get-current 'pack '()) "unique_id"))))
       (build-lifehist 'pack)
       (horiz
        (mbutton2 "manage-pack-back" "Cancel" (lambda () (list (finish-activity 1))))
@@ -683,65 +683,70 @@
 
   (activity
    "update-individual"
-   (vert
-    (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
-    (spacer 10)
-    (text-view (make-id "update-individual-name-text") "Name" 30 fillwrap)
-    (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
-               (lambda (v) (entity-set-value! "name" "varchar" v) '()))
-    (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
-    (mspinner "update-individual-gender" list-gender
-              (lambda (v) (entity-set-value! "gender" "varchar" (spinner-choice list-gender v)) '()))
-    (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
-    (horiz
-     (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
-     (button (make-id "date") "Set date" 30 fillwrap
-             (lambda ()
-               (list (date-picker-dialog
-                      "update-individual-date"
-                      (lambda (day month year)
-                        (let ((datestring (date->string (list year (+ month 1) day))))
-                          (entity-set-value! "dob" "varchar" datestring)
-                          (list
-                           (update-widget
-                            'text-view
-                            (get-id "update-individual-dob") 'text datestring))))))))
-     (button (make-id "update-unknown-date") "Unknown" 30 fillwrap
-             (lambda ()
-               (entity-set-value! "dob" "varchar" "Unknown")
-               (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
-     )
+   (scroll-view-vert
+    0 (layout 'fill-parent 'wrap-content 0.75 'centre 0)
+    (list
+     (vert
+      (text-view (make-id "title") "Update Mongoose" 40 fillwrap)
+      (spacer 10)
+      (text-view (make-id "update-individual-name-text") "Name" 30 fillwrap)
+      (edit-text (make-id "update-individual-name") "" 30 "text" fillwrap
+		 (lambda (v) (entity-set-value! "name" "varchar" v) '()))
+      (text-view (make-id "update-individual-name-text") "Gender" 30 fillwrap)
+      (mspinner "update-individual-gender" list-gender
+		(lambda (v) (entity-set-value! "gender" "varchar" (spinner-choice list-gender v)) '()))
+      (text-view (make-id "update-individual-dob-text") "Date of Birth" 30 fillwrap)
+      (horiz
+       (text-view (make-id "update-individual-dob") "00/00/00" 25 fillwrap)
+       (button (make-id "date") "Set date" 30 fillwrap
+	       (lambda ()
+		 (list (date-picker-dialog
+			"update-individual-date"
+			(lambda (day month year)
+			  (let ((datestring (date->string (list year (+ month 1) day))))
+			    (entity-set-value! "dob" "varchar" datestring)
+			    (list
+			     (update-widget
+			      'text-view
+			      (get-id "update-individual-dob") 'text datestring))))))))
+       (button (make-id "update-unknown-date") "Unknown" 30 fillwrap
+	       (lambda ()
+		 (entity-set-value! "dob" "varchar" "Unknown")
+		 (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
+       )
 
-    (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
-    (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
-    (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
-    (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
-    (text-view (make-id "update-individual-collar-text") "Collar weight" 30 fillwrap)
-    (edit-text (make-id "update-individual-collar-weight") "" 30 "numeric" fillwrap
-               (lambda (v) (entity-set-value! "collar-weight" "real" (string->number v)) '()))
-    (spacer 10)
-    (horiz
-     (mtoggle-button2 "update-individual-delete" "Delete"
-                      (lambda (v)
-                        (entity-set-value! "deleted" "int" (if v 1 0))
-                        (list)))
-     (mtoggle-button2 "update-individual-died" "Died"
-                      (lambda (v)
-                        (entity-set-value! "deleted" "int" (if v 2 0))
-                        (list))))
+      (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
+      (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
+		 (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
+      (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
+      (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
+		 (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
+      (text-view (make-id "update-individual-collar-text") "Collar weight" 30 fillwrap)
+      (edit-text (make-id "update-individual-collar-weight") "" 30 "numeric" fillwrap
+		 (lambda (v) (entity-set-value! "collar-weight" "real" (string->number v)) '()))
+      (spacer 10)
+      (horiz
+       (mtoggle-button2 "update-individual-delete" "Delete"
+			(lambda (v)
+			  (entity-set-value! "deleted" "int" (if v 1 0))
+			  (list)))
+       (mtoggle-button2 "update-individual-died" "Died"
+			(lambda (v)
+			  (entity-set-value! "deleted" "int" (if v 2 0))
+			  (list))))
 
-    (build-lifehist 'male)
-    
-    (horiz
-     (mbutton2 "update-individual-cancel" "Cancel"
-               (lambda () (list (finish-activity 2))))
-     (mbutton2 "update-individual-done" "Done"
-               (lambda ()
-                 (entity-update-values!)
-                 (list (finish-activity 2)))))
-    )
+      (build-grid-selector "move-pack-list" "button" "Move pack")
+      
+      (build-lifehist 'male)
+      
+      (horiz
+       (mbutton2 "update-individual-cancel" "Cancel"
+		 (lambda () (list (finish-activity 2))))
+       (mbutton2 "update-individual-done" "Done"
+		 (lambda ()
+		   (entity-update-values!)
+		   (list (finish-activity 2)))))
+      )))
    (lambda (activity arg)
      (activity-layout activity))
    (lambda (activity arg)
@@ -767,7 +772,32 @@
 		      (if (eqv? (entity-get-value "deleted") 1) 1 0))
        (update-widget 'toggle-button (get-id "update-individual-died") 'checked
 		      (if (eqv? (entity-get-value "deleted") 2) 1 0))
-       )))
+       (populate-grid-selector
+	"move-pack-list" "button" (db-mongoose-packs) #f
+	(lambda (pack)
+	  (list
+	   (alert-dialog
+	    "move-pack-done"
+	    "Move mongoose into new pack: are you sure?"
+	    (lambda (v)
+	      (cond
+	       ((eqv? v 1)
+		(let ((src-pack (get-entity-by-unique db "sync" (entity-get-value "pack-id"))))	    
+		  (entity-create! 
+		   db "stream" "movepack-event" 
+		   (list
+		    (ktv "mongoose-id" "varchar" (entity-get-value "unique_id"))
+		    (ktv "mongoose-name" "varchar" (entity-get-value "name"))
+		    (ktv "pack-dst-id" "varchar" (ktv-get pack "unique_id"))
+		    (ktv "pack-dst-name" "varchar" (ktv-get pack "name"))
+		    (ktv "pack-src-id" "varchar" (entity-get-value "pack-id"))
+		    (ktv "pack-src-name" "varchar" (ktv-get src-pack "name"))))
+		  (entity-set-value! "pack-id" "varchar" (ktv-get pack "unique_id"))
+		  (entity-update-values!)
+		  (list (finish-activity 1))))
+		 (else
+		  (list)))))))
+	))))
    (lambda (activity) '())
    (lambda (activity) '())
    (lambda (activity) '())
@@ -992,11 +1022,12 @@
 
     (build-lifehist 'litter)
 
-    (mtoggle-button2 "update-litter-delete" "Delete"
-		     (lambda (v)
-		       (entity-set-value! "deleted" "int" (if v 1 0))
-		       (list)))
-
+    (mbutton2 "update-litter-delete" "Delete"
+	      (lambda ()
+		(entity-set-value! "deleted" "int" 1)
+		(entity-update-values!)
+		(list (finish-activity 2))))
+    
     (horiz
      (mbutton2 "update-litter-cancel" "Cancel"
 	       (lambda () (list (finish-activity 2))))

@@ -70,7 +70,7 @@
        r "join " table "_value_" (filter-type i) " "
        "as " var " on "
        var ".entity_id = e.entity_id and " var ".attribute_id = '" (filter-key i) "' and ( "
-       "(julianday(" var ".value)-julianday('now'))"  (substring (filter-op i) 1 (string-length (filter-op i))) " ? "
+       "julianday('now')-julianday(" var ".value)"  (substring (filter-op i) 1 (string-length (filter-op i))) " ? "
        "or " var ".value like 'unknown') "))      
      ((equal? (substring (filter-op i) 0 1) "t")
       ;; time version

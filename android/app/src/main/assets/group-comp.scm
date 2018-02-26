@@ -203,9 +203,25 @@
         (db-mongooses-by-pack-female) #f
         (lambda (individuals)
           (set-current! 'entity-type "group-comp")
-          (entity-update-single-value! (ktv "pregnant" "varchar" (assemble-array individuals)))
-          (list)))
-       )
+          (entity-update-single-value! (ktv "pregnant" "varchar" (assemble-array individuals)))	  
+	  (let ((litter (db-current-litter)))	  
+	    (msg litter)
+	    (cond 
+	     ((null? litter)
+	      ;; create a new litter for this pack!
+	      (entity-create! db "sync" "litter" (init-litter (ktv-get (get-current 'pack '()) "unique_id")))
+	      (set-current! 'entity-type "group-comp")
+	      (list
+	       (if (null? (db-current-litter))
+		   (ok-dialog "litter-create-prob"
+			      "Tried to create new litter and failed..."
+			      (lambda () '()))
+		   (ok-dialog "litter-create-prob"
+			      (string-append 
+			       "Created new litter for pack "
+			       (ktv-get (get-current 'pack '()) "name"))
+			      (lambda () '())))))
+	     (else (list)))))))
       (update-grid-selector-enabled "gc-preg-choose" (get-current 'gc-not-present '()))
       (update-grid-selector-checked "gc-preg-choose" "pregnant")))
    (lambda (fragment) '())
