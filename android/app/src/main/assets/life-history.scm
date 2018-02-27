@@ -16,8 +16,8 @@
 (define list-pack-lifehist
   (list
    (list 'endgrp "End of pack")
-   (list 'lgrp "Last seen")
-   (list 'fgrp "First seen")))
+   (list 'lgrp "Lost Pack")
+   (list 'fgrp "Found Pack")))
 
 (define list-litter-lifehist
   (list
