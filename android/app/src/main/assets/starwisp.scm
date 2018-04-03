@@ -668,7 +668,7 @@
      ;; make sure all fields exist
      (entity-set-value! "name" "varchar" "noname")
      (entity-set-value! "gender" "varchar" "female")
-     (entity-set-value! "dob" "varchar" "00-00-00")
+     (entity-set-value! "dob" "varchar" (date->string (date-time)))
      (entity-set-value! "litter-code" "varchar" "")
      (entity-set-value! "chip-code" "varchar" "")
      (entity-set-value! "collar-weight" "real" "")
@@ -1024,9 +1024,18 @@
 
     (mbutton2 "update-litter-delete" "Delete"
 	      (lambda ()
-		(entity-set-value! "deleted" "int" 1)
-		(entity-update-values!)
-		(list (finish-activity 2))))
+		(list
+		 (alert-dialog
+		  "litter-delete-done"
+		  "Delete litter: are you sure?"
+		  (lambda (v)
+		    (cond
+		     ((eqv? v 1)
+		      (entity-set-value! "deleted" "int" 1)
+		      (entity-update-values!)
+		      (list (finish-activity 2)))
+		     (else
+		      (list))))))))
     
     (horiz
      (mbutton2 "update-litter-cancel" "Cancel"
