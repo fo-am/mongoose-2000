@@ -737,7 +737,7 @@
 
       (build-grid-selector "move-pack-list" "button" "Move pack")
       
-      (build-lifehist 'male)
+      (build-lifehist 'mongoose)
       
       (horiz
        (mbutton2 "update-individual-cancel" "Cancel"

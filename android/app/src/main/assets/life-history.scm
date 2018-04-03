@@ -56,56 +56,63 @@
    ((eq? type 'pack) "pack")
    ((eq? type 'litter) "litter")
    ((eq? type 'male) "male")
-   (else "female")))  
+   (else "female")))
 
+;; for updating mongooses to the right gender
 (define (update-lifehist gender)
   (list
    (update-widget 
-    'spinner (get-id "lifehist-type") 'array
+    'spinner (get-id "mongooselifehist-type") 'array
     (symbol-list-to-names
      (lifehist-types (if (equal? gender "female") 'female 'male))))
-   (update-widget 'text-view (get-id "lifehist-title") 'text
+   (update-widget 'text-view (get-id "mongooselifehist-title") 'text
 		  (string-append "New life history event for this " (lifehist-text gender)))))
-
+  
 (define (build-lifehist type)
-  (vert-colour 
-   lh-bgcol
-   (text-view (make-id "lifehist-title") (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
-   (horiz
-    (vert
+  (let ((typeid (symbol->string type)))
+    (vert-colour 
+     lh-bgcol
+     (text-view (make-id (string-append typeid "lifehist-title")) (string-append "New life history event for this " (lifehist-text type)) 30 fillwrap)
      (horiz
-      (mtext 0 "Date:")
+      (vert
+       (horiz
+	(mtext 0 "Date:")
       (mtext "lifehist-date-view" (date->string (date-time))))
      (mbutton-large 
-      "lifehist-date" "Set date" 
+      (string-append typeid "lifehist-date") "Set date" 
       (lambda ()
 	(list (date-picker-dialog
-	       "lifehist-date"
+	       (string-append typeid "lifehist-date")
 	       (lambda (day month year)
 		 (let ((datestring (date->string (list year (+ month 1) day))))
 		   (set-current! 'lifehist-date datestring)
 		   (list
 		    (update-widget
-		     'text-view (get-id "lifehist-date-view") 
+		     'text-view (get-id (string-append typeid "lifehist-date-view")) 
 		     'text datestring)))))))))
     (vert
      (mtext 0 "Code")
-     (mspinner "lifehist-type" 
-	       (lifehist-types type)
+     (mspinner (string-append typeid "lifehist-type") 
+	       ;; if type is mongoose, then redirect to a real list for now...
+	       (lifehist-types (if (eq? type 'mongoose) 'male type))
 	       (lambda (v) 
 		 (set-current! 
 		  'lifehist-code 
-		  (spinner-choice (lifehist-types type) v))
+		  (spinner-choice 
+		   (lifehist-types 
+		    (if (eq? type 'mongoose) 
+			(ktv-get (get-current 'individual ()) "gender")
+			type)) v))
 		 '())))
     (vert
      (mtext 0 "")
      (mcolour-button-large 
-      "lifehist-record" "Record"
+      (string-append typeid "lifehist-record") "Record"
       lh-col
       (lambda ()
 	(list
 	 (alert-dialog
-	  "lifehist-check"
+	  (string-append typeid "lifehist-check")
 	  "Recording life history event: are you sure?"
 	  (lambda (v)
 	    (cond
@@ -131,7 +138,6 @@
 		      (else (ktv-get (get-current 'individual ()) "name"))))))
 	      '())
 	     (else
-	      (list))))))))))))
-
+	      (list)))))))))))))
 
 
