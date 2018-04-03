@@ -643,9 +643,9 @@
                (entity-set-value! "dob" "varchar" "Unknown")
                (list (update-widget 'text-view (get-id "new-individual-dob") 'text "Unknown"))))
      )
-    (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
-    (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
-               (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
+;;    (text-view (make-id "new-individual-litter-text") "Litter code" 30 fillwrap)
+;;    (edit-text (make-id "new-individual-litter-code") "" 30 "text" fillwrap
+;;               (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
     (text-view (make-id "new-individual-chip-text") "Chip code" 30 fillwrap)
     (edit-text (make-id "new-individual-chip-code") "" 30 "text" fillwrap
                (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
@@ -715,9 +715,9 @@
 		 (list (update-widget 'text-view (get-id "update-individual-dob") 'text "Unknown"))))
        )
 
-      (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
-      (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
-		 (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
+;;      (text-view (make-id "update-individual-litter-text") "Litter code" 30 fillwrap)
+;;      (edit-text (make-id "update-individual-litter-code") "" 30 "text" fillwrap
+;;		 (lambda (v) (entity-set-value! "litter-code" "varchar" v) '()))
       (text-view (make-id "update-individual-chip-text") "Chip code" 30 fillwrap)
       (edit-text (make-id "update-individual-chip-code") "" 30 "text" fillwrap
 		 (lambda (v) (entity-set-value! "chip-code" "varchar" v) '()))
@@ -761,8 +761,8 @@
 		      (entity-get-value "dob"))
        (update-widget 'spinner (get-id "update-individual-gender") 'selection
 		      (spinner-index list-gender (entity-get-value "gender")))
-       (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
-		      (entity-get-value "litter-code"))
+;;       (update-widget 'edit-text (get-id "update-individual-litter-code") 'text
+;;		      (entity-get-value "litter-code"))
        (update-widget 'edit-text (get-id "update-individual-chip-code") 'text
 		      (entity-get-value "chip-code"))
        (update-widget 'edit-text (get-id "update-individual-collar-weight") 'text
