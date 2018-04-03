@@ -17,6 +17,8 @@
 
 (msg "dbsync.scm")
 
+(define entity-request-limit 20)
+(define entity-unlisted-dirtify-limit 20)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; stuff in memory
@@ -402,8 +404,8 @@
 
        ;; if we don't have this entity or the version on the server is newer
        (if (and (or (not exists) old)
-                ;; limit this to 5 a time
-                (< (length r) 5))
+                ;; limit this 
+                (< (length r) entity-request-limit))
            (cons (suck-entity-from-server db table unique-id) r)
            r)))
    '()
@@ -413,7 +415,7 @@
   (msg "mark-unlisted...")
   ;; load some local entities
   ;; don't need to do the whole list, as we are iterating here... (and it's slow)
-  (let ((ids (crop (shuffle (all-unique-ids db table)) 10))
+  (let ((ids (crop (shuffle (all-unique-ids db table)) entity-unlisted-dirtify-limit))
 	;; version-data will be 0 instead of '() due to dialogcallback quoting problem
         (server-ids (if (and (number? version-data) (eqv? version-data 0))
 			'() (map car version-data))))

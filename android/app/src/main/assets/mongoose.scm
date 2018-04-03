@@ -863,7 +863,7 @@
 ;;
 
 (define (debug! txt)
-  (set-current! 'debug-text (string-append txt "\n" (get-current 'debug-text ""))))
+  (set-current! 'debug-text (string-append txt "<br/>" (get-current 'debug-text ""))))
 
 (define (update-debug)
   (update-widget 'debug-text-view (get-id "sync-debug") 'text
