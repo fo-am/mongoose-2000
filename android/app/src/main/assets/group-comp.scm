@@ -12,13 +12,13 @@
                       (lambda (v)
                         (set-current! 'entity-type "group-comp")
                         (entity-update-single-value!
-                         (ktv "main-observer" "varchar" v)) '()))
+                         (ktv "main-observer" "varchar" (if v "yes" "no"))) '()))
       (vert
        (mtext "" "Code")
        (edit-text (make-id "gc-start-code") "" 30 "numeric" fillwrap
                   (lambda (v)
                     (set-current! 'entity-type "group-comp")
-                    (entity-update-values!
+                    (entity-update-single-value!
                      (ktv "group-comp-code" "varchar" v)) '()))))
 
      (mtitle "title" "Weights and Group Composition")
