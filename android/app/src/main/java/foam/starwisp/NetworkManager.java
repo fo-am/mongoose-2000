@@ -30,6 +30,7 @@ import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.Message;
+import android.os.StrictMode;
 
 import android.net.wifi.WifiConfiguration;
 
@@ -78,10 +79,15 @@ public class NetworkManager {
     }
 
     void Start(String ssid, StarwispActivity c, String name, StarwispBuilder b) {
+
         Log.i("starwisp","Network startup!");
         m_CallbackName=name;
         m_Context=c;
         m_Builder=b;
+
+	StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+	StrictMode.setThreadPolicy(policy); 
+
 
         if (state==NetworkManager.State.IDLE) {
             Log.i("starwisp","State is idle, launching scan");
