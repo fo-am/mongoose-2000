@@ -77,67 +77,67 @@
       (vert
        (horiz
 	(mtext 0 "Date:")
-      (mtext "lifehist-date-view" (date->string (date-time))))
-     (mbutton-large 
-      (string-append typeid "lifehist-date") "Set date" 
-      (lambda ()
-	(list (date-picker-dialog
-	       (string-append typeid "lifehist-date")
-	       (lambda (day month year)
-		 (let ((datestring (date->string (list year (+ month 1) day))))
-		   (set-current! 'lifehist-date datestring)
-		   (list
-		    (update-widget
-		     'text-view (get-id (string-append typeid "lifehist-date-view")) 
-		     'text datestring)))))))))
-    (vert
-     (mtext 0 "Code")
-     (mspinner (string-append typeid "lifehist-type") 
-	       ;; if type is mongoose, then redirect to a real list for now...
-	       (lifehist-types (if (eq? type 'mongoose) 'male type))
-	       (lambda (v) 
-		 (set-current! 
-		  'lifehist-code 
-		  (spinner-choice 
-		   (lifehist-types 
-		    (if (eq? type 'mongoose) 
-			(ktv-get (get-current 'individual ()) "gender")
-			type)) v))
-		 '())))
-    (vert
-     (mtext 0 "")
-     (mcolour-button-large 
-      (string-append typeid "lifehist-record") "Record"
-      lh-col
-      (lambda ()
-	(list
-	 (alert-dialog
-	  (string-append typeid "lifehist-check")
-	  "Recording life history event: are you sure?"
-	  (lambda (v)
-	    (cond
-	     ((eqv? v 1)
-	      ;; using entity-create! so as not to disturb the current
-	      ;; pack/litter/individual being currently edited in 
-	      ;; memory via the rest of the interface
-	      (entity-create! 
-	       db "stream" "lifehist-event" 
-	       (list
-		(ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
-		(ktv "type" "varchar" (symbol->string type))
-		(ktv "code" "varchar" (get-current 'lifehist-code "none"))
-		(ktv "entity-uid" "varchar" 
-		     (cond 
-		      ((eq? type 'pack) (ktv-get (get-current 'pack ()) "unique_id"))
-		      ((eq? type 'litter) (ktv-get (get-current 'litter ()) "unique_id"))
-		      (else (ktv-get (get-current 'individual ()) "unique_id"))))
-		(ktv "entity-name" "varchar"
-		     (cond 
-		      ((eq? type 'pack) (ktv-get (get-current 'pack ()) "name"))
-		      ((eq? type 'litter) (ktv-get (get-current 'litter ()) "name"))
-		      (else (ktv-get (get-current 'individual ()) "name"))))))
-	      '())
-	     (else
-	      (list)))))))))))))
+	(mtext (string-append typeid "lifehist-date-view") (date->string (date-time))))
+       (mbutton-large 
+	(string-append typeid "lifehist-date") "Set date" 
+	(lambda ()
+	  (list (date-picker-dialog
+		 (string-append typeid "lifehist-date")
+		 (lambda (day month year)
+		   (let ((datestring (date->string (list year (+ month 1) day))))
+		     (set-current! 'lifehist-date datestring)
+		     (list
+		      (update-widget
+		       'text-view (get-id (string-append typeid "lifehist-date-view")) 
+		       'text datestring)))))))))
+      (vert
+       (mtext 0 "Code")
+       (mspinner (string-append typeid "lifehist-type") 
+		 ;; if type is mongoose, then redirect to a real list for now...
+		 (lifehist-types (if (eq? type 'mongoose) 'male type))
+		 (lambda (v) 
+		   (set-current! 
+		    'lifehist-code 
+		    (spinner-choice 
+		     (lifehist-types 
+		      (if (eq? type 'mongoose) 
+			  (ktv-get (get-current 'individual ()) "gender")
+			  type)) v))
+		   '())))
+      (vert
+       (mtext 0 "")
+       (mcolour-button-large 
+	(string-append typeid "lifehist-record") "Record"
+	lh-col
+	(lambda ()
+	  (list
+	   (alert-dialog
+	    (string-append typeid "lifehist-check")
+	    "Recording life history event: are you sure?"
+	    (lambda (v)
+	      (cond
+	       ((eqv? v 1)
+		;; using entity-create! so as not to disturb the current
+		;; pack/litter/individual being currently edited in 
+		;; memory via the rest of the interface
+		(entity-create! 
+		 db "stream" "lifehist-event" 
+		 (list
+		  (ktv "date" "varchar" (get-current 'lifehist-date (date-time->string (date-time))))
+		  (ktv "type" "varchar" (symbol->string type))
+		  (ktv "code" "varchar" (get-current 'lifehist-code "none"))
+		  (ktv "entity-uid" "varchar" 
+		       (cond 
+			((eq? type 'pack) (ktv-get (get-current 'pack ()) "unique_id"))
+			((eq? type 'litter) (ktv-get (get-current 'litter ()) "unique_id"))
+			(else (ktv-get (get-current 'individual ()) "unique_id"))))
+		  (ktv "entity-name" "varchar"
+		       (cond 
+			((eq? type 'pack) (ktv-get (get-current 'pack ()) "name"))
+			((eq? type 'litter) (ktv-get (get-current 'litter ()) "name"))
+			(else (ktv-get (get-current 'individual ()) "name"))))))
+		'())
+	       (else
+		(list)))))))))))))
 
 

@@ -1018,7 +1018,8 @@
                           (list
                            (update-widget
                             'text-view
-                            (get-id "update-litter-date") 'text datestring)))))))))
+                            (get-id "update-litter-date-text") 
+			    'text datestring)))))))))
      
 
     (build-lifehist 'litter)
