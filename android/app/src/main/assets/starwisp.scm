@@ -86,10 +86,11 @@
     (mtext "foo" "Your ID")
     (edit-text (make-id "main-id-text") "" 30 "text" fillwrap
                (lambda (v)
-                 (set-current! 'user-id v)
-                 (update-entity
-                  db "local" 1 (list (ktv "user-id" "varchar" v)))
-                 '()))
+		 (let ((v (filter-uri-chars v)))
+		   (set-current! 'user-id v)
+		   (update-entity
+		    db "local" 1 (list (ktv "user-id" "varchar" v)))
+		   '())))
     (mtext "foo" "Database")
     (horiz
      (mbutton2 "main-review" "Review changes" (lambda () (list (start-activity "review" 0 ""))))

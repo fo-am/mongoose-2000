@@ -69,6 +69,32 @@
         (ktv-value ktv)))))
 
 ;; filter uri chars
+(define (contains-bad-uri-char? s)
+  (foldl
+   (lambda (v r)
+     (or r
+	 (eqv? v #\newline)
+	 (eqv? v #\!)
+	 (eqv? v #\*)
+	 (eqv? v #\')
+	 (eqv? v #\()
+	 (eqv? v #\))
+	 (eqv? v #\;)
+	 ;;            (eqv? v #\:)
+	 (eqv? v #\@)
+	 (eqv? v #\&)
+	 (eqv? v #\=)
+	 (eqv? v #\+)
+	 (eqv? v #\$)
+	 ;;            (eqv? v #\,)
+	 (eqv? v #\/)
+	 (eqv? v #\?)
+	 (eqv? v #\#)
+	 (eqv? v #\[)
+	 (eqv? v #\])))
+   #f
+   (string->list s)))
+
 (define (filter-uri-chars s)
   (list->string
    (filter

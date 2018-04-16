@@ -251,7 +251,9 @@
   (insert-entity-if-not-exists
    db "local" "app-settings" "null" 1
    (list
-    (ktv "user-id" "varchar" "No name yet..."))))
+    (ktv "user-id" "varchar" "No name yet...")))
+  (clean-unique-ids db "sync")
+  (clean-unique-ids db "stream"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user interface abstraction

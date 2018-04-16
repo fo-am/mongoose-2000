@@ -235,7 +235,9 @@
    "fn=sync"
    "&table=" table
    "&entity-type=" (list-ref (car e) 0)
-   "&unique-id=" (list-ref (car e) 1)
+   ;; need to filter this here as can contain dodgy chars from the past
+   ;; should be ok as they get filtered as values in build-url-from-ktvlist
+   "&unique-id=" (filter-uri-chars (list-ref (car e) 1)) 
    "&dirty=" (number->string (list-ref (car e) 2))
    "&version=" (number->string (list-ref (car e) 3))
    (build-url-from-ktvlist (cadr e))))
@@ -920,3 +922,21 @@
                         )))))
           (_ (- n 1))))
   (_ (random 10)))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; clean unique-ids 
+
+(define (clean-unique-ids db table)
+  (for-each
+   (lambda (e)
+     (let ((uid (vector-ref e 1))
+	   (id (vector-ref e 0)))
+       (when (contains-bad-uri-char? uid)
+	     (msg uid "->" (filter-uri-chars uid))
+	     (db-exec
+	      db (string-append
+		  "update " table "_entity set unique_id=? where entity_id = ?")
+	      (filter-uri-chars uid) id))))
+   (cdr (db-select db (string-append "select entity_id, unique_id from " table "_entity;")))))
+
