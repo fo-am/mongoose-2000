@@ -66,7 +66,7 @@
     (symbol-list-to-names
      (lifehist-types (if (equal? gender "female") 'female 'male))))
    (update-widget 'text-view (get-id "mongooselifehist-title") 'text
-		  (string-append "New life history event for this " (lifehist-text gender)))))
+		  (string-append "New life history event for this " gender))))
   
 (define (build-lifehist type)
   (let ((typeid (symbol->string type)))
